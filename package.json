@@ -1,0 +1,12 @@
+{
+  "name": "grid-level-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "支持调整行列数的网格关卡编辑器",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
+    "check": "node --check dist/app.js && node --check scripts/serve.mjs"
+  }
+}

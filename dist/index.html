@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5f6f3" />
+    <meta name="description" content="从一张棋盘开始，创建你的关卡。自由调整 2–3 行、3–5 列，即时预览网格。" />
+    <title>关卡编辑器 · 方格</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="brand-name">方格<span class="brand-en">FANGGE</span></span>
+        </div>
+        <span class="header-divider" aria-hidden="true"></span>
+        <span class="app-name">关卡编辑器</span>
+        <span class="version">初始构建 <span>v0.1</span></span>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="page-heading" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">A LITTLE GRID, A NEW WORLD</p>
+          <h1 id="page-title">从一张棋盘开始<span class="title-dot">。</span></h1>
+          <p class="page-description">设定棋盘的行与列，为你的下一个关卡留好空间。</p>
+        </div>
+        <span class="live-badge"><span class="status-dot"></span>实时预览</span>
+      </section>
+
+      <div class="editor">
+        <aside class="settings-panel" aria-labelledby="settings-title">
+          <div class="panel-heading">
+            <span class="section-index">01</span>
+            <h2 id="settings-title">棋盘尺寸</h2>
+          </div>
+          <p class="panel-description">选择适合关卡的网格大小。</p>
+
+          <form id="size-form">
+            <div class="dimension-fields">
+              <fieldset>
+                <legend>行数 <span>ROWS</span></legend>
+                <div class="choices rows-choices">
+                  <label class="choice">
+                    <input type="radio" name="rows" value="2" />
+                    <span class="choice-surface"><strong>2</strong><span>行</span></span>
+                  </label>
+                  <label class="choice">
+                    <input type="radio" name="rows" value="3" checked />
+                    <span class="choice-surface"><strong>3</strong><span>行</span></span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>列数 <span>COLUMNS</span></legend>
+                <div class="choices columns-choices">
+                  <label class="choice">
+                    <input type="radio" name="columns" value="3" />
+                    <span class="choice-surface"><strong>3</strong><span>列</span></span>
+                  </label>
+                  <label class="choice">
+                    <input type="radio" name="columns" value="4" checked />
+                    <span class="choice-surface"><strong>4</strong><span>列</span></span>
+                  </label>
+                  <label class="choice">
+                    <input type="radio" name="columns" value="5" />
+                    <span class="choice-surface"><strong>5</strong><span>列</span></span>
+                  </label>
+                </div>
+              </fieldset>
+            </div>
+
+            <div class="capacity">
+              <div><span class="capacity-label">棋盘容量</span><p>行数 × 列数</p></div>
+              <div class="capacity-value"><output id="cell-count">12</output><span>格</span></div>
+            </div>
+
+            <button type="button" id="reset-size" class="reset-button" disabled>
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 8A6.5 6.5 0 1 1 4.8 14M3.5 3.5V8H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              恢复默认尺寸
+            </button>
+          </form>
+
+          <div class="settings-note">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m4.5 10 3.5 3.5 7.5-7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            <p id="storage-note">修改即生效，尺寸自动保存在本机。</p>
+          </div>
+        </aside>
+
+        <section class="preview-panel" aria-labelledby="preview-title">
+          <header class="preview-header">
+            <div class="preview-title-group">
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.4" /><path d="M3 8h14M3 12h14M8 3v14M12 3v14" stroke="currentColor" stroke-width="1.2" /></svg>
+              <h2 id="preview-title">棋盘预览</h2>
+            </div>
+            <output id="size-summary" class="size-summary" aria-live="polite" aria-atomic="true">3 行 × 4 列</output>
+          </header>
+
+          <div class="board-stage">
+            <div class="board-layout" id="board-layout" style="--rows: 3; --columns: 4">
+              <span class="axis-origin" aria-hidden="true">↘</span>
+              <div class="column-labels" id="column-labels" aria-hidden="true"></div>
+              <div class="row-labels" id="row-labels" aria-hidden="true"></div>
+              <div class="board" id="board" role="table" aria-label="空白棋盘，3 行 4 列" aria-rowcount="3" aria-colcount="4"></div>
+            </div>
+            <noscript><p class="noscript-note">请开启浏览器 JavaScript，以预览和调整棋盘。</p></noscript>
+          </div>
+
+          <footer class="preview-footer">
+            <span><span class="empty-cell-key" aria-hidden="true"></span>空白格子</span>
+            <span id="board-footnote">12 个格子，等待你的创意</span>
+          </footer>
+        </section>
+      </div>
+
+      <footer class="page-footer">
+        <span>小小方格，无限可能。</span>
+        <span class="range-note">2–3 行 <span>·</span> 3–5 列 <span>·</span> 6 种布局</span>
+      </footer>
+    </main>
+  </body>
+</html>
