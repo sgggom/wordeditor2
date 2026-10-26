@@ -30,3 +30,32 @@ npm run dev
 - `scripts/serve.mjs`：仅监听本机的开发服务器，无第三方依赖。
 
 运行 `npm run check` 检查 JavaScript 语法。本阶段仅编辑棋盘尺寸，格子内容留待后续功能扩展。
+
+## 单词数据库
+
+已导入 `四游戏词库_精简版.xlsx`，共 22,440 条记录：必答词 10,748 条，额外词 11,692 条。原文件保存在 `data/source/`，导入过程不修改 Excel。
+
+编辑器可读取的静态数据位于 `dist/data/`：
+
+- `word-bank.json`：字段映射、来源文件校验值、分组数量和数据文件索引。
+- `required-words.json`：「必答词」的完整记录。
+- `extra-words.json`：「额外词」的完整记录。
+
+每条记录保留原来的 8 个字段、原始值类型与顺序，另加 `id` 和 `sourceRow` 供定位原表。导入不去重、不改大小写、不补全空值，也不根据词长过滤。
+
+| 数据字段 | 原表字段 |
+| --- | --- |
+| `word` | 单词 |
+| `scope` | 范围库 |
+| `phonetic` | 音标 |
+| `emotion` | 情绪类型 |
+| `abbreviation` | 是否缩写 |
+| `rarityLevel` | 生僻档位 |
+| `definitionEn` | 英文注释 |
+| `definitionZh` | 中文注释 |
+
+分类数字保持原表含义与数值，例如「是否缩写」仍保存为 `0` 或 `1`。
+
+以后更新 `data/source/` 中的原词库后，运行 `npm run import:words` 重新生成 JSON。导入脚本使用 Python 3 标准库，无需额外安装依赖。
+
+通过本地开发服务器或在线站点，可以用 `fetch('./data/word-bank.json')` 读取索引，再按其中的 `file` 读取 `./data/` 下的对应词表。此阶段仅接入数据，词库尚未加入页面选词或自动填盘流程。

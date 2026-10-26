@@ -1,0 +1,158 @@
+"""Convert the supplied word workbook to static JSON without changing the XLSX."""
+
+import hashlib
+import json
+import posixpath
+import re
+import tempfile
+import xml.etree.ElementTree as ET
+from pathlib import Path
+from zipfile import ZipFile
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE = ROOT / "data" / "source" / "四游戏词库_精简版.xlsx"
+DESTINATION = ROOT / "dist" / "data"
+NS = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+RELATIONSHIP_ID = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
+GROUPS = (("required", "必答词"), ("extra", "额外词"))
+FIELDS = (
+    ("word", "单词"),
+    ("scope", "范围库"),
+    ("phonetic", "音标"),
+    ("emotion", "情绪类型"),
+    ("abbreviation", "是否缩写"),
+    ("rarityLevel", "生僻档位"),
+    ("definitionEn", "英文注释"),
+    ("definitionZh", "中文注释"),
+)
+
+
+def text_value(node):
+    if node is None:
+        return ""
+    # Read text and rich-text runs, excluding optional phonetic annotations.
+    value = (node.findtext("s:t", default="", namespaces=NS)
+             + "".join(run.findtext("s:t", default="", namespaces=NS)
+                       for run in node.findall("s:r", NS)))
+    return re.sub(r"_x([0-9A-Fa-f]{4})_", lambda match: chr(int(match[1], 16)), value)
+
+
+def cell_value(cell, shared_strings):
+    if cell.find("s:f", NS) is not None:
+        raise ValueError(f"单元格 {cell.get('r')} 包含公式，请先在词库中转为确定的值。")
+    kind = cell.get("t", "n")
+    if kind == "inlineStr":
+        return text_value(cell.find("s:is", NS))
+    value = cell.findtext("s:v", namespaces=NS)
+    if value is None:
+        return None
+    if kind == "s":
+        return shared_strings[int(value)]
+    if kind == "b":
+        return value == "1"
+    if kind == "e":
+        raise ValueError(f"单元格 {cell.get('r')} 包含 Excel 错误：{value}")
+    if kind == "n":
+        number = float(value)
+        return int(number) if number.is_integer() else number
+    return value
+
+
+def read_records(archive, sheet_path, shared_strings, group):
+    sheet = ET.fromstring(archive.read(sheet_path))
+    records = []
+    header_found = False
+    for row in sheet.findall("s:sheetData/s:row", NS):
+        row_number = int(row.attrib["r"])
+        cells = {re.sub(r"\d", "", cell.attrib["r"]): cell_value(cell, shared_strings)
+                 for cell in row.findall("s:c", NS)}
+        if not any(value is not None and value != "" for value in cells.values()):
+            continue
+        if any(key not in set("ABCDEFGH") and value is not None for key, value in cells.items()):
+            raise ValueError(f"{group} 第 {row_number} 行有未识别的额外字段。")
+        values = [cells.get(column) for column in "ABCDEFGH"]
+        if not header_found:
+            if values != [label for _, label in FIELDS]:
+                raise ValueError(f"{group} 的表头与预期字段不一致：{values}")
+            header_found = True
+            continue
+        if not isinstance(values[0], str) or not values[0].strip():
+            raise ValueError(f"{group} 第 {row_number} 行缺少有效单词。")
+        record = {"id": f"{group}:{row_number}", "sourceRow": row_number}
+        record.update((key, value) for (key, _), value in zip(FIELDS, values))
+        records.append(record)
+    if not header_found:
+        raise ValueError(f"{group} 缺少表头。")
+    return records
+
+
+def write_atomic(path, content):
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as temporary:
+        temporary.write(content)
+        temp_path = Path(temporary.name)
+    try:
+        temp_path.chmod(0o644)
+        temp_path.replace(path)
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
+def main():
+    source_bytes = SOURCE.read_bytes()
+    manifest = {
+        "schemaVersion": 1,
+        "source": {
+            "fileName": SOURCE.name,
+            "sha256": hashlib.sha256(source_bytes).hexdigest(),
+        },
+        "fields": [{"key": key, "label": label} for key, label in FIELDS],
+        "groups": [],
+        "totalCount": 0,
+    }
+    outputs = {}
+    with ZipFile(SOURCE) as archive:
+        shared_strings = []
+        if "xl/sharedStrings.xml" in archive.namelist():
+            shared_strings = [text_value(item) for item in
+                              ET.fromstring(archive.read("xl/sharedStrings.xml"))]
+        relationships = {item.attrib["Id"]: item for item in
+                         ET.fromstring(archive.read("xl/_rels/workbook.xml.rels"))}
+        workbook = ET.fromstring(archive.read("xl/workbook.xml"))
+        sheets = {sheet.attrib["name"]: sheet for sheet in workbook.find("s:sheets", NS)}
+        if set(sheets) != {label for _, label in GROUPS}:
+            raise ValueError(f"工作表与预期不一致：{list(sheets)}")
+
+        for key, label in GROUPS:
+            relationship = relationships[sheets[label].attrib[RELATIONSHIP_ID]]
+            if relationship.get("TargetMode") == "External":
+                raise ValueError("词库工作表必须保存在当前文件中。")
+            target = relationship.attrib["Target"]
+            sheet_path = (target.lstrip("/") if target.startswith("/")
+                          else posixpath.normpath(posixpath.join("xl", target)))
+            records = read_records(archive, sheet_path, shared_strings, key)
+            # Preserve order, duplicates, original text, numbers, zeros and blanks.
+            payload = ("[\n" + ",\n".join(json.dumps(record, ensure_ascii=False, allow_nan=False,
+                         separators=(",", ":")) for record in records) + "\n]\n").encode("utf-8")
+            filename = f"{key}-words.json"
+            outputs[filename] = payload
+            manifest["groups"].append({
+                "key": key,
+                "label": label,
+                "count": len(records),
+                "file": filename,
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            })
+            manifest["totalCount"] += len(records)
+
+    outputs["word-bank.json"] = (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    DESTINATION.mkdir(parents=True, exist_ok=True)
+    for filename, content in outputs.items():
+        write_atomic(DESTINATION / filename, content)
+    for group in manifest["groups"]:
+        print(f"{group['label']}：{group['count']:,} 条")
+    print(f"共 {manifest['totalCount']:,} 条，已导入 {DESTINATION}")
+
+
+if __name__ == "__main__":
+    main()

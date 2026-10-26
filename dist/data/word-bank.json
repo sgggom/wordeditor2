@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "fileName": "四游戏词库_精简版.xlsx",
+    "sha256": "0c8c4ba9a5bc6d94cb12a25def4b5095aaabc5aeda22049a7cf95920379327e7"
+  },
+  "fields": [
+    {
+      "key": "word",
+      "label": "单词"
+    },
+    {
+      "key": "scope",
+      "label": "范围库"
+    },
+    {
+      "key": "phonetic",
+      "label": "音标"
+    },
+    {
+      "key": "emotion",
+      "label": "情绪类型"
+    },
+    {
+      "key": "abbreviation",
+      "label": "是否缩写"
+    },
+    {
+      "key": "rarityLevel",
+      "label": "生僻档位"
+    },
+    {
+      "key": "definitionEn",
+      "label": "英文注释"
+    },
+    {
+      "key": "definitionZh",
+      "label": "中文注释"
+    }
+  ],
+  "groups": [
+    {
+      "key": "required",
+      "label": "必答词",
+      "count": 10748,
+      "file": "required-words.json",
+      "sha256": "2e11476a460ada91942b99efe2643e99cbf5937cd1b22e57d972398bb08b12c1"
+    },
+    {
+      "key": "extra",
+      "label": "额外词",
+      "count": 11692,
+      "file": "extra-words.json",
+      "sha256": "862fe4393760d2861b60ba97cfe8c49e12042ff8b2be0999e4e1bc269d3f5a7e"
+    }
+  ],
+  "totalCount": 22440
+}

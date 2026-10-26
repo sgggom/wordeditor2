@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
+    "import:words": "python3 scripts/import-word-bank.py",
     "check": "node --check dist/app.js && node --check scripts/serve.mjs"
   }
 }
