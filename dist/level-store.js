@@ -88,6 +88,24 @@ export function deleteSavedLevel(id) {
   });
 }
 
+export function importSavedLevels(levels) {
+  if (!Array.isArray(levels) || !levels.length) throw new Error("没有可导入的关卡。");
+  const snapshots = structuredClone(levels);
+  return transact("readwrite", (store, request, done) => {
+    request(store.getAll(), records => {
+      const position = records.reduce((maximum, record) => Math.max(maximum, positionOf(record)), 0);
+      const added = [];
+      for (const [index, level] of snapshots.entries()) {
+        const record = { createdAt: Date.now(), position: position + index + 1, level };
+        request(store.add(record), id => {
+          added.push({ ...record, id });
+          if (added.length === snapshots.length) done(ordered([...records, ...added]));
+        });
+      }
+    });
+  });
+}
+
 export function moveSavedLevel(id, direction) {
   if (direction !== -1 && direction !== 1) throw new Error("关卡移动方向无效。");
   return transact("readwrite", (store, request, done) => {

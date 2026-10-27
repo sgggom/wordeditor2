@@ -250,6 +250,8 @@
           <div class="saved-level-actions">
             <button type="button" id="add-level-to-list" class="generate-button" disabled>加入关卡列表</button>
             <button type="button" id="export-levels" class="reset-button" title="按列表顺序导出已保存关卡" disabled>导出关卡</button>
+            <button type="button" id="import-levels" class="reset-button" title="读取 JSON 并追加到关卡列表" disabled>导入关卡</button>
+            <input type="file" id="import-levels-file" accept=".json,application/json" hidden>
           </div>
           <p id="saved-level-error" class="saved-level-error" role="alert" hidden></p>
           <div id="saved-level-list" class="saved-level-list" aria-label="已保存的关卡"></div>

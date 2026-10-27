@@ -166,6 +166,7 @@ legend { padding: 0; margin-bottom: 5px; color: #66705f; font-size: 11px; }
 .saved-level-actions .generate-button { width: 100%; height: 32px; padding: 0 6px; }
 .saved-level-actions .generate-button:disabled { cursor: default; }
 .saved-level-actions #export-levels { width: 100%; height: 30px; margin-top: 6px; }
+.saved-level-actions #import-levels { width: 100%; height: 30px; margin-top: 6px; }
 .saved-level-error { flex-shrink: 0; max-height: 52px; margin: 0 8px 8px; overflow: auto; color: #a33d30; font-size: 11px; line-height: 1.5; }
 .saved-level-list { flex: 1; display: flex; flex-direction: column; gap: 7px; min-height: 0; padding: 0 8px 8px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .saved-level-empty { margin: 6px 0; color: #89977e; font-size: 11px; text-align: center; }

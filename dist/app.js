@@ -41,6 +41,8 @@ import { gameExportText } from "./level-export.js";
   const levelDataContent = document.querySelector("#level-data-content");
   const addLevelButton = document.querySelector("#add-level-to-list");
   const exportLevelsButton = document.querySelector("#export-levels");
+  const importLevelsButton = document.querySelector("#import-levels");
+  const importLevelsFile = document.querySelector("#import-levels-file");
   const savedLevelList = document.querySelector("#saved-level-list");
   const savedLevelCount = document.querySelector("#saved-level-count");
   const savedLevelError = document.querySelector("#saved-level-error");
@@ -175,6 +177,8 @@ import { gameExportText } from "./level-export.js";
 
   function renderSavedLevels() {
     const busy = generating || savingLevel || updatingLevelList || batchRunning;
+    importLevelsButton.disabled = busy || exportingLevels || !levelLibraryReady;
+    importLevelsButton.textContent = updatingLevelList ? "处理中…" : "导入关卡";
     savedLevelCount.textContent = String(savedLevels.length);
     exportLevelsButton.disabled = exportingLevels || savingLevel || updatingLevelList || batchRunning || !levelLibraryReady || !savedLevels.length;
     exportLevelsButton.textContent = exportingLevels ? "导出中…" : "导出关卡";
@@ -1014,6 +1018,39 @@ import { gameExportText } from "./level-export.js";
     } finally {
       exportingLevels = false;
       renderSavedLevels();
+    }
+  });
+
+  importLevelsButton.addEventListener("click", () => {
+    if (!importLevelsButton.disabled) importLevelsFile.click();
+  });
+  importLevelsFile.addEventListener("change", async () => {
+    const file = importLevelsFile.files[0];
+    importLevelsFile.value = "";
+    if (!file || importLevelsButton.disabled) return;
+    updatingLevelList = true;
+    savedLevelError.hidden = true;
+    render();
+    let worker;
+    try {
+      const text = await file.text();
+      const levels = await new Promise((resolve, reject) => {
+        worker = new Worker("./import-worker.js", { type: "module" });
+        worker.onmessage = ({ data }) => data.error ? reject(new Error(data.error)) : resolve(data.levels);
+        worker.onerror = () => reject(new Error("关卡读取失败，请刷新重试。"));
+        worker.postMessage(text);
+      });
+      const previousCount = savedLevels.length;
+      savedLevels = await (await getLevelStore()).importSavedLevels(levels);
+      savedLevelListDirty = true;
+      openSavedLevel(savedLevels[previousCount].id);
+    } catch (error) {
+      savedLevelError.textContent = `导入失败：${error.message || "无法保存关卡。"}`;
+      savedLevelError.hidden = false;
+    } finally {
+      worker?.terminate();
+      updatingLevelList = false;
+      render();
     }
   });
 
