@@ -41,14 +41,14 @@
   "groups": [
     {
       "key": "required",
-      "label": "必答词",
+      "label": "普通词库",
       "count": 10748,
       "file": "required-words.json",
       "sha256": "2e11476a460ada91942b99efe2643e99cbf5937cd1b22e57d972398bb08b12c1"
     },
     {
       "key": "extra",
-      "label": "额外词",
+      "label": "仅额外词库",
       "count": 11692,
       "file": "extra-words.json",
       "sha256": "862fe4393760d2861b60ba97cfe8c49e12042ff8b2be0999e4e1bc269d3f5a7e"

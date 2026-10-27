@@ -4,47 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f5f6f3" />
-    <meta name="description" content="从一张棋盘开始，创建你的关卡。自由调整 2–3 行、3–5 列，即时预览网格。" />
-    <title>关卡编辑器 · 方格</title>
+    <title>关卡编辑器</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css" />
-    <script src="./app.js" defer></script>
+    <script src="./app.js" type="module"></script>
   </head>
   <body>
     <header class="app-header">
       <div class="header-inner">
-        <div class="brand">
-          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <span class="brand-name">方格<span class="brand-en">FANGGE</span></span>
-        </div>
-        <span class="header-divider" aria-hidden="true"></span>
-        <span class="app-name">关卡编辑器</span>
-        <span class="version">初始构建 <span>v0.1</span></span>
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <h1 class="app-name">关卡编辑器</h1>
+        <button type="button" id="open-config-list" class="reset-button" aria-haspopup="dialog">关卡配置列表</button>
       </div>
     </header>
 
     <main class="main">
-      <section class="page-heading" aria-labelledby="page-title">
-        <div>
-          <p class="eyebrow">A LITTLE GRID, A NEW WORLD</p>
-          <h1 id="page-title">从一张棋盘开始<span class="title-dot">。</span></h1>
-          <p class="page-description">设定棋盘的行与列，为你的下一个关卡留好空间。</p>
-        </div>
-        <span class="live-badge"><span class="status-dot"></span>实时预览</span>
-      </section>
-
-      <div class="editor">
-        <aside class="settings-panel" aria-labelledby="settings-title">
-          <div class="panel-heading">
-            <span class="section-index">01</span>
-            <h2 id="settings-title">棋盘尺寸</h2>
-          </div>
-          <p class="panel-description">选择适合关卡的网格大小。</p>
+      <section class="settings-panel" aria-labelledby="settings-title">
+          <h2 id="settings-title" class="sr-only">关卡配置</h2>
 
           <form id="size-form">
             <div class="dimension-fields">
               <fieldset>
-                <legend>行数 <span>ROWS</span></legend>
+                <legend>行数</legend>
                 <div class="choices rows-choices">
                   <label class="choice">
                     <input type="radio" name="rows" value="2" />
@@ -58,7 +39,7 @@
               </fieldset>
 
               <fieldset>
-                <legend>列数 <span>COLUMNS</span></legend>
+                <legend>列数</legend>
                 <div class="choices columns-choices">
                   <label class="choice">
                     <input type="radio" name="columns" value="3" />
@@ -76,22 +57,160 @@
               </fieldset>
             </div>
 
+            <div class="target-setting">
+              <label for="target-config-toggle">关卡目标词</label>
+              <button type="button" id="target-config-toggle" class="target-config-toggle" popovertarget="target-config-panel" aria-haspopup="dialog"><span id="target-config-summary">6 词</span><span aria-hidden="true">▾</span></button>
+            </div>
+
+            <div class="target-setting initial-max-length-setting">
+              <label for="initial-max-word-length" title="限制初始词长度，同时受最长单词长度约束。">初始词最长</label>
+              <input id="initial-max-word-length" name="initialMaxWordLength" type="number" min="1" step="1" value="8" inputmode="numeric" required />
+            </div>
+
+            <div class="target-setting max-length-setting">
+              <label for="max-word-length" title="限制所有关卡目标的长度，包括初始词和候选转目标词；额外词仍完整检索。">最长单词长度</label>
+              <input id="max-word-length" name="maxWordLength" type="number" min="1" step="1" value="8" inputmode="numeric" required />
+            </div>
+
+            <div class="target-setting forward-probability-setting">
+              <label for="initial-forward-probability" title="正向为向右或向下起步。在填充空格数相同的摆法中，0%优先反向，100%优先正向；无可用摆法时尝试另一方向。">初始正向概率</label>
+              <div class="percentage-input">
+                <input id="initial-forward-probability" name="initialForwardProbability" type="number" min="0" max="100" step="1" value="50" inputmode="numeric" required />
+                <span aria-hidden="true">%</span>
+              </div>
+            </div>
+
+            <div class="target-setting duplicate-range-setting">
+              <label for="target-duplicate-range" title="当前目标词与关卡列表中最近 N 关的目标词查重；0 为关闭。">目标词查重</label>
+              <div class="percentage-input">
+                <input id="target-duplicate-range" name="targetDuplicateRange" type="number" min="0" step="1" value="20" required />
+                <span>关</span>
+              </div>
+            </div>
+
+            <div class="target-setting duplicate-range-setting">
+              <label for="extra-duplicate-range" title="当前额外词与关卡列表中最近 N 关的额外词查重；0 为关闭。">额外词查重</label>
+              <div class="percentage-input">
+                <input id="extra-duplicate-range" name="extraDuplicateRange" type="number" min="0" step="1" value="20" required />
+                <span>关</span>
+              </div>
+            </div>
+
             <div class="capacity">
-              <div><span class="capacity-label">棋盘容量</span><p>行数 × 列数</p></div>
+              <span class="capacity-label">格子数</span>
               <div class="capacity-value"><output id="cell-count">12</output><span>格</span></div>
             </div>
 
-            <button type="button" id="reset-size" class="reset-button" disabled>
-              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 8A6.5 6.5 0 1 1 4.8 14M3.5 3.5V8H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              恢复默认尺寸
-            </button>
-          </form>
+            <div class="form-actions">
+              <button type="button" id="filter-toggle" class="reset-button filter-toggle" popovertarget="word-filter-panel">词库筛选 <span id="filter-summary" class="filter-summary">全部</span></button>
+              <button type="button" id="generate-level" class="generate-button">生成关卡</button>
+              <button type="button" id="reset-size" class="reset-button" disabled>
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 8A6.5 6.5 0 1 1 4.8 14M3.5 3.5V8H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                恢复默认
+              </button>
+            </div>
+            <div id="target-config-panel" class="filter-panel target-config-panel" popover role="dialog" aria-labelledby="target-config-title">
+              <div class="filter-panel-heading">
+                <h2 id="target-config-title">关卡目标词</h2>
+                <button type="button" class="filter-close" popovertarget="target-config-panel" popovertargetaction="hide" aria-label="关闭关卡目标词配置">×</button>
+              </div>
+              <div class="target-config-count">
+                <label for="target-count">目标数量</label>
+                <input id="target-count" name="targetCount" type="number" min="1" step="1" value="6" inputmode="numeric" required />
+              </div>
+              <label class="target-plan-switch"><input id="target-plan-enabled" type="checkbox" />逐个配置词长</label>
+              <div id="target-plan-fields" hidden>
+                <div id="target-plan-slots" class="target-plan-slots"></div>
+                <output id="target-plan-summary" class="target-plan-summary" aria-live="polite"></output>
+              </div>
+              <p id="target-config-error" class="generation-error target-config-error" role="alert" hidden></p>
+              <div class="filter-footer">
+                <button type="button" id="apply-target-config" class="generate-button">完成</button>
+              </div>
+            </div>
 
-          <div class="settings-note">
-            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m4.5 10 3.5 3.5 7.5-7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
-            <p id="storage-note">修改即生效，尺寸自动保存在本机。</p>
+            <div id="word-filter-panel" class="filter-panel" popover aria-labelledby="filter-title">
+              <div class="filter-panel-heading">
+                <h2 id="filter-title">词库筛选</h2>
+                <button type="button" class="filter-close" popovertarget="word-filter-panel" popovertargetaction="hide" aria-label="关闭词库筛选">×</button>
+              </div>
+              <div class="filter-fields">
+                <fieldset>
+                  <legend>范围库</legend>
+                  <div class="filter-options">
+                    <label><input type="checkbox" data-word-filter="scope" value="1" checked />1</label>
+                    <label><input type="checkbox" data-word-filter="scope" value="2" checked />2</label>
+                    <label><input type="checkbox" data-word-filter="scope" value="3" checked />3</label>
+                    <label><input type="checkbox" data-word-filter="scope" value="4" checked />4</label>
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend>情绪类型</legend>
+                  <div class="filter-options">
+                    <label><input type="checkbox" data-word-filter="emotion" value="-2" checked />-2</label>
+                    <label><input type="checkbox" data-word-filter="emotion" value="-1" checked />-1</label>
+                    <label><input type="checkbox" data-word-filter="emotion" value="0" checked />0</label>
+                    <label><input type="checkbox" data-word-filter="emotion" value="1" checked />1</label>
+                    <label><input type="checkbox" data-word-filter="emotion" value="2" checked />2</label>
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend>是否缩写</legend>
+                  <div class="filter-options">
+                    <label><input type="checkbox" data-word-filter="abbreviation" value="0" checked />非缩写</label>
+                    <label><input type="checkbox" data-word-filter="abbreviation" value="1" checked />缩写</label>
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend>生僻档位</legend>
+                  <div class="filter-options">
+                    <label><input type="checkbox" data-word-filter="rarityLevel" value="1" checked />1</label>
+                    <label><input type="checkbox" data-word-filter="rarityLevel" value="2" checked />2</label>
+                    <label><input type="checkbox" data-word-filter="rarityLevel" value="3" checked />3</label>
+                    <label><input type="checkbox" data-word-filter="rarityLevel" value="4" checked />4</label>
+                    <label><input type="checkbox" data-word-filter="rarityLevel" value="5" checked />5</label>
+                  </div>
+                </fieldset>
+              </div>
+              <div class="filter-footer">
+                <button type="button" id="reset-filters" class="reset-button">重置筛选</button>
+                <button type="button" class="generate-button" popovertarget="word-filter-panel" popovertargetaction="hide">完成</button>
+              </div>
+            </div>
+            <p id="generation-error" class="generation-error" role="alert" hidden></p>
+          </form>
+      </section>
+
+      <section id="batch-run-bar" class="batch-run-bar" aria-label="配置列表运行进度" hidden>
+        <output id="batch-run-status" aria-live="polite"></output>
+        <progress id="batch-run-progress" value="0" max="1" aria-label="已保存的关卡进度"></progress>
+        <button type="button" id="stop-batch-run" class="reset-button">停止运行</button>
+      </section>
+
+      <div class="editor">
+        <section class="word-card all-words-panel" aria-labelledby="words-title">
+          <header class="word-panel-heading">
+            <h2 id="words-title">当前关卡所有词</h2>
+            <div class="word-counts">
+              <span class="target-word-count">目标词 <output id="target-word-count" aria-label="目标词数量">0</output></span>
+              <span>额外词 <output id="extra-word-count" aria-label="额外词数量">0</output></span>
+              <span>总数 <output id="word-count" aria-label="当前关卡单词总数">0</output></span>
+            </div>
+          </header>
+          <div class="word-scroll" tabindex="0" aria-label="当前关卡所有词列表">
+            <div class="word-table-header" aria-hidden="true">
+              <span>单词</span>
+              <span data-column="rarity">生僻档位</span>
+              <span data-column="path">路径</span>
+              <span data-column="path-score" title="首向：上1、下0、左1、右0；每个拐点和折返各加1分。0分绿、1分蓝、2分黄、3分及以上红。">路径分</span>
+              <span data-column="initial">初始词</span>
+              <span data-column="candidate">候选词</span>
+              <span data-column="only-extra">仅额外</span>
+              <span data-column="target-selection">目标</span>
+            </div>
+            <div id="word-list" class="word-list"></div>
           </div>
-        </aside>
+        </section>
 
         <section class="preview-panel" aria-labelledby="preview-title">
           <header class="preview-header">
@@ -99,7 +218,18 @@
               <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.4" /><path d="M3 8h14M3 12h14M8 3v14M12 3v14" stroke="currentColor" stroke-width="1.2" /></svg>
               <h2 id="preview-title">棋盘预览</h2>
             </div>
-            <output id="size-summary" class="size-summary" aria-live="polite" aria-atomic="true">3 行 × 4 列</output>
+            <div class="emotion-summary">
+              <span id="emotion-score-label">情绪总分</span>
+              <output id="emotion-score" aria-labelledby="emotion-score-label" aria-live="polite">—</output>
+            </div>
+            <div class="emotion-summary" title="所有目标词的生僻档位之和">
+              <span id="rarity-score-label">生僻总分</span>
+              <output id="rarity-score" aria-labelledby="rarity-score-label" aria-live="polite">—</output>
+            </div>
+            <div class="preview-actions">
+              <output id="size-summary" class="size-summary" aria-live="polite" aria-atomic="true">3 行 × 4 列</output>
+              <button type="button" id="level-data-toggle" class="reset-button" popovertarget="level-data-panel" disabled>关卡数据</button>
+            </div>
           </header>
 
           <div class="board-stage">
@@ -109,20 +239,88 @@
               <div class="row-labels" id="row-labels" aria-hidden="true"></div>
               <div class="board" id="board" role="table" aria-label="空白棋盘，3 行 4 列" aria-rowcount="3" aria-colcount="4"></div>
             </div>
-            <noscript><p class="noscript-note">请开启浏览器 JavaScript，以预览和调整棋盘。</p></noscript>
           </div>
+        </section>
 
-          <footer class="preview-footer">
-            <span><span class="empty-cell-key" aria-hidden="true"></span>空白格子</span>
-            <span id="board-footnote">12 个格子，等待你的创意</span>
-          </footer>
+        <section class="saved-level-panel" aria-labelledby="saved-levels-title">
+          <header class="saved-level-heading">
+            <h2 id="saved-levels-title">关卡列表</h2>
+            <output id="saved-level-count" aria-label="已加入的关卡数量">0</output>
+          </header>
+          <div class="saved-level-actions">
+            <button type="button" id="add-level-to-list" class="generate-button" disabled>加入关卡列表</button>
+            <button type="button" id="export-levels" class="reset-button" title="按列表顺序导出已保存关卡" disabled>导出关卡</button>
+          </div>
+          <p id="saved-level-error" class="saved-level-error" role="alert" hidden></p>
+          <div id="saved-level-list" class="saved-level-list" aria-label="已保存的关卡"></div>
         </section>
       </div>
 
-      <footer class="page-footer">
-        <span>小小方格，无限可能。</span>
-        <span class="range-note">2–3 行 <span>·</span> 3–5 列 <span>·</span> 6 种布局</span>
-      </footer>
+      <section id="level-data-panel" class="filter-panel level-data-panel" popover aria-labelledby="level-data-title">
+        <div class="filter-panel-heading">
+          <h2 id="level-data-title">关卡数据</h2>
+          <button type="button" class="filter-close" popovertarget="level-data-panel" popovertargetaction="hide" aria-label="关闭关卡数据">×</button>
+        </div>
+        <div id="level-data-content" class="level-data-content" tabindex="0" aria-label="关卡统计数据"></div>
+      </section>
+
     </main>
+
+    <dialog id="level-config-dialog" class="config-list-dialog" aria-labelledby="config-list-title">
+      <header class="config-dialog-heading">
+        <h2 id="config-list-title">关卡配置列表 <span>共 <output id="config-list-count">0</output> 关</span></h2>
+        <button type="button" class="filter-close" data-close-config-list aria-label="关闭关卡配置列表">×</button>
+      </header>
+      <div class="config-list-toolbar">
+        <label for="config-add-count">新增</label>
+        <input id="config-add-count" type="number" min="1" max="1500" step="1" value="10" aria-label="新增关数" />
+        <span>关</span>
+        <button type="button" id="add-config-rows" class="reset-button" title="按编辑器当前配置新增多关">添加</button>
+        <button type="button" id="delete-config-rows" class="reset-button" disabled>删除所选</button>
+        <span id="config-worker-info" class="config-worker-info" aria-live="polite"></span>
+        <span class="config-selection-count">已选 <output id="config-selected-count">0</output> 关</span>
+      </div>
+      <div class="config-list-toolbar config-batch-toolbar">
+        <label for="config-batch-field">批量设置</label>
+        <select id="config-batch-field"></select>
+        <input id="config-batch-value" type="number" step="1" />
+        <button type="button" id="apply-config-batch" class="generate-button" disabled>应用到所选</button>
+      </div>
+      <div class="config-table-scroll" tabindex="0" aria-label="多关配置列表">
+        <table class="config-table">
+          <thead><tr>
+            <th class="config-select-column"><input id="config-select-all" type="checkbox" aria-label="全选关卡配置" /></th>
+            <th class="config-index-column">关卡</th>
+            <th class="config-size-column">行</th><th class="config-size-column">列</th>
+            <th>目标数量</th><th class="config-plan-column">目标词长</th>
+            <th>初始词最长</th><th>最长单词</th><th>初始正向 %</th>
+            <th>目标查重</th><th>额外查重</th><th>词库筛选</th><th class="config-use-column">操作</th>
+          </tr></thead>
+          <tbody id="config-list-body"></tbody>
+        </table>
+      </div>
+      <p id="config-list-error" class="config-list-error" role="alert" hidden></p>
+      <div id="config-run-progress" class="config-run-progress" hidden>
+        <output id="config-run-status" aria-live="polite"></output>
+        <progress id="config-run-meter" value="0" max="1" aria-label="配置列表运行进度"></progress>
+      </div>
+      <footer class="config-dialog-footer">
+        <button type="button" id="run-selected-configs" class="generate-button" disabled>运行所选</button>
+        <button type="button" id="run-all-configs" class="generate-button">运行全部</button>
+        <button type="button" id="stop-config-run" class="reset-button" hidden>停止运行</button>
+        <button type="button" class="reset-button" data-close-config-list>关闭</button>
+        <button type="button" id="save-config-list" class="generate-button">保存配置</button>
+      </footer>
+    </dialog>
+
+    <dialog id="config-detail-dialog" class="config-detail-dialog" aria-labelledby="config-detail-title">
+      <header class="filter-panel-heading">
+        <h2 id="config-detail-title">关卡配置</h2>
+        <button type="button" id="close-config-detail" class="filter-close" aria-label="关闭配置详情">×</button>
+      </header>
+      <div id="config-detail-content"></div>
+      <p id="config-detail-error" class="config-list-error" role="alert" hidden></p>
+      <footer class="filter-footer"><button type="button" id="apply-config-detail" class="generate-button">完成</button></footer>
+    </dialog>
   </body>
 </html>

@@ -16,6 +16,7 @@ DESTINATION = ROOT / "dist" / "data"
 NS = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 RELATIONSHIP_ID = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
 GROUPS = (("required", "必答词"), ("extra", "额外词"))
+GROUP_LABELS = {"required": "普通词库", "extra": "仅额外词库"}
 FIELDS = (
     ("word", "单词"),
     ("scope", "范围库"),
@@ -138,7 +139,7 @@ def main():
             outputs[filename] = payload
             manifest["groups"].append({
                 "key": key,
-                "label": label,
+                "label": GROUP_LABELS[key],
                 "count": len(records),
                 "file": filename,
                 "sha256": hashlib.sha256(payload).hexdigest(),
