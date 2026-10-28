@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createBatchRunner } from "../dist/batch-runner.js";
+import { configJobsInRange } from "../dist/level-config.js";
 
 const config = () => ({ rows: 3, columns: 4, targetCount: 6, targetLengthPlan: null,
   initialMaxWordLength: 4, maxWordLength: 6, initialForwardProbability: 80,
@@ -145,4 +146,22 @@ test("fatal generation errors and unreadable history stop without writing a resu
     save: async () => { assert.fail("Should not save"); },
   });
   assert.equal((await badHistory.run(jobs())).error, "Database unavailable");
+});
+
+test("a range run generates and saves only its inclusive configuration interval", async () => {
+  const records = Array.from({ length: 6 }, (_, index) => ({ id: `row-${index + 1}`,
+    config: { ...config(), initialForwardProbability: (index + 1) * 10 } }));
+  const seen = [], saved = [];
+  const runner = createBatchRunner({
+    getHistory: async () => [],
+    generate: async settings => { seen.push(settings.initialForwardProbability); return level(`WORD${seen.length}`); },
+    save: async generated => { const record = { id: saved.length + 1, level: generated }; saved.push(record); return record; },
+  });
+  const state = await runner.run(configJobsInRange(records, 2, 4));
+  assert.equal(state.phase, "complete");
+  assert.equal(state.completed, 3);
+  assert.deepEqual(seen, [20, 30, 40]);
+  assert.deepEqual(saved.map(record => record.level.sourceConfig), [
+    { id: "row-2", position: 2 }, { id: "row-3", position: 3 }, { id: "row-4", position: 4 },
+  ]);
 });

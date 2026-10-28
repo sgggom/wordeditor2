@@ -309,11 +309,31 @@
       </div>
       <footer class="config-dialog-footer">
         <button type="button" id="run-selected-configs" class="generate-button" disabled>运行所选</button>
-        <button type="button" id="run-all-configs" class="generate-button">运行全部</button>
+        <button type="button" id="run-all-configs" class="generate-button">批量生成</button>
         <button type="button" id="stop-config-run" class="reset-button" hidden>停止运行</button>
         <button type="button" class="reset-button" data-close-config-list>关闭</button>
         <button type="button" id="save-config-list" class="generate-button">保存配置</button>
       </footer>
+    </dialog>
+
+    <dialog id="config-run-range-dialog" class="config-detail-dialog config-run-range-dialog" aria-labelledby="config-run-range-title">
+      <header class="filter-panel-heading">
+        <h2 id="config-run-range-title">生成范围</h2>
+        <button type="button" class="filter-close" data-close-run-range aria-label="关闭生成范围">×</button>
+      </header>
+      <form id="config-run-range-form" novalidate>
+        <div class="config-run-range-fields">
+          <label for="config-run-from">起始关<input id="config-run-from" type="number" min="1" step="1" required /></label>
+          <span aria-hidden="true">—</span>
+          <label for="config-run-to">结束关<input id="config-run-to" type="number" min="1" step="1" required /></label>
+        </div>
+        <output id="config-run-range-summary" class="config-run-range-summary" aria-live="polite"></output>
+        <p id="config-run-range-error" class="config-list-error" role="alert" hidden></p>
+        <footer class="filter-footer">
+          <button type="button" class="reset-button" data-close-run-range>取消</button>
+          <button type="submit" class="generate-button" id="start-config-range">开始生成</button>
+        </footer>
+      </form>
     </dialog>
 
     <dialog id="config-detail-dialog" class="config-detail-dialog" aria-labelledby="config-detail-title">

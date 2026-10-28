@@ -154,6 +154,12 @@ legend { padding: 0; margin-bottom: 5px; color: #66705f; font-size: 11px; }
 .config-detail-dialog input[type="number"] { width: 76px; text-align: center; }
 .config-detail-dialog .config-list-error { margin: 0 0 12px; }
 .config-detail-dialog .target-plan-slots { max-height: min(360px, 48dvh); }
+.config-run-range-dialog { width: 360px; }
+.config-run-range-fields { display: grid; grid-template-columns: 1fr 20px 1fr; align-items: end; gap: 10px; margin: 18px 0 12px; }
+.config-run-range-fields label { display: grid; gap: 7px; color: #52664a; font-size: 12px; }
+.config-run-range-fields > span { padding-bottom: 10px; text-align: center; color: #819173; }
+.config-run-range-fields input[type="number"] { width: 100%; height: 38px; font-size: 16px; }
+.config-run-range-summary { display: block; margin: 0 0 14px; padding: 10px; border-radius: 6px; background: #f0f5e9; color: #52664a; font-size: 12px; text-align: center; }
 .config-detail-dialog.fixed-board-dialog { width: 900px; max-width: calc(100vw - 40px); }
 .fixed-board-editor { display: grid; grid-template-columns: minmax(360px, 1fr) 300px; gap: 22px; height: min(490px, calc(100dvh - 190px)); min-height: 0; margin: 12px 0; }
 .fixed-board-side, .fixed-search-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }

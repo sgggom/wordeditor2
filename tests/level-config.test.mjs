@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { CONFIG_LIST_STORAGE_KEY, patchLevelConfigs, readConfigList, resizeTargetPlan, saveConfigList,
-  validateConfigList, validateLevelConfig } from "../dist/level-config.js";
+  validateConfigList, validateLevelConfig, configJobsInRange } from "../dist/level-config.js";
 
 const config = () => ({ rows: 3, columns: 4, targetCount: 6,
   targetLengthPlan: ["short", "medium", "long", "short", "medium", "long"],
@@ -89,4 +89,25 @@ test("the configuration list supports all 1500 reference levels", () => {
   const full = Array.from({ length: 1500 }, (_, index) => ({ id: `reference-${index + 1}`, config: config() }));
   assert.equal(validateConfigList(full).length, 1500);
   assert.throws(() => validateConfigList([...full, { id: "reference-1501", config: config() }]), /1500/);
+});
+
+test("generation ranges include both endpoints and preserve the displayed configuration numbers", () => {
+  const full = Array.from({ length: 1500 }, (_, index) => ({ id: `reference-${index + 1}`, config: config() }));
+  const before = structuredClone(full);
+  const range = configJobsInRange(full, 20, 50);
+  assert.equal(range.length, 31);
+  assert.deepEqual(range.map(job => job.position), Array.from({ length: 31 }, (_, index) => index + 20));
+  assert.equal(range[0].id, "reference-20");
+  assert.equal(range.at(-1).id, "reference-50");
+  assert.equal(configJobsInRange(full, 1, 1500).length, 1500);
+  assert.deepEqual(configJobsInRange(full, 1500, 1500).map(job => job.position), [1500]);
+  assert.deepEqual(full, before);
+});
+
+test("invalid generation ranges fail instead of truncating, swapping or rounding the request", () => {
+  const list = records();
+  for (const [from, to] of [[0, 2], [1, 4], [3, 2], [1.5, 3], [1, 2.5], [NaN, 2], [1, NaN], ["1", 3], [1, Infinity]]) {
+    assert.throws(() => configJobsInRange(list, from, to), /起始关|结束关/);
+  }
+  assert.throws(() => configJobsInRange([], 1, 1), /为空/);
 });

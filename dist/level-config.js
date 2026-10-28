@@ -82,6 +82,15 @@ export function validateConfigList(records) {
   return records;
 }
 
+export function configJobsInRange(records, from, to) {
+  if (!Array.isArray(records) || !records.length) throw new Error("关卡配置列表为空。");
+  for (const [value, label] of [[from, "起始关"], [to, "结束关"]]) {
+    if (!Number.isSafeInteger(value) || value < 1 || value > records.length) throw new Error(`${label}需为 1～${records.length} 的整数。`);
+  }
+  if (from > to) throw new Error("起始关不能大于结束关。");
+  return records.slice(from - 1, to).map((record, index) => ({ ...record, position: from + index }));
+}
+
 export function readConfigList(storage = localStorage) {
   const raw = storage.getItem(CONFIG_LIST_STORAGE_KEY);
   if (raw === null) return null;

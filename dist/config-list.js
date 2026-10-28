@@ -1,5 +1,5 @@
 import { CONFIG_NUMBER_FIELDS, CONFIG_FILTER_OPTIONS, MAX_CONFIG_ROWS, readConfigList, saveConfigList,
-  patchLevelConfigs, resizeTargetPlan, validateConfigNumber, validateLevelConfig, hasConfigPreset, installConfigPreset } from "./level-config.js";
+  patchLevelConfigs, resizeTargetPlan, validateConfigNumber, validateLevelConfig, hasConfigPreset, installConfigPreset, configJobsInRange } from "./level-config.js";
 import { countTargetLengthPlan } from "./level-generator.js";
 import { renderTargetPlanChoices } from "./target-plan-controls.js";
 import { REFERENCE_CONFIG_ID } from "./reference-config.js";
@@ -27,6 +27,12 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   const detailError = document.querySelector("#config-detail-error");
   const runSelectedButton = document.querySelector("#run-selected-configs");
   const runAllButton = document.querySelector("#run-all-configs");
+  const rangeDialog = document.querySelector("#config-run-range-dialog");
+  const rangeForm = document.querySelector("#config-run-range-form");
+  const rangeFrom = document.querySelector("#config-run-from");
+  const rangeTo = document.querySelector("#config-run-to");
+  const rangeSummary = document.querySelector("#config-run-range-summary");
+  const rangeError = document.querySelector("#config-run-range-error");
   const stopButton = document.querySelector("#stop-config-run");
   const runProgress = document.querySelector("#config-run-progress");
   const runStatus = document.querySelector("#config-run-status");
@@ -81,11 +87,14 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     markRunningRow();
   }
 
-  async function startRun(onlySelected) {
-    if (running || !persist()) return;
-    const jobs = records.map((record, index) => ({ ...record, position: index + 1 }))
-      .filter(record => !onlySelected || selected.has(record.id));
+  async function startRun(jobs) {
+    if (running) return;
+    if (!persist()) {
+      if (rangeDialog.open) showError(error.textContent, rangeError);
+      return;
+    }
     if (!jobs.length) { showError("请先选择要运行的配置。"); return; }
+    if (rangeDialog.open) rangeDialog.close();
     selected = new Set(jobs.map(job => job.id));
     running = true;
     originalDisabled = new WeakMap();
@@ -103,6 +112,15 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
       stopButton.hidden = true;
       renderSelection();
       markRunningRow();
+    }
+  }
+
+  function renderRangeSummary() {
+    try {
+      const jobs = configJobsInRange(records, rangeFrom.valueAsNumber, rangeTo.valueAsNumber);
+      rangeSummary.textContent = `第 ${rangeFrom.valueAsNumber}～${rangeTo.valueAsNumber} 关 · 共 ${jobs.length} 关`;
+    } catch {
+      rangeSummary.textContent = `可选 1～${records.length} 关`;
     }
   }
 
@@ -354,8 +372,27 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   document.querySelector("#close-config-detail").addEventListener("click", () => detail.close());
   detail.addEventListener("close", () => { fixedBoardEditor?.destroy(); fixedBoardEditor = null; detailState = null; });
   saveButton.addEventListener("click", persist);
-  runSelectedButton.addEventListener("click", () => startRun(true));
-  runAllButton.addEventListener("click", () => startRun(false));
+  runSelectedButton.addEventListener("click", () => startRun(records.map((record, index) => ({ ...record, position: index + 1 }))
+    .filter(record => selected.has(record.id))));
+  runAllButton.addEventListener("click", () => {
+    if (running || !records.length) return;
+    rangeFrom.max = rangeTo.max = String(records.length);
+    rangeFrom.value = "1";
+    rangeTo.value = String(records.length);
+    rangeError.hidden = true;
+    renderRangeSummary();
+    rangeDialog.showModal();
+    rangeFrom.focus();
+    rangeFrom.select();
+  });
+  for (const button of rangeDialog.querySelectorAll("[data-close-run-range]")) button.addEventListener("click", () => rangeDialog.close());
+  rangeForm.addEventListener("input", () => { rangeError.hidden = true; renderRangeSummary(); });
+  rangeForm.addEventListener("submit", event => {
+    event.preventDefault();
+    if (!rangeDialog.open || running) return;
+    try { startRun(configJobsInRange(records, rangeFrom.valueAsNumber, rangeTo.valueAsNumber)); }
+    catch (failure) { showError(failure.message, rangeError); }
+  });
   stopButton.addEventListener("click", () => stopRun());
   selectAll.addEventListener("change", () => {
     if (running) return;
