@@ -5,6 +5,7 @@ import { renderTargetPlanChoices } from "./target-plan-controls.js";
 import { REFERENCE_CONFIG_ID } from "./reference-config.js";
 import { formatBatchState } from "./batch-runner.js";
 import { defaultGenerationWorkers, detectedProcessorCount } from "./generation-client.js";
+import { mountFixedBoardEditor } from "./fixed-board-editor.js";
 
 export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) {
   const openButton = document.querySelector("#open-config-list");
@@ -31,11 +32,12 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   const runStatus = document.querySelector("#config-run-status");
   const runMeter = document.querySelector("#config-run-meter");
   const workerInfo = document.querySelector("#config-worker-info");
-  const columns = ["rows", "columns", "targetCount", "targets", "initialMaxWordLength", "maxWordLength",
+  const columns = ["rows", "columns", "targetCount", "targets", "fixedWords", "initialMaxWordLength", "maxWordLength",
     "initialForwardProbability", "targetDuplicateRange", "extraDuplicateRange", "filters"];
   let records = [];
   let selected = new Set();
   let detailState = null;
+  let fixedBoardEditor = null;
   let presetLoadError = "";
   let running = false;
   let runState = null;
@@ -206,9 +208,11 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
           button.type = "button";
           button.className = "config-cell-button";
           button.dataset.configAction = field;
-          button.textContent = field === "targets" ? planSummary(record.config)
+          button.textContent = field === "fixedWords" ? record.config.fixedWords?.join(" · ") || "未设置"
+            : field === "targets" ? planSummary(record.config)
             : Object.keys(record.config.filters).length ? `${Object.keys(record.config.filters).length} 项筛选` : "全部";
-          button.setAttribute("aria-label", `第 ${index + 1} 关${field === "targets" ? "目标词长配置" : "词库筛选"}`);
+          if (field === "fixedWords") button.title = record.config.fixedWords?.join(", ") || "设置一个或多个固定单词";
+          button.setAttribute("aria-label", `第 ${index + 1} 关${field === "targets" ? "目标词长配置" : field === "fixedWords" ? "固定单词" : "词库筛选"}`);
           cell.append(button);
         }
         row.append(cell);
@@ -229,7 +233,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     if (!records.length) {
       const row = document.createElement("tr");
       const cell = document.createElement("td");
-      cell.colSpan = 13;
+      cell.colSpan = columns.length + 3;
       cell.className = "config-list-empty";
       cell.textContent = "暂无关卡配置";
       row.append(cell);
@@ -289,14 +293,28 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   function openDetails(kind, ids) {
     const source = records.find(record => ids.includes(record.id));
     if (!source) return;
+    const settings = records.filter(record => ids.includes(record.id)).map(record => record.config);
+    if (kind === "fixedWords") {
+      try {
+        validateConfigNumber("rows", source.config.rows); validateConfigNumber("columns", source.config.columns);
+        if (settings.some(config => config.rows !== source.config.rows || config.columns !== source.config.columns)) throw new Error("批量摆放固定单词时，所选关卡的棋盘尺寸需一致。");
+      } catch (failure) { showError(failure.message); return; }
+    }
+    fixedBoardEditor?.destroy(); fixedBoardEditor = null;
+    detail.classList.toggle("fixed-board-dialog", kind === "fixedWords");
     detailState = { kind, ids: [...ids], config: structuredClone(source.config) };
-    detailTitle.textContent = `${ids.length > 1 ? `所选 ${ids.length} 关 · ` : `第 ${records.indexOf(source) + 1} 关 · `}${kind === "targets" ? "关卡目标词" : "词库筛选"}`;
+    detailTitle.textContent = `${ids.length > 1 ? `所选 ${ids.length} 关 · ` : `第 ${records.indexOf(source) + 1} 关 · `}${kind === "targets" ? "关卡目标词" : kind === "fixedWords" ? "固定单词" : "词库筛选"}`;
     detailError.hidden = true;
     if (kind === "targets") {
       detailContent.innerHTML = '<div class="target-config-count"><label for="config-detail-target-count">目标数量</label><input id="config-detail-target-count" type="number" min="1" step="1" /></div><label class="target-plan-switch"><input id="config-detail-plan-enabled" type="checkbox" />逐个配置词长</label><div class="target-plan-slots"></div><output class="target-plan-summary"></output>';
       detailContent.querySelector("#config-detail-target-count").value = String(source.config.targetCount);
       detailContent.querySelector("#config-detail-plan-enabled").checked = source.config.targetLengthPlan !== null;
       renderDetailTargets();
+    } else if (kind === "fixedWords") {
+      fixedBoardEditor = mountFixedBoardEditor(detailContent, source.config, { configs: settings, onError: message => {
+        detailError.hidden = !message;
+        detailError.textContent = message;
+      } });
     } else {
       const fields = document.querySelector("#word-filter-panel .filter-fields").cloneNode(true);
       for (const input of fields.querySelectorAll("input[data-word-filter]")) {
@@ -308,7 +326,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   }
 
   for (const [value, label] of [...Object.entries(CONFIG_NUMBER_FIELDS).map(([key, rule]) => [key, rule.label]),
-    ["targets", "关卡目标词"], ["filters", "词库筛选"]]) batchField.add(new Option(label, value));
+    ["targets", "关卡目标词"], ["fixedWords", "固定单词"], ["filters", "词库筛选"]]) batchField.add(new Option(label, value));
 
   openButton.addEventListener("click", () => {
     workerInfo.textContent = `自动并行 ${defaultGenerationWorkers()} 路`;
@@ -334,7 +352,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   });
   for (const button of dialog.querySelectorAll("[data-close-config-list]")) button.addEventListener("click", () => dialog.close());
   document.querySelector("#close-config-detail").addEventListener("click", () => detail.close());
-  detail.addEventListener("close", () => { detailState = null; });
+  detail.addEventListener("close", () => { fixedBoardEditor?.destroy(); fixedBoardEditor = null; detailState = null; });
   saveButton.addEventListener("click", persist);
   runSelectedButton.addEventListener("click", () => startRun(true));
   runAllButton.addEventListener("click", () => startRun(false));
@@ -413,8 +431,8 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     } else openDetails(button.dataset.configAction, [id]);
   });
   detailContent.addEventListener("input", event => {
-    if (detailState?.kind !== "targets") return;
     detailError.hidden = true;
+    if (detailState?.kind !== "targets") return;
     const config = detailState.config;
     if (event.target.matches("input[data-target-index]")) {
       config.targetLengthPlan[Number(event.target.dataset.targetIndex)] = event.target.value;
@@ -436,6 +454,9 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
       // Validate the currently visible draft, including the count when length selection is off.
       patch = { targetCount: detailContent.querySelector("#config-detail-target-count").valueAsNumber,
         targetLengthPlan: detailContent.querySelector("#config-detail-plan-enabled").checked ? config.targetLengthPlan ?? [] : null };
+    } else if (kind === "fixedWords") {
+      try { patch = fixedBoardEditor.getValue(); }
+      catch (failure) { showError(failure.message, detailError); return; }
     } else {
       const filters = {};
       for (const [key, options] of Object.entries(CONFIG_FILTER_OPTIONS)) {

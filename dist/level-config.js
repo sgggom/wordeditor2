@@ -1,4 +1,5 @@
 import { countTargetLengthPlan } from "./level-generator.js";
+import { normalizeFixedWords, validateFixedWords, normalizeFixedLayout } from "./fixed-words.js";
 
 export const CONFIG_LIST_STORAGE_KEY = "fangge.level-config-list.v1";
 export const MAX_CONFIG_ROWS = 1500;
@@ -38,7 +39,10 @@ export function validateLevelConfig(config) {
   if (config.targetLengthPlan !== null && (!Array.isArray(config.targetLengthPlan) || config.targetLengthPlan.length > MAX_TARGET_PLAN_SLOTS)) {
     throw new Error(`逐个词长配置需为不超过 ${MAX_TARGET_PLAN_SLOTS} 项的列表。`);
   }
-  countTargetLengthPlan(config.targetCount, config.targetLengthPlan);
+  const lengthCounts = countTargetLengthPlan(config.targetCount, config.targetLengthPlan);
+  if (config.fixedWords !== undefined && !Array.isArray(config.fixedWords)) throw new Error("固定单词需为单词列表。");
+  validateFixedWords(config, lengthCounts);
+  normalizeFixedLayout(config);
   if (!config.filters || typeof config.filters !== "object" || Array.isArray(config.filters)) throw new Error("词库筛选无效。");
   for (const [key, values] of Object.entries(config.filters)) {
     const allowed = CONFIG_FILTER_OPTIONS[key];
@@ -48,12 +52,15 @@ export function validateLevelConfig(config) {
 }
 
 export function patchLevelConfigs(records, selectedIds, patch) {
-  const allowed = [...Object.keys(CONFIG_NUMBER_FIELDS), "targetLengthPlan", "filters"];
+  const allowed = [...Object.keys(CONFIG_NUMBER_FIELDS), "targetLengthPlan", "filters", "fixedWords", "fixedLayout"];
   if (Object.keys(patch).some(key => !allowed.includes(key))) throw new Error("配置字段无效。");
   const ids = new Set(selectedIds);
   return records.map(record => {
     if (!ids.has(record.id)) return record;
     const config = { ...structuredClone(record.config), ...structuredClone(patch) };
+    if (Object.hasOwn(patch, "fixedWords")) config.fixedWords = normalizeFixedWords(config.fixedWords);
+    if (Object.hasOwn(patch, "fixedWords") && !Object.hasOwn(patch, "fixedLayout") && config.fixedLayout) config.fixedLayout = null;
+    if (Object.hasOwn(patch, "fixedLayout")) config.fixedLayout = normalizeFixedLayout(config);
     if (Object.hasOwn(patch, "targetCount") && !Object.hasOwn(patch, "targetLengthPlan")) {
       config.targetLengthPlan = resizeTargetPlan(config.targetLengthPlan, config.targetCount);
     }

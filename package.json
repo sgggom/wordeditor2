@@ -9,7 +9,7 @@
     "start": "node scripts/serve.mjs",
     "import:words": "python3 scripts/import-word-bank.py",
     "import:list0-configs": "node scripts/import-list0-configs.mjs",
-    "check": "node --check dist/app.js && node --check dist/level-export.js && node --check dist/level-generator.js && node --check dist/level-statistics.js && node --check dist/level-rules.js && node --check dist/level-store.js && node --check dist/level-config.js && node --check dist/config-list.js && node --check dist/batch-runner.js && node --check dist/generation-client.js && node --check dist/target-plan-controls.js && node --check dist/reference-config.js && node --check dist/generator-worker.js && node --check scripts/import-list0-configs.mjs && node --check scripts/serve.mjs && node --check dist/level-import.js && node --check dist/import-worker.js",
+    "check": "node --check dist/app.js && node --check dist/fixed-words.js && node --check dist/fixed-board-editor.js && node --check dist/path-safety.js && node --check dist/level-export.js && node --check dist/level-generator.js && node --check dist/level-statistics.js && node --check dist/level-rules.js && node --check dist/level-store.js && node --check dist/level-config.js && node --check dist/config-list.js && node --check dist/batch-runner.js && node --check dist/generation-client.js && node --check dist/target-plan-controls.js && node --check dist/reference-config.js && node --check dist/generator-worker.js && node --check scripts/import-list0-configs.mjs && node --check scripts/serve.mjs && node --check dist/level-import.js && node --check dist/import-worker.js",
     "test": "node --test tests/*.test.mjs"
   }
 }

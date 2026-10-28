@@ -77,6 +77,7 @@ function verifyLevel(level, targetCount) {
   assert.ok(replay.every(Boolean));
   const counts = Array(level.cells.length).fill(0);
   for (const entry of level.targetWords) {
+    assert.equal(entry.pathAnalysis.safe, true);
     assert.ok(candidates.has(entry.word) && !extras.has(entry.word));
     assert.ok(!onlyExtraNames.has(entry.word));
     verifyPath(entry, level);
@@ -224,7 +225,7 @@ test("candidate enumeration is exhaustive across both banks and does not calcula
   const expected = new Set([...normal, ...onlyExtra].filter(entry => canSpell(entry.word, letters, 3, 4)).map(entry => entry.word));
   assert.deepEqual(new Set(found.map(entry => entry.word)), expected);
   assert.deepEqual(new Set([...level.targetWords, ...level.extraWords].map(entry => entry.word)), expected);
-  assert.deepEqual(new Set(level.candidateWords.map(entry => entry.word)), new Set([...expected].filter(word => !onlyExtraNames.has(word))));
+  assert.deepEqual(new Set(level.candidateWords.map(entry => entry.word)), new Set(found.filter(entry => !entry.onlyExtra && entry.pathAnalysis.safe).map(entry => entry.word)));
   assert.ok(found.every(entry => !("count" in entry)));
 });
 
@@ -280,7 +281,9 @@ test("repeated-letter paths are deduplicated by word and extras never inflate us
   const level = repeated.generate({ rows: 2, columns: 3, targetCount: 1, random: seededRandom(12) });
   assert.equal(level.initialWords.length, 1);
   assert.deepEqual(level.targetWords.map(entry => entry.word), ["AAAAAA"]);
-  assert.equal(level.candidateWords.length, 4);
+  assert.equal(level.candidateWords.length, 1);
+  assert.ok(level.targetWords[0].pathAnalysis.legalPathCount > 1);
+  assert.ok(level.extraWords.every(entry => entry.pathAnalysis.safe === false));
   assert.equal(level.extraWords.length, 3);
   assert.deepEqual(level.cells.map(cell => cell.count), [1, 1, 1, 1, 1, 1]);
   for (const entry of [...level.targetWords, ...level.extraWords]) verifyPath(entry, level);
@@ -316,27 +319,27 @@ test("initial and overall length limits constrain their own stages across all bo
 });
 
 test("initial length allows later targets up to the separate overall limit", () => {
-  const repeated = createGenerator(entries(["AAA", "AAAA", "AAAAA"]));
-  const level = repeated.generate({ rows: 2, columns: 3, targetCount: 3, initialMaxWordLength: 4, maxWordLength: 5, random: seededRandom(12) });
+  const limited = createGenerator(entries(["ABC", "CDEF", "ABCDE"]));
+  const level = limited.generate({ rows: 2, columns: 3, targetCount: 3, initialMaxWordLength: 4, maxWordLength: 5, random: seededRandom(12) });
   assert.ok(level.initialWords.every(entry => entry.word.length <= 4));
-  assert.ok(level.candidateWords.some(entry => entry.word === "AAAAA"));
-  assert.ok(level.targetWords.some(entry => entry.word === "AAAAA"));
+  assert.ok(level.candidateWords.some(entry => entry.word === "ABCDE"));
+  assert.ok(level.targetWords.some(entry => entry.word === "ABCDE"));
   assert.equal(level.targetWords.length, 3);
 });
 
 test("words beyond the overall length remain extras and cannot fill missing targets", () => {
-  const repeated = createGenerator(entries(["AAA", "AAAA", "AAAAA"]), entries(["AAAAAA"]));
+  const limited = createGenerator(entries(["ABC", "CDEF", "ABCDE"]), entries(["ABCDEF"]));
   const options = { rows: 2, columns: 3, targetCount: 2, initialMaxWordLength: 8, maxWordLength: 4, random: seededRandom(12) };
-  const level = repeated.generate(options);
+  const level = limited.generate(options);
   assert.ok(level.initialWords.every(entry => entry.word.length <= 4));
-  assert.deepEqual(new Set(level.targetWords.map(entry => entry.word)), new Set(["AAA", "AAAA"]));
-  assert.deepEqual(new Set(level.candidateWords.map(entry => entry.word)), new Set(["AAA", "AAAA"]));
-  assert.deepEqual(new Set(level.extraWords.map(entry => entry.word)), new Set(["AAAAA", "AAAAAA"]));
-  assert.equal(level.extraWords.find(entry => entry.word === "AAAAAA").onlyExtra, true);
+  assert.deepEqual(new Set(level.targetWords.map(entry => entry.word)), new Set(["ABC", "CDEF"]));
+  assert.deepEqual(new Set(level.candidateWords.map(entry => entry.word)), new Set(["ABC", "CDEF"]));
+  assert.deepEqual(new Set(level.extraWords.map(entry => entry.word)), new Set(["ABCDE", "ABCDEF"]));
+  assert.equal(level.extraWords.find(entry => entry.word === "ABCDEF").onlyExtra, true);
   assert.equal(level.initialMaxWordLength, 8);
   assert.equal(level.maxWordLength, 4);
-  assert.throws(() => repeated.generate({ ...options, targetCount: 3 }), /少于设置的 3/);
-  assert.throws(() => repeated.selectTargets({ ...level, letters: level.cells.map(cell => cell.letter),
+  assert.throws(() => limited.generate({ ...options, targetCount: 3 }), /少于设置的 3/);
+  assert.throws(() => limited.selectTargets({ ...level, letters: level.cells.map(cell => cell.letter),
     foundWords: [...level.targetWords, ...level.extraWords], maxWordLength: 3 }), /最长单词长度/);
 });
 

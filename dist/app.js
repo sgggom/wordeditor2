@@ -7,6 +7,8 @@ import { calculateRarityTotal } from "./level-statistics.js";
 import { createBatchRunner, formatBatchState } from "./batch-runner.js";
 import { createGenerationClient, defaultGenerationWorkers } from "./generation-client.js";
 import { gameExportText } from "./level-export.js";
+import { normalizeFixedWords, normalizeFixedLayout } from "./fixed-words.js";
+import { createPathSafetyChecker } from "./path-safety.js";
 
 (() => {
   "use strict";
@@ -22,6 +24,8 @@ import { gameExportText } from "./level-export.js";
   const INITIAL_LENGTH_STORAGE_KEY = "fangge.level-initial-max-word-length.v1";
   const FORWARD_STORAGE_KEY = "fangge.level-initial-forward-probability.v1";
   const FILTER_STORAGE_KEY = "fangge.level-word-filters.v1";
+  const FIXED_WORDS_STORAGE_KEY = "fangge.level-fixed-words.v1";
+  const FIXED_LAYOUT_STORAGE_KEY = "fangge.level-fixed-layout.v1";
   const LEGACY_DUPLICATE_RANGE_STORAGE_KEY = "fangge.level-duplicate-check-range.v1";
   const DUPLICATE_RANGE_STORAGE_KEYS = {
     target: "fangge.level-target-duplicate-range.v1", extra: "fangge.level-extra-duplicate-range.v1",
@@ -74,6 +78,8 @@ import { gameExportText } from "./level-export.js";
   };
   const filterButton = document.querySelector("#filter-toggle");
   const filterSummary = document.querySelector("#filter-summary");
+  const activeFixedWords = document.querySelector("#active-fixed-words");
+  const fixedWordsSummary = document.querySelector("#fixed-words-summary");
   const filterInputs = [...document.querySelectorAll("input[data-word-filter]")];
   const filterOptions = Object.fromEntries(["scope", "emotion", "abbreviation", "rarityLevel"].map(key =>
     [key, filterInputs.filter(input => input.dataset.wordFilter === key).map(input => Number(input.value))]
@@ -87,6 +93,8 @@ import { gameExportText } from "./level-export.js";
   let configuredInitialMaxWordLength = readMaxWordLength(INITIAL_LENGTH_STORAGE_KEY, LEGACY_LENGTH_STORAGE_KEY);
   let configuredInitialForwardProbability = readInitialForwardProbability();
   let configuredFilters = readFilters();
+  let configuredFixedWords = readFixedWords();
+  let configuredFixedLayout = readFixedLayout();
   let configuredDuplicateRanges = Object.fromEntries(Object.entries(DUPLICATE_RANGE_STORAGE_KEYS)
     .map(([kind, key]) => [kind, readDuplicateRange(key)]));
   let level = null;
@@ -141,6 +149,8 @@ import { gameExportText } from "./level-export.js";
       localStorage.setItem(INITIAL_LENGTH_STORAGE_KEY, String(configuredInitialMaxWordLength));
       localStorage.setItem(FORWARD_STORAGE_KEY, String(configuredInitialForwardProbability));
       localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(configuredFilters));
+      localStorage.setItem(FIXED_WORDS_STORAGE_KEY, JSON.stringify(configuredFixedWords));
+      localStorage.setItem(FIXED_LAYOUT_STORAGE_KEY, JSON.stringify(configuredFixedLayout));
       for (const [kind, key] of Object.entries(DUPLICATE_RANGE_STORAGE_KEYS)) {
         localStorage.setItem(key, String(configuredDuplicateRanges[kind]));
       }
@@ -270,6 +280,8 @@ import { gameExportText } from "./level-export.js";
     configuredInitialMaxWordLength = level.initialMaxWordLength;
     configuredInitialForwardProbability = level.initialForwardProbability;
     configuredFilters = level.filters;
+    configuredFixedWords = normalizeFixedWords(level.fixedWords ?? []);
+    configuredFixedLayout = structuredClone(level.fixedLayout ?? null);
     configuredDuplicateRanges = Object.fromEntries(Object.keys(duplicateRangeInputs).map(kind =>
       [kind, level.duplicateCheck?.[kind]?.range ?? level.duplicateCheck?.range ?? configuredDuplicateRanges[kind]]));
     restoreTargetConfigInputs();
@@ -278,8 +290,7 @@ import { gameExportText } from "./level-export.js";
     initialForwardInput.value = String(configuredInitialForwardProbability);
     for (const [kind, input] of Object.entries(duplicateRangeInputs)) input.value = String(configuredDuplicateRanges[kind]);
     restoreFilterInputs();
-    errorMessage.hidden = true;
-    errorMessage.textContent = "";
+    showPathSafetyWarning();
     wordList.parentElement.scrollTop = 0;
     render();
     savedLevelList.querySelector(`[data-saved-level-id="${record.id}"]`)?.focus({ preventScroll: true });
@@ -412,6 +423,18 @@ import { gameExportText } from "./level-export.js";
     return 50;
   }
 
+  function readFixedWords() {
+    try { return normalizeFixedWords(JSON.parse(localStorage.getItem(FIXED_WORDS_STORAGE_KEY)) ?? []); }
+    catch { return []; }
+  }
+
+  function readFixedLayout() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(FIXED_LAYOUT_STORAGE_KEY));
+      return saved ? normalizeFixedLayout({ rows: saved.rows, columns: saved.columns, fixedWords: configuredFixedWords, fixedLayout: saved }) : null;
+    } catch { return null; }
+  }
+
   function readFilters() {
     try {
       const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY));
@@ -522,9 +545,10 @@ import { gameExportText } from "./level-export.js";
 
   function renderWords() {
     const scrollTop = wordList.parentElement.scrollTop;
+    const checkPath = createPathSafetyChecker(level);
     const roles = [
       { key: "initial", label: "初始词", words: new Set(level?.initialWords.map(entry => entry.word) ?? []) },
-      { key: "candidate", label: "候选词", words: new Set(level?.candidateWords.map(entry => entry.word) ?? []) },
+      { key: "candidate", label: "候选词", words: new Set(level?.candidateWords.filter(entry => checkPath(entry.word)).map(entry => entry.word) ?? []) },
       { key: "target", label: "关卡目标", words: new Set(level?.targetWords.map(entry => entry.word) ?? []) },
       { key: "extra", label: "额外词", words: new Set(level?.extraWords.map(entry => entry.word) ?? []) },
     ];
@@ -597,7 +621,7 @@ import { gameExportText } from "./level-export.js";
       button.setAttribute("aria-label", `${entry.word}，生僻档位 ${rarity.textContent}，路径难度 ${assigned.difficultyScore} 分，${tags.map(tag => tag.label).join("、")}`);
       const selection = document.createElement("label");
       selection.className = "target-selection";
-      if (membership.candidate.has(entry.word) && !entry.onlyExtra) {
+      if ((membership.candidate.has(entry.word) || membership.target.has(entry.word)) && !entry.onlyExtra) {
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.dataset.targetWord = entry.word;
@@ -608,7 +632,7 @@ import { gameExportText } from "./level-export.js";
         selection.append(checkbox);
       } else {
         selection.textContent = "—";
-        selection.title = "只有候选词可选为目标词";
+        selection.title = !checkPath(entry.word) ? "存在使用不同格子的连接路径，不能设为目标词" : "只有候选词可选为目标词";
       }
       row.append(button, selection);
       buttons.append(row);
@@ -818,6 +842,9 @@ import { gameExportText } from "./level-export.js";
     const activeFilters = Object.keys(configuredFilters).length;
     filterSummary.textContent = activeFilters ? `${activeFilters}项` : "全部";
     filterButton.classList.toggle("is-active", activeFilters > 0);
+    activeFixedWords.hidden = configuredFixedWords.length === 0;
+    fixedWordsSummary.textContent = configuredFixedWords.join(" · ");
+    activeFixedWords.title = configuredFixedWords.join(", ") + (configuredFixedLayout ? "（位置已固定）" : "");
     renderWords();
     renderStatistics();
     renderSavedLevels();
@@ -843,6 +870,13 @@ import { gameExportText } from "./level-export.js";
     selectedWord = null;
     errorMessage.hidden = true;
     errorMessage.textContent = "";
+  }
+
+  function showPathSafetyWarning() {
+    const checkPath = createPathSafetyChecker(level);
+    const unsafeTargets = level?.targetWords.filter(entry => !checkPath(entry.word)).map(entry => entry.word) ?? [];
+    errorMessage.hidden = unsafeTargets.length === 0;
+    errorMessage.textContent = unsafeTargets.length ? `目标词 ${unsafeTargets.join("、")} 存在使用不同格子的连接路径，请重新生成或调整目标词；修复前不能导出。` : "";
   }
 
   function showError(message) {
@@ -927,7 +961,7 @@ import { gameExportText } from "./level-export.js";
     try {
       const duplicateCheck = createDuplicateCheck(savedLevels, configuredDuplicateRanges);
       const generated = await getGenerationClient().generate({ ...size, targetCount, targetLengthPlan,
-        initialMaxWordLength, maxWordLength, initialForwardProbability, filters }, duplicateCheck, {
+        initialMaxWordLength, maxWordLength, initialForwardProbability, filters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout }, duplicateCheck, {
         signal: controller.signal,
         onProgress: ({ attempts, workers }) => {
           if (currentRequestId !== requestId || controller.signal.aborted) return;
@@ -1099,8 +1133,7 @@ import { gameExportText } from "./level-export.js";
     try {
       level = setTargetWord(level, checkbox.dataset.targetWord, checkbox.checked);
       if (activeSavedLevelId !== null) savedLevelEdited = true;
-      errorMessage.hidden = true;
-      errorMessage.textContent = "";
+      showPathSafetyWarning();
       render();
     } catch (error) {
       showError(error.message);
@@ -1231,6 +1264,8 @@ import { gameExportText } from "./level-export.js";
     configuredInitialForwardProbability = config.initialForwardProbability;
     configuredDuplicateRanges = { target: config.targetDuplicateRange, extra: config.extraDuplicateRange };
     configuredFilters = config.filters;
+    configuredFixedWords = normalizeFixedWords(config.fixedWords ?? []);
+    configuredFixedLayout = structuredClone(config.fixedLayout ?? null);
     restoreTargetConfigInputs();
     initialMaxWordLengthInput.value = String(configuredInitialMaxWordLength);
     maxWordLengthInput.value = String(configuredMaxWordLength);
@@ -1302,7 +1337,7 @@ import { gameExportText } from "./level-export.js";
     getConfig: () => structuredClone({
       ...size, targetCount: configuredTargetCount, targetLengthPlan: configuredTargetLengthPlan,
       initialMaxWordLength: configuredInitialMaxWordLength, maxWordLength: configuredMaxWordLength,
-      initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters,
+      initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
       initialRarityLevel: 1, minimumEmotionScore: 0,
       targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra,
     }),

@@ -104,11 +104,11 @@ test("quota conflicts and missing groups fail explicitly", () => {
 });
 
 test("initial filling reserves the requested groups and zero-share words remain extras", () => {
-  const generator = createGenerator(["AAA", "AAAA", "AAAAA", "AAAAAA"].map(word => ({ word })));
+  const generator = createGenerator(["ABC", "ABCD", "ABCDE", "ABCDEF"].map(word => ({ word })));
   const level = generator.generate({ rows: 2, columns: 3, targetCount: 2, targetLengthRatios: { short: 0, medium: 0, long: 100 }, random: () => 0 });
   assert.ok(level.initialWords.every(entry => entry.word.length >= 5));
-  assert.deepEqual(new Set(level.targetWords.map(entry => entry.word)), new Set(["AAAAA", "AAAAAA"]));
-  assert.deepEqual(new Set(level.extraWords.map(entry => entry.word)), new Set(["AAA", "AAAA"]));
+  assert.deepEqual(new Set(level.targetWords.map(entry => entry.word)), new Set(["ABCDE", "ABCDEF"]));
+  assert.deepEqual(new Set(level.extraWords.map(entry => entry.word)), new Set(["ABC", "ABCD"]));
   assert.deepEqual(level.targetLengthCounts, { short: 0, medium: 0, long: 2 });
 });
 

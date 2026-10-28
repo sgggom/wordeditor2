@@ -102,6 +102,7 @@
             </div>
 
             <div class="form-actions">
+              <span id="active-fixed-words" class="active-fixed-words" hidden>固定词 <output id="fixed-words-summary"></output></span>
               <button type="button" id="filter-toggle" class="reset-button filter-toggle" popovertarget="word-filter-panel">词库筛选 <span id="filter-summary" class="filter-summary">全部</span></button>
               <button type="button" id="generate-level" class="generate-button">生成关卡</button>
               <button type="button" id="reset-size" class="reset-button" disabled>
@@ -294,7 +295,7 @@
             <th class="config-select-column"><input id="config-select-all" type="checkbox" aria-label="全选关卡配置" /></th>
             <th class="config-index-column">关卡</th>
             <th class="config-size-column">行</th><th class="config-size-column">列</th>
-            <th>目标数量</th><th class="config-plan-column">目标词长</th>
+            <th>目标数量</th><th class="config-plan-column">目标词长</th><th class="config-fixed-column">固定单词</th>
             <th>初始词最长</th><th>最长单词</th><th>初始正向 %</th>
             <th>目标查重</th><th>额外查重</th><th>词库筛选</th><th class="config-use-column">操作</th>
           </tr></thead>

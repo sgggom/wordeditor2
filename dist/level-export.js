@@ -1,3 +1,5 @@
+import { createPathSafetyChecker } from "./path-safety.js";
+
 // Compatible with word关卡/index.html: assemblePack / freshLevel.
 export function createGameExport(records) {
   if (!Array.isArray(records) || !records.length) throw new Error("关卡列表为空。");
@@ -12,6 +14,7 @@ export function createGameExport(records) {
     if (!Array.isArray(targetWords) || !targetWords.length || !Array.isArray(extraWords)) fail("单词数据不完整。");
     const counts = Array(cells.length).fill(0);
     const names = new Set();
+    const checkPath = createPathSafetyChecker(level);
     for (const [entries, isTarget] of [[targetWords, true], [extraWords, false]]) {
       for (const entry of entries) {
         const word = entry?.word;
@@ -24,6 +27,7 @@ export function createGameExport(records) {
           const previous = path[step - 1];
           return Math.abs(Math.floor(cell / columns) - Math.floor(previous / columns)) + Math.abs(cell % columns - previous % columns) !== 1;
         })) fail(`${word} 的连接路径无效。`);
+        if (isTarget && !checkPath(word)) fail(`目标词 ${word} 存在使用不同格子的连接路径，请重新生成或调整目标词后再导出。`);
         if (isTarget) for (const cell of path) counts[cell] += 1;
       }
     }

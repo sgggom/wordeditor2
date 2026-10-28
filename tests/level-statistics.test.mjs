@@ -102,7 +102,9 @@ test("all legal paths are counted, but representatives never replace assigned pa
   }
   assert.deepEqual(foundWords.find(entry => entry.word === "AAA").pathAnalysis.representative.path, [0, 1, 2]);
   assert.deepEqual(foundWords.find(entry => entry.word === "AAAAAA").pathAnalysis.representative.path, [0, 1, 2, 5, 4, 3]);
-  const level = generator.selectTargets({ ...options, foundWords, targetCount: 2, random: () => 0 });
+  assert.equal(foundWords.find(entry => entry.word === "AAA").pathAnalysis.safe, false);
+  assert.equal(foundWords.find(entry => entry.word === "AAAAAA").pathAnalysis.safe, true);
+  const level = generator.selectTargets({ ...options, foundWords, targetCount: 1, random: () => 0 });
   assert.deepEqual(level.targetWords[0].path, options.initialWords[0].path);
   assert.deepEqual(level.targetWords[0].pathAnalysis.assigned.path, options.initialWords[0].path);
   assert.equal(level.targetWords[0].pathAnalysis.assigned.difficultyScore, 6);
@@ -110,13 +112,13 @@ test("all legal paths are counted, but representatives never replace assigned pa
   const counts = Array(6).fill(0);
   for (const entry of level.targetWords) for (const cell of entry.path) counts[cell] += 1;
   assert.deepEqual(level.cells.map(cell => cell.count), counts);
-  assert.deepEqual(level.statistics.paths.turnDistribution, { 0: 1, 1: 0, 2: 1, "3+": 0 });
-  assert.equal(level.statistics.paths.multiplePathWordCount, 2);
+  assert.deepEqual(level.statistics.paths.turnDistribution, { 0: 0, 1: 0, 2: 1, "3+": 0 });
+  assert.equal(level.statistics.paths.multiplePathWordCount, 1);
   assert.equal(level.statistics.board.duplicateLetterCellCount, 5);
   assert.equal(level.statistics.board.duplicateLetterCellRatio, 5 / 6);
-  assert.equal(level.statistics.vocabulary.unknownRarityCount, 2);
+  assert.equal(level.statistics.vocabulary.unknownRarityCount, 1);
   assert.equal(level.statistics.emotion.total, null);
-  assert.equal(level.statistics.words.extraRatio, 0);
+  assert.equal(level.statistics.words.extraRatio, 0.5);
 });
 
 test("emotion totals preserve negative and zero values; absent metadata is not scored as zero", () => {

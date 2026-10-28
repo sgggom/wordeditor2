@@ -24,13 +24,13 @@ self.onmessage = async ({ data }) => {
     if (activeRun?.requestId === data.requestId) activeRun = null;
     return;
   }
-  const { requestId, rows, columns, targetCount, targetLengthPlan, initialMaxWordLength, maxWordLength, initialForwardProbability, filters, duplicateCheck } = data;
+  const { requestId, rows, columns, targetCount, targetLengthPlan, initialMaxWordLength, maxWordLength, initialForwardProbability, filters, fixedWords, fixedLayout, duplicateCheck } = data;
   const run = { requestId };
   activeRun = run;
   try {
     const generator = await loadGenerator();
     const options = { rows, columns, targetCount, targetLengthPlan, initialMaxWordLength, maxWordLength, initialForwardProbability,
-      initialRarityLevel: 1, minimumEmotionScore: 0, filters, duplicateCheck };
+      initialRarityLevel: 1, minimumEmotionScore: 0, filters, fixedWords, fixedLayout, duplicateCheck };
     const level = await generateUntilComplete(generator, options, {
       isCurrent: () => activeRun === run,
       onProgress: progress => self.postMessage({ requestId, progress }),

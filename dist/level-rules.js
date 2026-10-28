@@ -1,4 +1,5 @@
 import { calculateLevelStatistics } from "./level-statistics.js";
+import { createPathSafetyChecker } from "./path-safety.js";
 
 export function createDuplicateCheck(records, ranges) {
   return Object.fromEntries(["target", "extra"].map(kind => {
@@ -28,11 +29,12 @@ export function findDuplicateWords(level, duplicateCheck) {
 export function setTargetWord(level, word, selected) {
   if (typeof selected !== "boolean") throw new Error("目标词选择无效。");
   const candidate = level.candidateWords.find(entry => entry.word === word);
-  if (!candidate || candidate.onlyExtra) throw new Error("只能从候选词中选择目标词。");
+  const wasSelected = level.targetWords.some(entry => entry.word === word);
+  if ((!candidate || candidate.onlyExtra) && (selected || !wasSelected)) throw new Error("只能从候选词中选择目标词。");
+  if (selected && !createPathSafetyChecker(level)(word)) throw new Error(`${word} 存在使用不同格子的连接路径，不能设为目标词。`);
   if (!selected && level.initialWords.some(entry => entry.word === word)) {
     throw new Error("初始词不能移出关卡目标。");
   }
-  const wasSelected = level.targetWords.some(entry => entry.word === word);
   if (wasSelected === selected) return level;
   const allWords = [...level.targetWords, ...level.extraWords];
   const targetNames = new Set(level.targetWords.map(entry => entry.word));

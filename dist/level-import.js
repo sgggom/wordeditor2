@@ -1,4 +1,5 @@
 import { calculateLevelStatistics, compareRepresentativePaths, describePath } from "./level-statistics.js";
+import { pathCellMask } from "./path-safety.js";
 
 export function importGameLevels(data, records = []) {
   if (!data || !Array.isArray(data.books) || !Array.isArray(data.daily) ||
@@ -59,14 +60,16 @@ export function importGameLevels(data, records = []) {
     for (const entry of entries) {
       const descriptions = entry.paths.map(path => describePath(path, columns)).sort(compareRepresentativePaths);
       entry.path ??= descriptions[0].path;
-      entry.pathAnalysis = { legalPathCount: entry.paths.length, assigned: describePath(entry.path, columns), representative: descriptions[0] };
+      const mask = pathCellMask(entry.path);
+      entry.pathAnalysis = { legalPathCount: entry.paths.length, safe: entry.paths.every(path => pathCellMask(path) === mask),
+        assigned: describePath(entry.path, columns), representative: descriptions[0] };
       delete entry.paths;
     }
     const level = { rows, columns, name: source.name ?? "", targetCount: targets.length,
       targetLengthPlan: null, targetLengthRatios: null, targetLengthCounts: null,
       initialMaxWordLength: columns, maxWordLength: Math.max(...targets.map(word => word.length)),
       initialForwardProbability: 50, filters: {}, initialWords: [],
-      candidateWords: entries.filter(entry => !entry.onlyExtra), targetWords: targetEntries,
+      candidateWords: entries.filter(entry => !entry.onlyExtra && entry.pathAnalysis.safe), targetWords: targetEntries,
       extraWords: entries.slice(targets.length),
       cells: letters.map((letter, cell) => ({ letter, count: parseInt(source.n[cell], 36) })),
     };
