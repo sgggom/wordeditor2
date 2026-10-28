@@ -189,8 +189,10 @@ legend { padding: 0; margin-bottom: 5px; color: #66705f; font-size: 11px; }
 .fixed-search-count { color: #819173; font-size: 11px; }
 .fixed-search-results { display: flex; flex-direction: column; gap: 6px; min-height: 0; flex: 1; overflow: auto; scrollbar-width: thin; }
 .fixed-search-result { flex-shrink: 0; width: 100%; padding: 10px; border: 1px solid #dfe5d7; border-radius: 7px; background: #fafbf8; color: #345038; text-align: left; }
-.fixed-search-result:hover:enabled, .fixed-search-result.is-selected { border-color: #8faf69; background: #edf5e1; }
-.fixed-search-result:disabled { background: #f4f5f1; color: #87917f; cursor: default; }
+.fixed-search-result:not(.is-disabled):hover, .fixed-search-result.is-selected { border-color: #8faf69; background: #edf5e1; }
+.fixed-search-result.is-disabled { background: #f4f5f1; color: #87917f; }
+.fixed-result-actions { display: flex; gap: 6px; margin-top: 8px; }
+.fixed-result-actions .reset-button { flex: 1; }
 .fixed-result-heading { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
 .fixed-result-heading strong { font-size: 14px; }
 .fixed-result-heading > span { color: #7a8d6b; font-size: 11px; }

@@ -107,3 +107,31 @@ test("a fully pinned board reports impossible target settings instead of retryin
     targetCount: 2, targetLengthPlan: ["short", "short"] }),
     error => error.code !== "GENERATION_RETRY" && /情绪总分/.test(error.message));
 });
+
+test("automatic-only preset words follow the initial direction preference without pinning their paths", () => {
+  const generator = createGenerator(records(["CAT", "DOG", "HEN"]));
+  for (const initialForwardProbability of [0, 100]) {
+    const level = generator.generate({ ...settings(), fixedLayout: null, initialForwardProbability, random: randomFrom(31) });
+    assert.equal(level.fixedLayout, null);
+    assert.deepEqual(level.fixedWords, ["CAT", "DOG"]);
+    assert.ok(level.fixedWords.every(word => level.initialWords.some(entry => entry.word === word)));
+    const first = level.initialWords[0].path;
+    assert.equal(first[1] > first[0], initialForwardProbability === 100);
+    assert.ok(level.targetWords.every(entry => entry.pathAnalysis.safe));
+  }
+});
+
+test("switching presets to automatic keeps the words and can be applied across different board sizes", () => {
+  const original = [{ id: "large", config: settings() }, { id: "small", config: { ...settings(), rows: 2,
+    targetCount: 2, targetLengthPlan: ["short", "short"], fixedLayout: null } }];
+  const updated = patchLevelConfigs(original, ["large", "small"], { fixedWords: ["CAT", "DOG"], fixedLayout: null });
+  assert.notEqual(original[0].config.fixedLayout, null);
+  const generator = createGenerator(records(["CAT", "DOG", "HEN"]));
+  for (const { config } of updated) {
+    const level = generator.generate({ ...config, random: randomFrom(17) });
+    assert.equal(level.fixedLayout, null);
+    assert.deepEqual(level.fixedWords, ["CAT", "DOG"]);
+    assert.ok(level.fixedWords.every(word => level.targetWords.some(entry => entry.word === word)));
+    assert.ok(level.cells.every(cell => cell.letter && cell.count > 0));
+  }
+});

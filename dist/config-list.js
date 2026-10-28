@@ -229,7 +229,8 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
           button.textContent = field === "fixedWords" ? record.config.fixedWords?.join(" · ") || "未设置"
             : field === "targets" ? planSummary(record.config)
             : Object.keys(record.config.filters).length ? `${Object.keys(record.config.filters).length} 项筛选` : "全部";
-          if (field === "fixedWords") button.title = record.config.fixedWords?.join(", ") || "设置一个或多个固定单词";
+          if (field === "fixedWords") button.title = record.config.fixedWords?.map(word =>
+            `${word}（${record.config.fixedLayout?.placements.some(entry => entry.word === word) ? "固定位置" : "自动摆放"}）`).join("、") || "设置一个或多个固定单词";
           button.setAttribute("aria-label", `第 ${index + 1} 关${field === "targets" ? "目标词长配置" : field === "fixedWords" ? "固定单词" : "词库筛选"}`);
           cell.append(button);
         }
@@ -314,8 +315,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     const settings = records.filter(record => ids.includes(record.id)).map(record => record.config);
     if (kind === "fixedWords") {
       try {
-        validateConfigNumber("rows", source.config.rows); validateConfigNumber("columns", source.config.columns);
-        if (settings.some(config => config.rows !== source.config.rows || config.columns !== source.config.columns)) throw new Error("批量摆放固定单词时，所选关卡的棋盘尺寸需一致。");
+        for (const config of settings) { validateConfigNumber("rows", config.rows); validateConfigNumber("columns", config.columns); }
       } catch (failure) { showError(failure.message); return; }
     }
     fixedBoardEditor?.destroy(); fixedBoardEditor = null;

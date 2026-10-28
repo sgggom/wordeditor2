@@ -26,14 +26,19 @@ const element = (tag, className, text) => {
 
 export function mountFixedBoardEditor(container, config, { configs = [config], onError = () => {} } = {}) {
   const { rows, columns } = config;
+  const canPin = configs.every(settings => settings.rows === rows && settings.columns === columns);
   let words = normalizeFixedWords(config.fixedWords);
   // Keep coordinates when the user changes the size. Words outside the new
-  // board remain in the list and must be placed again, never silently deleted.
+  // board need an explicit new placement or a switch to automatic placement.
+  const pendingPins = new Set();
   let placements = (config.fixedLayout?.placements ?? []).flatMap(entry => {
     const oldColumns = config.fixedLayout.columns;
     const coordinates = entry.path.map(cell => [Math.floor(cell / oldColumns), cell % oldColumns]);
-    return coordinates.every(([row, column]) => row < rows && column < columns)
-      ? [{ word: entry.word, path: coordinates.map(([row, column]) => row * columns + column) }] : [];
+    if (coordinates.every(([row, column]) => row < rows && column < columns)) {
+      return [{ word: entry.word, path: coordinates.map(([row, column]) => row * columns + column) }];
+    }
+    pendingPins.add(entry.word);
+    return [];
   });
   let activeWord = null, activePath = [], selectedWord = null;
   let vocabulary = null, byWord = new Map(), disposed = false;
@@ -102,18 +107,27 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
     grid.replaceChildren(fragment); drawPath(path);
     status.textContent = activeWord
       ? `${activeWord} · ${activePath.length}/${activeWord.length} 格${activePath.length < activeWord.length ? ` · 下一字母 ${activeWord[activePath.length]}` : " · 请调整路径"}`
-      : selectedWord ? `${selectedWord} · 位置已固定` : "选择单词后，依次点击格子摆放";
+      : selectedWord ? `${selectedWord} · ${placements.some(entry => entry.word === selectedWord) ? "位置已固定" : pendingPins.has(selectedWord) ? "需重新摆放或改为自动" : "生成时自动摆放"}`
+      : canPin ? "可选择自动摆放，或在棋盘上固定位置" : "所选棋盘尺寸不同，可选择自动摆放";
     undo.disabled = !activePath.length;
     cancel.disabled = !activeWord;
     const items = document.createDocumentFragment();
     for (const word of words) {
       const placed = placements.some(entry => entry.word === word);
       const row = element("div", `fixed-preset-row${word === selectedWord || word === activeWord ? " is-selected" : ""}`);
+      row.dataset.fixedSelectedWord = word;
       const label = element("button", "fixed-preset-word", word); label.type = "button"; label.dataset.fixedPreview = word;
-      const state = element("span", "fixed-preset-state", word === activeWord ? "摆放中" : placed ? "已固定" : "待摆放");
-      const edit = element("button", "reset-button", placed ? "重摆" : "摆放"); edit.type = "button"; edit.dataset.fixedWord = word;
+      const state = element("span", "fixed-preset-state", word === activeWord ? "摆放中" : placed ? "固定位置" : pendingPins.has(word) ? "需重新摆放" : "自动摆放");
+      const edit = element("button", "reset-button", placed ? "重摆" : "固定位置"); edit.type = "button"; edit.dataset.fixedWord = word;
+      edit.disabled = !canPin;
+      if (!canPin) edit.title = "所选关卡尺寸不同，不能批量固定位置";
       const remove = element("button", "reset-button fixed-remove", "删除"); remove.type = "button"; remove.dataset.fixedRemove = word;
-      row.append(label, state, edit, remove); items.append(row);
+      row.append(label, state);
+      if (placed || activeWord === word || pendingPins.has(word)) {
+        const automatic = element("button", "reset-button", "自动摆放");
+        automatic.type = "button"; automatic.dataset.fixedAutomatic = word; row.append(automatic);
+      }
+      row.append(edit, remove); items.append(row);
     }
     list.replaceChildren(items);
     if (!words.length) list.append(element("span", "fixed-list-empty", "暂无固定单词"));
@@ -130,21 +144,41 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
     resultCount.textContent = matches.length ? `${matches.length} 个结果${matches.length > 60 ? " · 显示前 60 个" : ""}` : "没有匹配的单词";
     const fragment = document.createDocumentFragment();
     for (const { entry, issue } of matches.slice(0, 60)) {
-      const button = element("button", `fixed-search-result${entry.word === activeWord ? " is-selected" : ""}`);
-      button.type = "button"; button.dataset.fixedWord = entry.word; button.disabled = Boolean(issue);
-      button.title = issue || entry.definitionZh || entry.definitionEn || entry.word;
+      const selected = words.includes(entry.word), pinned = placements.some(item => item.word === entry.word);
+      const card = element("div", `fixed-search-result${selected ? " is-selected" : ""}${issue ? " is-disabled" : ""}`);
+      card.title = issue || entry.definitionZh || entry.definitionEn || entry.word;
       const heading = element("span", "fixed-result-heading");
-      heading.append(element("strong", "", entry.word), element("span", "", issue ? "不可用" : placements.some(item => item.word === entry.word) ? "重摆" : "摆放"));
-      button.append(heading, element("span", "fixed-result-definition", issue || entry.definitionZh || entry.definitionEn || "暂无释义"));
-      fragment.append(button);
+      heading.append(element("strong", "", entry.word), element("span", "", issue ? "不可用" : pinned ? "固定位置" : selected ? "已选择" : ""));
+      const actions = element("div", "fixed-result-actions");
+      const automatic = element("button", "reset-button", "自动摆放"); automatic.type = "button"; automatic.dataset.fixedAutomatic = entry.word;
+      automatic.disabled = Boolean(issue) || (selected && !pinned && !pendingPins.has(entry.word) && activeWord !== entry.word);
+      const manual = element("button", "reset-button", pinned ? "重摆" : "固定位置"); manual.type = "button"; manual.dataset.fixedWord = entry.word;
+      manual.disabled = Boolean(issue) || !canPin;
+      if (!canPin) manual.title = "所选关卡尺寸不同，不能批量固定位置";
+      actions.append(automatic, manual);
+      card.append(heading, element("span", "fixed-result-definition", issue || entry.definitionZh || entry.definitionEn || "暂无释义"), actions);
+      fragment.append(card);
     }
     results.replaceChildren(fragment); results.scrollTop = 0;
   }
 
   function startWord(word) {
+    if (!canPin) { onError("所选关卡尺寸不同，请选择自动摆放。"); return; }
     const issue = wordIssue(word);
     if (issue) { onError(`${word}：${issue}`); return; }
+    if (!words.includes(word)) words.push(word);
     activeWord = word; activePath = []; selectedWord = null;
+    onError(""); renderBoard(); renderSearch();
+  }
+
+  function useAutomatic(word) {
+    const issue = wordIssue(word);
+    if (issue) { onError(`${word}：${issue}`); return; }
+    if (!words.includes(word)) words.push(word);
+    placements = placements.filter(entry => entry.word !== word);
+    pendingPins.delete(word);
+    if (activeWord === word) { activeWord = null; activePath = []; }
+    if (!activeWord) selectedWord = word;
     onError(""); renderBoard(); renderSearch();
   }
 
@@ -173,6 +207,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
       try {
         normalizeFixedLayout({ rows, columns, fixedWords: nextWords, fixedLayout: nextLayout });
         words = nextWords; placements = nextLayout.placements; selectedWord = activeWord;
+        pendingPins.delete(activeWord);
         activeWord = null; activePath = []; renderSearch();
       } catch (error) { onError(error.message); }
     }
@@ -183,18 +218,20 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   const click = event => {
     const button = event.target.closest("button");
     if (!button || button.disabled) return;
+    if (button.dataset.fixedAutomatic) { useAutomatic(button.dataset.fixedAutomatic); return; }
     if (button.dataset.fixedWord) { startWord(button.dataset.fixedWord); return; }
     if (button.dataset.fixedCell !== undefined) { chooseCell(Number(button.dataset.fixedCell)); return; }
     if (button.dataset.fixedRemove) {
       const word = button.dataset.fixedRemove;
       words = words.filter(entry => entry !== word); placements = placements.filter(entry => entry.word !== word);
+      pendingPins.delete(word);
       if (activeWord === word) { activeWord = null; activePath = []; }
       if (selectedWord === word) selectedWord = null;
     } else if (button.dataset.fixedPreview) {
       selectedWord = button.dataset.fixedPreview; activeWord = null; activePath = [];
     } else if (button.dataset.fixedAction === "undo") activePath.pop();
     else if (button.dataset.fixedAction === "cancel") { activeWord = null; activePath = []; }
-    else if (button.dataset.fixedAction === "clear") { words = []; placements = []; activeWord = null; activePath = []; selectedWord = null; }
+    else if (button.dataset.fixedAction === "clear") { words = []; placements = []; pendingPins.clear(); activeWord = null; activePath = []; selectedWord = null; }
     else if (button.dataset.fixedAction === "retry") { load(); return; }
     onError(""); renderBoard(); renderSearch();
   };
@@ -214,9 +251,9 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   renderBoard(); load();
   return {
     getValue() {
-      if (activeWord) throw new Error(`请先摆完 ${activeWord}，或取消本次摆放。`);
-      const missing = words.filter(word => !placements.some(entry => entry.word === word));
-      if (missing.length) throw new Error(`请先摆放 ${missing.join("、")}。`);
+      if (activeWord) throw new Error(`请先摆完 ${activeWord}，或将它改为自动摆放。`);
+      if (pendingPins.size) throw new Error(`棋盘尺寸已变化，请重新摆放 ${[...pendingPins].join("、")} 或将其改为自动摆放。`);
+      if (placements.length && !canPin) throw new Error("所选棋盘尺寸不同，请将固定位置的词改为自动摆放后应用。");
       for (const word of words) { const issue = wordIssue(word); if (issue) throw new Error(`${word}：${issue}`); }
       const fixedLayout = placements.length ? { rows, columns, placements: structuredClone(placements) } : null;
       return { fixedWords: [...words], fixedLayout: normalizeFixedLayout({ rows, columns, fixedWords: words, fixedLayout }) };
