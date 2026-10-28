@@ -1,8 +1,6 @@
 # 方格 · 关卡编辑器
 
-支持本地运行，也通过 GitHub Pages 发布。
-
-在线地址：https://sgggom.github.io/wordeditor2/ 。推送到 `main` 后，GitHub Actions 自动检查并发布 `dist/` 目录。关卡及配置仍保存在当前浏览器本地。
+当前仅在本地开发和运行。未经用户明确要求，不向远程推送或发布。关卡及配置保存在当前浏览器本地。
 
 关卡列表中的「导入关卡」可读取导出的 `word-tiles-levels.json`（`books` / `daily` 格式），按书册及关卡顺序追加到已有列表，成功后打开首个导入关卡。导入会校验全部关卡并根据棋盘、单词和格子计数还原合法路径、补充词库释义及统计；文件无效或保存失败时不会部分导入。游戏文件未记录初始词与生成参数，导入关卡不标记初始词，生成参数使用默认值。
 
@@ -145,3 +143,12 @@ npm run dev
 以后更新 `data/source/` 中的原词库后，运行 `npm run import:words` 重新生成 JSON。导入脚本使用 Python 3 标准库，无需额外安装依赖。
 
 `required-words.json` 中的词可用于主动填盘，也可从候选词转为目标。原表「额外词」对应的 `extra-words.json` 按「仅额外」处理：只在棋盘能拼出该词时出现在额外词列表，不能主动填盘或成为目标。仅额外标记优先于普通词分类，源数据保持不变。
+
+## 预设关卡列表与本地版本
+
+顶栏「预设关卡列表」可独立浏览我们的本地版本及参考竞品，切换关卡、跳转关号、点击单词查看路径。这里的浏览不会替换编辑器当前关卡、修改生成配置或参与生成查重。
+
+- **Word Tiles · list 0**：保存原始完整 1500 关的棋盘、目标词、额外词、原关卡 ID 及原始字段。源文件来自 `/Users/sggg/Desktop/leveleditor/关卡数据/07_Word_Tiles/原始配置/wt_level_list_0_解码.json`，副本位于 `dist/data/presets/word-tiles-list0.json`，来源与 SHA256 登记在 `dist/data/preset-level-lists.json`。与既有的 list 0 **生成配置**是不同数据。
+- **2026-10-28 · 版本 1**：我们确认保留的 20 关（001～020），快照保存在 `dist/data/versions/2026-10-28-v1/`。`levels.json` 保留完整关卡及路径、统计和生成配置；`word-tiles-levels.json` 是游戏导出；`configs.json` 是当时完整的生成配置列表。可在预设窗口下载该版本游戏文件。
+
+本地版本历史使用 `dist/data/local-versions.json`，按日期及当天版本号登记。只有用户要求提交本地版本时才增加版本，保留旧快照并创建 Git 本地提交，不推送远程。2026-10-28 的版本 1 还包含预设列表浏览功能及竞品 list 0 数据。

@@ -1,6 +1,6 @@
 import { calculateLevelStatistics, compareRepresentativePaths, describePath } from "./level-statistics.js";
 import { createDuplicateCheck, findDuplicateWords } from "./level-rules.js";
-import { validateFixedWords, normalizeFixedLayout, fixedLayoutLetters } from "./fixed-words.js";
+import { validateFixedWords, normalizeFixedLayout, fixedLayoutLetters, normalizeFixedWordExemptions } from "./fixed-words.js";
 import { createPathSafetyChecker } from "./path-safety.js";
 
 function shuffled(items, random) {
@@ -133,8 +133,8 @@ function normalizeFilters(filters = {}) {
   return result;
 }
 
-function matchesFilters(entry, filters) {
-  return Object.entries(filters).every(([key, values]) => values.includes(entry[key]));
+function matchesFilters(entry, filters, exempt = false) {
+  return Object.entries(filters).every(([key, values]) => (exempt && (key === "scope" || key === "rarityLevel")) || values.includes(entry[key]));
 }
 
 function initialWordFilters(filters, rarityLevel) {
@@ -174,11 +174,11 @@ export function createGenerator(records, onlyExtraRecords = []) {
   const lengths = new Set([...dictionary.keys()].map(word => word.length));
   let cachedPool;
 
-  function getPool(filters) {
+  function getPool(filters, exemptions = new Set()) {
     const normalized = normalizeFilters(filters);
-    const key = JSON.stringify(normalized);
+    const key = JSON.stringify([normalized, [...exemptions].sort()]);
     if (cachedPool?.key === key) return cachedPool;
-    const entries = eligible.filter(entry => matchesFilters(entry, normalized));
+    const entries = eligible.filter(entry => matchesFilters(entry, normalized, exemptions.has(entry.word)));
     const byLength = new Map();
     const byPosition = new Map();
     for (const entry of entries) {
@@ -248,11 +248,11 @@ export function createGenerator(records, onlyExtraRecords = []) {
   }
 
   // Stage 1: consider all legal routes, preferring the greatest number of empty cells.
-  function findPlacement({ rows, columns, letters, usedWords = [], initialMaxWordLength = 8, maxWordLength = 8, initialForwardProbability = 50, initialRarityLevel = null, remainingTargetLengths = null, filters = {}, fixedWord = null, random = Math.random }) {
+  function findPlacement({ rows, columns, letters, usedWords = [], initialMaxWordLength = 8, maxWordLength = 8, initialForwardProbability = 50, initialRarityLevel = null, remainingTargetLengths = null, filters = {}, fixedWord = null, fixedWordExemptions = [], random = Math.random }) {
     validateMaxWordLength(initialMaxWordLength, "初始词最长");
     validateMaxWordLength(maxWordLength);
     validateInitialForwardProbability(initialForwardProbability);
-    const pool = getPool(initialWordFilters(filters, initialRarityLevel));
+    const pool = getPool(initialWordFilters(filters, initialRarityLevel), new Set(fixedWordExemptions));
     const fixedEntry = fixedWord ? pool.entries.find(entry => entry.word === fixedWord) : null;
     if (fixedWord && !fixedEntry) return null;
     const routes = geometry(rows, columns);
@@ -283,7 +283,7 @@ export function createGenerator(records, onlyExtraRecords = []) {
     return null;
   }
 
-  function fillBoard({ rows, columns, initialMaxWordLength, maxWordLength, initialForwardProbability, initialRarityLevel, targetLengthCounts, filters, fixedWords, fixedLayout, random }) {
+  function fillBoard({ rows, columns, initialMaxWordLength, maxWordLength, initialForwardProbability, initialRarityLevel, targetLengthCounts, filters, fixedWords, fixedLayout, fixedWordExemptions, random }) {
     const placements = fixedLayout?.placements ?? [];
     const letters = fixedLayoutLetters(rows, columns, placements);
     const initialWords = placements.map(({ word, path }) => ({ ...dictionary.get(word), path: [...path] }));
@@ -294,14 +294,14 @@ export function createGenerator(records, onlyExtraRecords = []) {
     for (const word of shuffled(fixedWords.filter(word => !pinned.has(word)), random).sort((a, b) => b.length - a.length)) {
       const placement = findPlacement({ rows, columns, letters, usedWords: initialWords.map(entry => entry.word),
         initialMaxWordLength, maxWordLength, initialForwardProbability, initialRarityLevel, remainingTargetLengths,
-        filters, fixedWord: word, random });
+        filters, fixedWord: word, fixedWordExemptions, random });
       if (!placement) return null;
       placement.path.forEach((cell, index) => { letters[cell] = placement.word[index]; });
       initialWords.push(placement);
       if (remainingTargetLengths) remainingTargetLengths[targetLengthGroup(word.length)] -= 1;
     }
     while (letters.includes("")) {
-      const placement = findPlacement({ rows, columns, letters, usedWords: initialWords.map(entry => entry.word), initialMaxWordLength, maxWordLength, initialForwardProbability, initialRarityLevel, remainingTargetLengths, filters, random });
+      const placement = findPlacement({ rows, columns, letters, usedWords: initialWords.map(entry => entry.word), initialMaxWordLength, maxWordLength, initialForwardProbability, initialRarityLevel, remainingTargetLengths, filters, fixedWordExemptions, random });
       if (!placement) return null;
       placement.path.forEach((cell, index) => { letters[cell] = placement.word[index]; });
       initialWords.push(placement);
@@ -343,19 +343,21 @@ export function createGenerator(records, onlyExtraRecords = []) {
   }
 
   // Stage 3: keep placed words and promote the lowest-scoring eligible paths, with random ties.
-  function selectTargets({ rows, columns, letters, initialWords, foundWords, targetCount, targetLengthPlan = null, targetLengthRatios = null, maxWordLength = 8, filters = {}, random = Math.random }) {
+  function selectTargets({ rows, columns, letters, initialWords, foundWords, targetCount, targetLengthPlan = null, targetLengthRatios = null, maxWordLength = 8, filters = {}, fixedWords = [], fixedWordExemptions = [], random = Math.random }) {
     validateTargetCount(targetCount);
     validateMaxWordLength(maxWordLength);
     const { plan, ratios, counts: targetLengthCounts } = resolveTargetLengths(targetCount, targetLengthPlan, targetLengthRatios);
     const normalized = normalizeFilters(filters);
     const initialNames = new Set(initialWords.map(entry => entry.word));
+    const exemptions = new Set(normalizeFixedWordExemptions({ fixedWords, fixedWordExemptions }));
+    if ([...exemptions].some(word => !initialNames.has(word))) throw new Error("豁免词必须是已摆入的初始固定词。");
     const foundByWord = new Map(foundWords.map(entry => [entry.word, entry]));
     const checkPath = createPathSafetyChecker({ rows, columns, letters });
     const isSafe = entry => entry?.pathAnalysis?.safe ?? (entry ? checkPath(entry.word) : false);
     const canTarget = entry => {
       const record = dictionary.get(entry.word);
       return record?.onlyExtra === false && record.word.length <= maxWordLength &&
-        (!targetLengthCounts || targetLengthGroup(record.word.length) !== null) && matchesFilters(record, normalized);
+        (!targetLengthCounts || targetLengthGroup(record.word.length) !== null) && matchesFilters(record, normalized, exemptions.has(record.word));
     };
     if (initialNames.size !== initialWords.length || initialWords.some(entry => !canTarget(entry))) {
       throw new Error("初始词不能重复、包含仅额外词、超出最长单词长度或不符合词库筛选。");
@@ -404,11 +406,11 @@ export function createGenerator(records, onlyExtraRecords = []) {
     for (const entry of targetWords) {
       for (const cell of entry.path) cells[cell].count += 1;
     }
-    const level = { rows, columns, targetCount, targetLengthPlan: plan, targetLengthRatios: ratios, targetLengthCounts, maxWordLength, filters: normalized, cells, initialWords, candidateWords, targetWords, extraWords };
+    const level = { rows, columns, targetCount, targetLengthPlan: plan, targetLengthRatios: ratios, targetLengthCounts, maxWordLength, filters: normalized, fixedWords: [...fixedWords], fixedWordExemptions: [...exemptions], cells, initialWords, candidateWords, targetWords, extraWords };
     return { ...level, statistics: calculateLevelStatistics(level) };
   }
 
-  function generate({ rows, columns, targetCount = 6, targetLengthPlan = null, targetLengthRatios = null, initialMaxWordLength = 8, maxWordLength = 8, initialForwardProbability = 50, initialRarityLevel = null, minimumEmotionScore = null, filters = {}, fixedWords = [], fixedLayout = null, duplicateCheck = createDuplicateCheck([], { target: 0, extra: 0 }), random = Math.random }) {
+  function generate({ rows, columns, targetCount = 6, targetLengthPlan = null, targetLengthRatios = null, initialMaxWordLength = 8, maxWordLength = 8, initialForwardProbability = 50, initialRarityLevel = null, minimumEmotionScore = null, filters = {}, fixedWords = [], fixedLayout = null, fixedWordExemptions = [], duplicateCheck = createDuplicateCheck([], { target: 0, extra: 0 }), random = Math.random }) {
     validateSize(rows, columns);
     validateTargetCount(targetCount);
     validateMaxWordLength(initialMaxWordLength, "初始词最长");
@@ -417,23 +419,25 @@ export function createGenerator(records, onlyExtraRecords = []) {
     if (minimumEmotionScore !== null && !Number.isFinite(minimumEmotionScore)) throw new Error("情绪总分下限需为有效数字。");
     const { plan, ratios, counts: targetLengthCounts } = resolveTargetLengths(targetCount, targetLengthPlan, targetLengthRatios);
     fixedWords = validateFixedWords({ rows, columns, targetCount, initialMaxWordLength, maxWordLength, fixedWords }, targetLengthCounts);
+    fixedWordExemptions = normalizeFixedWordExemptions({ fixedWords, fixedWordExemptions });
+    const exemptions = new Set(fixedWordExemptions);
     fixedLayout = normalizeFixedLayout({ rows, columns, fixedWords, fixedLayout });
     const pinned = new Set(fixedLayout?.placements.map(entry => entry.word) ?? []);
     const pinnedLetters = fixedLayoutLetters(rows, columns, fixedLayout?.placements ?? []);
     const fullyPinned = pinnedLetters.every(Boolean);
     const fixedCoverage = pinnedLetters.filter(Boolean).length +
       fixedWords.filter(word => !pinned.has(word)).reduce((sum, word) => sum + word.length, 0);
-    const pool = getPool(filters);
-    const initialPool = getPool(initialWordFilters(filters, initialRarityLevel));
+    const pool = getPool(filters, exemptions);
+    const initialPool = getPool(initialWordFilters(filters, initialRarityLevel), exemptions);
     const fixedNames = new Set(fixedWords);
     const duplicateTargets = new Set(duplicateCheck.target.range > 0 ? duplicateCheck.target.words.map(word => word.toUpperCase()) : []);
     for (const word of fixedWords) {
       const entry = dictionary.get(word);
       if (!entry) throw new Error(`固定单词 ${word} 不在词库中。`);
       if (entry.onlyExtra) throw new Error(`固定单词 ${word} 属于仅额外词，不能作为初始词。`);
-      if (!matchesFilters(entry, pool.filters)) throw new Error(`固定单词 ${word} 不符合当前词库筛选。`);
-      if (initialRarityLevel !== null && entry.rarityLevel !== initialRarityLevel) throw new Error(`固定单词 ${word} 不符合初始词生僻档位 ${initialRarityLevel}。`);
-      if (duplicateTargets.has(word)) throw new Error(`固定单词 ${word} 与最近 ${duplicateCheck.target.range} 关的目标词重复，请调整固定词或查重范围。`);
+      if (!matchesFilters(entry, pool.filters, exemptions.has(word))) throw new Error(`固定单词 ${word} 不符合当前词库筛选。`);
+      if (!exemptions.has(word) && initialRarityLevel !== null && entry.rarityLevel !== initialRarityLevel) throw new Error(`固定单词 ${word} 不符合初始词生僻档位 ${initialRarityLevel}。`);
+      if (!exemptions.has(word) && duplicateTargets.has(word)) throw new Error(`固定单词 ${word} 与最近 ${duplicateCheck.target.range} 关的目标词重复，请调整固定词或查重范围。`);
     }
     if (!pool.entries.length) throw new Error("筛选后没有可用的初始词，请调整词库筛选。");
     if (!initialPool.entries.length) throw new Error("当前词库筛选与初始词生僻档位下没有可用的初始词。");
@@ -473,7 +477,7 @@ export function createGenerator(records, onlyExtraRecords = []) {
     let emotionFailure = false;
     let unsafeInitialWord = "";
     for (let attempt = 0; attempt < GENERATION_BATCH_SIZE; attempt += 1) {
-      const filled = fillBoard({ rows, columns, initialMaxWordLength, maxWordLength, initialForwardProbability, initialRarityLevel, targetLengthCounts, filters: pool.filters, fixedWords, fixedLayout, random });
+      const filled = fillBoard({ rows, columns, initialMaxWordLength, maxWordLength, initialForwardProbability, initialRarityLevel, targetLengthCounts, filters: pool.filters, fixedWords, fixedLayout, fixedWordExemptions, random });
       if (!filled) {
         if (fullyPinned) throw new Error("固定棋盘无法连接全部固定单词，请调整摆放位置。");
         continue;
@@ -487,14 +491,14 @@ export function createGenerator(records, onlyExtraRecords = []) {
         unsafeInitialWord = unsafeInitial.word; continue;
       }
       const candidateCount = foundWords.filter(entry => entry.pathAnalysis.safe && !entry.onlyExtra && entry.word.length <= maxWordLength &&
-        (!targetLengthCounts || targetLengthGroup(entry.word.length) !== null) && matchesFilters(entry, pool.filters)).length;
+        (!targetLengthCounts || targetLengthGroup(entry.word.length) !== null) && matchesFilters(entry, pool.filters, exemptions.has(entry.word))).length;
       bestCandidateCount = Math.max(bestCandidateCount, candidateCount);
       if (candidateCount < targetCount) {
         if (fullyPinned) throw new Error(`固定棋盘只有 ${candidateCount} 个可用目标词，少于设置的 ${targetCount} 个，请调整布局或目标数量。`);
         continue;
       }
       try {
-        const result = selectTargets({ rows, columns, ...filled, foundWords, targetCount, targetLengthPlan: plan, targetLengthRatios: ratios, maxWordLength, filters: pool.filters, random });
+        const result = selectTargets({ rows, columns, ...filled, foundWords, targetCount, targetLengthPlan: plan, targetLengthRatios: ratios, maxWordLength, filters: pool.filters, fixedWords, fixedWordExemptions, random });
         if (minimumEmotionScore !== null && (!Number.isFinite(result.statistics.emotion.total) || result.statistics.emotion.total < minimumEmotionScore)) {
           if (fullyPinned && fixedWords.length === targetCount) throw new Error(`固定棋盘的目标词已全部确定，情绪总分未达到 ${minimumEmotionScore}，请调整布局。`);
           emotionFailure = true;

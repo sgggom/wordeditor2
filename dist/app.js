@@ -7,11 +7,13 @@ import { calculateRarityTotal } from "./level-statistics.js";
 import { createBatchRunner, formatBatchState } from "./batch-runner.js";
 import { createGenerationClient, defaultGenerationWorkers } from "./generation-client.js";
 import { gameExportText } from "./level-export.js";
-import { normalizeFixedWords, normalizeFixedLayout } from "./fixed-words.js";
+import { normalizeFixedWords, normalizeFixedLayout, normalizeFixedWordExemptions } from "./fixed-words.js";
 import { createPathSafetyChecker } from "./path-safety.js";
+import { setupPresetLevelLists } from "./preset-level-lists.js";
 
 (() => {
   "use strict";
+  setupPresetLevelLists();
 
   const DEFAULT_SIZE = Object.freeze({ rows: 3, columns: 4 });
   const LIMITS = Object.freeze({ rows: [2, 3], columns: [3, 5] });
@@ -26,6 +28,7 @@ import { createPathSafetyChecker } from "./path-safety.js";
   const FILTER_STORAGE_KEY = "fangge.level-word-filters.v1";
   const FIXED_WORDS_STORAGE_KEY = "fangge.level-fixed-words.v1";
   const FIXED_LAYOUT_STORAGE_KEY = "fangge.level-fixed-layout.v1";
+  const FIXED_EXEMPTIONS_STORAGE_KEY = "fangge.level-fixed-word-exemptions.v1";
   const LEGACY_DUPLICATE_RANGE_STORAGE_KEY = "fangge.level-duplicate-check-range.v1";
   const DUPLICATE_RANGE_STORAGE_KEYS = {
     target: "fangge.level-target-duplicate-range.v1", extra: "fangge.level-extra-duplicate-range.v1",
@@ -94,6 +97,7 @@ import { createPathSafetyChecker } from "./path-safety.js";
   let configuredInitialForwardProbability = readInitialForwardProbability();
   let configuredFilters = readFilters();
   let configuredFixedWords = readFixedWords();
+  let configuredFixedWordExemptions = readFixedWordExemptions();
   let configuredFixedLayout = readFixedLayout();
   let configuredDuplicateRanges = Object.fromEntries(Object.entries(DUPLICATE_RANGE_STORAGE_KEYS)
     .map(([kind, key]) => [kind, readDuplicateRange(key)]));
@@ -151,6 +155,7 @@ import { createPathSafetyChecker } from "./path-safety.js";
       localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(configuredFilters));
       localStorage.setItem(FIXED_WORDS_STORAGE_KEY, JSON.stringify(configuredFixedWords));
       localStorage.setItem(FIXED_LAYOUT_STORAGE_KEY, JSON.stringify(configuredFixedLayout));
+      localStorage.setItem(FIXED_EXEMPTIONS_STORAGE_KEY, JSON.stringify(configuredFixedWordExemptions));
       for (const [kind, key] of Object.entries(DUPLICATE_RANGE_STORAGE_KEYS)) {
         localStorage.setItem(key, String(configuredDuplicateRanges[kind]));
       }
@@ -281,6 +286,7 @@ import { createPathSafetyChecker } from "./path-safety.js";
     configuredInitialForwardProbability = level.initialForwardProbability;
     configuredFilters = level.filters;
     configuredFixedWords = normalizeFixedWords(level.fixedWords ?? []);
+    configuredFixedWordExemptions = normalizeFixedWordExemptions(level);
     configuredFixedLayout = structuredClone(level.fixedLayout ?? null);
     configuredDuplicateRanges = Object.fromEntries(Object.keys(duplicateRangeInputs).map(kind =>
       [kind, level.duplicateCheck?.[kind]?.range ?? level.duplicateCheck?.range ?? configuredDuplicateRanges[kind]]));
@@ -433,6 +439,12 @@ import { createPathSafetyChecker } from "./path-safety.js";
       const saved = JSON.parse(localStorage.getItem(FIXED_LAYOUT_STORAGE_KEY));
       return saved ? normalizeFixedLayout({ rows: saved.rows, columns: saved.columns, fixedWords: configuredFixedWords, fixedLayout: saved }) : null;
     } catch { return null; }
+  }
+
+  function readFixedWordExemptions() {
+    try { return normalizeFixedWordExemptions({ fixedWords: configuredFixedWords,
+      fixedWordExemptions: JSON.parse(localStorage.getItem(FIXED_EXEMPTIONS_STORAGE_KEY)) ?? [] }); }
+    catch { return []; }
   }
 
   function readFilters() {
@@ -962,7 +974,8 @@ import { createPathSafetyChecker } from "./path-safety.js";
     try {
       const duplicateCheck = createDuplicateCheck(savedLevels, configuredDuplicateRanges);
       const generated = await getGenerationClient().generate({ ...size, targetCount, targetLengthPlan,
-        initialMaxWordLength, maxWordLength, initialForwardProbability, filters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout }, duplicateCheck, {
+        initialMaxWordLength, maxWordLength, initialForwardProbability, filters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
+        fixedWordExemptions: configuredFixedWordExemptions }, duplicateCheck, {
         signal: controller.signal,
         onProgress: ({ attempts, workers }) => {
           if (currentRequestId !== requestId || controller.signal.aborted) return;
@@ -1266,6 +1279,7 @@ import { createPathSafetyChecker } from "./path-safety.js";
     configuredDuplicateRanges = { target: config.targetDuplicateRange, extra: config.extraDuplicateRange };
     configuredFilters = config.filters;
     configuredFixedWords = normalizeFixedWords(config.fixedWords ?? []);
+    configuredFixedWordExemptions = normalizeFixedWordExemptions(config);
     configuredFixedLayout = structuredClone(config.fixedLayout ?? null);
     restoreTargetConfigInputs();
     initialMaxWordLengthInput.value = String(configuredInitialMaxWordLength);
@@ -1339,6 +1353,7 @@ import { createPathSafetyChecker } from "./path-safety.js";
       ...size, targetCount: configuredTargetCount, targetLengthPlan: configuredTargetLengthPlan,
       initialMaxWordLength: configuredInitialMaxWordLength, maxWordLength: configuredMaxWordLength,
       initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
+      fixedWordExemptions: configuredFixedWordExemptions,
       initialRarityLevel: 1, minimumEmotionScore: 0,
       targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra,
     }),

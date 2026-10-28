@@ -59,11 +59,12 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
     const entry = byWord.get(word);
     if (!entry) return vocabulary ? "不在可用初始词库中" : "词库加载中";
     for (const settings of configs) {
+      const exempt = settings.fixedWordExemptions?.includes(word) ?? false;
       try {
         validateFixedWords({ ...settings, fixedWords: [...new Set([...words, word])] }, countTargetLengthPlan(settings.targetCount, settings.targetLengthPlan));
       } catch (error) { return error.message; }
-      if (Object.entries(settings.filters ?? {}).some(([key, values]) => !values.includes(entry[key]))) return "不符合词库筛选";
-      if (entry.rarityLevel !== 1) return "初始词生僻档位需为 1";
+      if (Object.entries(settings.filters ?? {}).some(([key, values]) => !(exempt && (key === "scope" || key === "rarityLevel")) && !values.includes(entry[key]))) return "不符合词库筛选";
+      if (!exempt && entry.rarityLevel !== 1) return "初始词生僻档位需为 1";
     }
     return "";
   }

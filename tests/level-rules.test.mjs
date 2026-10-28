@@ -19,6 +19,19 @@ const historyEntry = (id, targets, extras = []) => ({ id, level: {
   targetWords: targets.map(word => ({ word })), extraWords: extras.map(word => ({ word })),
 } });
 
+test("preceding history excludes the current and later levels, including legacy records", () => {
+  const records = Array.from({ length: 30 }, (_, index) => historyEntry(index + 1, [`WORD${index + 1}`], [`EXTRA${index + 1}`]));
+  const check = createDuplicateCheck(records, { target: 20, extra: 2 }, 25);
+  assert.deepEqual(check.target.levelIds, Array.from({ length: 20 }, (_, index) => index + 5));
+  assert.deepEqual(check.extra.levelIds, [23, 24]);
+  assert.deepEqual(createDuplicateCheck(records, { target: 20, extra: 20 }, 1).target.words, []);
+  const newer = historyEntry(40, ["NEW24"]);
+  newer.level.sourceConfig = { position: 24 };
+  const original = records[23];
+  original.level.sourceConfig = { position: 24 };
+  assert.deepEqual(createDuplicateCheck([newer, original], { target: 1, extra: 0 }, 25).target.words, ["NEW24"]);
+});
+
 test("target and extra duplicate windows use independent last-N ranges and can be disabled separately", () => {
   const history = [historyEntry(1, ["OLD"]), historyEntry(7, ["ABC"], ["FED"]), historyEntry(12, ["DEF"], ["ABC"])];
   const check = createDuplicateCheck(history, { target: 2, extra: 1 });

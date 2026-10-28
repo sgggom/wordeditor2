@@ -15,6 +15,7 @@
         <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <h1 class="app-name">关卡编辑器</h1>
         <button type="button" id="open-config-list" class="reset-button" aria-haspopup="dialog">关卡配置列表</button>
+        <button type="button" id="open-preset-levels" class="reset-button" aria-haspopup="dialog">预设关卡列表</button>
       </div>
     </header>
 
@@ -344,6 +345,23 @@
       <div id="config-detail-content"></div>
       <p id="config-detail-error" class="config-list-error" role="alert" hidden></p>
       <footer class="filter-footer"><button type="button" id="apply-config-detail" class="generate-button">完成</button></footer>
+    </dialog>
+    <dialog id="preset-level-dialog" class="preset-level-dialog" aria-labelledby="preset-level-title">
+      <header class="filter-panel-heading">
+        <h2 id="preset-level-title">预设关卡列表</h2>
+        <button type="button" id="close-preset-levels" class="filter-close" aria-label="关闭预设关卡列表">×</button>
+      </header>
+      <div class="preset-level-toolbar">
+        <label>关卡列表 <select id="preset-level-source" aria-label="选择预设关卡列表"></select></label>
+        <label>关号 <input id="preset-level-jump" type="number" min="1" value="1" aria-label="跳转关号" disabled /></label>
+        <a id="preset-level-download" class="reset-button" hidden>下载游戏文件</a>
+      </div>
+      <p id="preset-level-summary" class="preset-level-metadata" aria-live="polite">选择关卡列表</p>
+      <p id="preset-level-error" class="config-list-error" role="alert" hidden></p>
+      <div class="preset-level-content">
+        <nav id="preset-level-items" class="preset-level-items" aria-label="预设关卡"></nav>
+        <section id="preset-level-preview" class="preset-level-preview" aria-label="预设关卡详情"></section>
+      </div>
     </dialog>
   </body>
 </html>

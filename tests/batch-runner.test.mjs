@@ -14,6 +14,24 @@ const deferred = () => {
   return { promise, resolve, reject };
 };
 
+test("middle-range generation checks only preceding levels and uses newly saved versions", async () => {
+  const history = Array.from({ length: 10 }, (_, index) => ({ id: index + 1,
+    level: { ...level(`OLD${index + 1}`), sourceConfig: { id: `config-${index + 1}`, position: index + 1 } } }));
+  const checks = [], saved = [];
+  const runner = createBatchRunner({
+    getHistory: async () => history,
+    generate: async (_, check) => { checks.push(check); return level(`NEW${checks.length + 4}`); },
+    save: async generated => { const record = { id: 11 + saved.length, level: generated }; saved.push(record); return record; },
+  });
+  await runner.run([5, 6].map(position => ({ id: `config-${position}`, position, config: config() })));
+  assert.deepEqual(checks[0].target.words, ["OLD3", "OLD4"]);
+  assert.deepEqual(checks[0].extra.words, ["OLD4X"]);
+  assert.deepEqual(checks[1].target.words, ["OLD4", "NEW5"]);
+  assert.deepEqual(checks[1].target.levelIds, [4, 11]);
+  assert.deepEqual(checks[1].extra.words, ["NEW5X"]);
+  assert.equal(history.length, 10);
+});
+
 test("batch generation uses list order, freezes its configuration, and includes committed results in subsequent duplicate windows", async () => {
   const queue = jobs();
   const history = [{ id: 1, level: level("OLD") }];

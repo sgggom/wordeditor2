@@ -1,5 +1,5 @@
 import { countTargetLengthPlan } from "./level-generator.js";
-import { normalizeFixedWords, validateFixedWords, normalizeFixedLayout } from "./fixed-words.js";
+import { normalizeFixedWords, validateFixedWords, normalizeFixedLayout, normalizeFixedWordExemptions } from "./fixed-words.js";
 
 export const CONFIG_LIST_STORAGE_KEY = "fangge.level-config-list.v1";
 export const MAX_CONFIG_ROWS = 1500;
@@ -42,6 +42,7 @@ export function validateLevelConfig(config) {
   const lengthCounts = countTargetLengthPlan(config.targetCount, config.targetLengthPlan);
   if (config.fixedWords !== undefined && !Array.isArray(config.fixedWords)) throw new Error("固定单词需为单词列表。");
   validateFixedWords(config, lengthCounts);
+  normalizeFixedWordExemptions(config);
   normalizeFixedLayout(config);
   if (!config.filters || typeof config.filters !== "object" || Array.isArray(config.filters)) throw new Error("词库筛选无效。");
   for (const [key, values] of Object.entries(config.filters)) {
@@ -52,13 +53,17 @@ export function validateLevelConfig(config) {
 }
 
 export function patchLevelConfigs(records, selectedIds, patch) {
-  const allowed = [...Object.keys(CONFIG_NUMBER_FIELDS), "targetLengthPlan", "filters", "fixedWords", "fixedLayout"];
+  const allowed = [...Object.keys(CONFIG_NUMBER_FIELDS), "targetLengthPlan", "filters", "fixedWords", "fixedLayout", "fixedWordExemptions"];
   if (Object.keys(patch).some(key => !allowed.includes(key))) throw new Error("配置字段无效。");
   const ids = new Set(selectedIds);
   return records.map(record => {
     if (!ids.has(record.id)) return record;
     const config = { ...structuredClone(record.config), ...structuredClone(patch) };
     if (Object.hasOwn(patch, "fixedWords")) config.fixedWords = normalizeFixedWords(config.fixedWords);
+    if (Object.hasOwn(patch, "fixedWords") && !Object.hasOwn(patch, "fixedWordExemptions") && config.fixedWordExemptions) {
+      config.fixedWordExemptions = config.fixedWordExemptions.filter(word => config.fixedWords.includes(word));
+    }
+    if (Object.hasOwn(patch, "fixedWordExemptions")) config.fixedWordExemptions = normalizeFixedWordExemptions(config);
     if (Object.hasOwn(patch, "fixedWords") && !Object.hasOwn(patch, "fixedLayout") && config.fixedLayout) config.fixedLayout = null;
     if (Object.hasOwn(patch, "fixedLayout")) config.fixedLayout = normalizeFixedLayout(config);
     if (Object.hasOwn(patch, "targetCount") && !Object.hasOwn(patch, "targetLengthPlan")) {
@@ -107,11 +112,12 @@ export function hasConfigPreset(presetId, storage = localStorage) {
 
 export function saveConfigList(records, storage = localStorage, presetId) {
   validateConfigList(records);
-  if (presetId === undefined) {
-    try { presetId = JSON.parse(storage.getItem(CONFIG_LIST_STORAGE_KEY))?.presetId; } catch { /* An explicit save can replace invalid old data. */ }
-  }
+  let previous;
+  try { previous = JSON.parse(storage.getItem(CONFIG_LIST_STORAGE_KEY)); } catch { /* An explicit save can replace invalid old data. */ }
+  if (presetId === undefined) presetId = previous?.presetId;
   storage.setItem(CONFIG_LIST_STORAGE_KEY, JSON.stringify({ version: 1, records,
-    ...(typeof presetId === "string" ? { presetId } : {}) }));
+    ...(typeof presetId === "string" ? { presetId } : {}),
+    ...(typeof previous?.openingWordsPresetId === "string" ? { openingWordsPresetId: previous.openingWordsPresetId } : {}) }));
 }
 
 export function installConfigPreset(preset, storage = localStorage) {

@@ -33,7 +33,7 @@ export function createBatchRunner({ getHistory, generate, save, onSaved = () => 
           publish({ phase: "generating", position: job.position, configId: job.id, attempts: 0, workers: 0 });
           const duplicateCheck = createDuplicateCheck(history, {
             target: job.config.targetDuplicateRange, extra: job.config.extraDuplicateRange,
-          });
+          }, job.position);
           const level = await generate(job.config, duplicateCheck, {
             signal,
             onProgress: ({ attempts, workers }) => {

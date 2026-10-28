@@ -6,6 +6,7 @@ import { REFERENCE_CONFIG_ID } from "./reference-config.js";
 import { formatBatchState } from "./batch-runner.js";
 import { defaultGenerationWorkers, detectedProcessorCount } from "./generation-client.js";
 import { mountFixedBoardEditor } from "./fixed-board-editor.js";
+import { installOpeningWordsPreset } from "./opening-words-preset.js";
 
 export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) {
   const openButton = document.querySelector("#open-config-list");
@@ -135,6 +136,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
         if (preset.id !== REFERENCE_CONFIG_ID || preset.records?.length !== 1500) throw new Error("参考配置数据不完整。");
         installConfigPreset(preset);
       }
+      installOpeningWordsPreset();
     } catch (failure) {
       presetLoadError = failure.name === "QuotaExceededError" ? "本地存储空间不足，参考配置未写入。" : failure.message;
     } finally {

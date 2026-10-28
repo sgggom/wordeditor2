@@ -1,0 +1,238 @@
+{
+  "books": [
+    {
+      "name": "第一册",
+      "sub": "入门",
+      "mix": [
+        100,
+        0,
+        0,
+        0,
+        0
+      ],
+      "levels": [
+        {
+          "id": "1",
+          "name": "",
+          "g": "MAP,SBA,UNR",
+          "t": "BAR MAP SUN",
+          "n": "111111111",
+          "e": "ABA ABS BAM BAMS BAP BARN NUS PAM PAMS PAR RAP UNBAR",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "2",
+          "name": "",
+          "g": "BUY,DOG,HAT",
+          "t": "BUY DOG HAT GOAT",
+          "n": "111122122",
+          "e": "DOAT DOGY GOA GOD HAO OAT TAO",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "3",
+          "name": "",
+          "g": "TON,BOX,FOX",
+          "t": "BOX FOX TON BOOT",
+          "n": "221221111",
+          "e": "BOO BOON NOO NOT OOT TOO",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "4",
+          "name": "",
+          "g": "WOC,GIP,TEL",
+          "t": "COW LET PIG",
+          "n": "111111111",
+          "e": "GIE GIP LEI OIG PIE TEL",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "5",
+          "name": "",
+          "g": "FEET,ANFA",
+          "t": "ATE FAN FAT FATE FEET TEEN",
+          "n": "22451223",
+          "e": "ANE ETA FANE FEE FEN FET FETA NEE TEE",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "6",
+          "name": "",
+          "g": "BOT,UES,GBU",
+          "t": "BUG BUS TOE BUST GUEST",
+          "n": "113223222",
+          "e": "BES BEST BOT BOTS OES SEB STOB SUB TOES USE",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "7",
+          "name": "",
+          "g": "CART,ETNE",
+          "t": "ART CAR CAT RACE TENT",
+          "n": "34321211",
+          "e": "ACE ATE CARN CART CARTE CATE ECARTE ETA NET RAT RATE TACE TAR TARN TART TEC TEN TRACE",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "8",
+          "name": "",
+          "g": "NLEN,ETPD",
+          "t": "END NET PEN TEN LEND",
+          "n": "21332212",
+          "e": "ELN LEPT PEL PELT PEND",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "9",
+          "name": "",
+          "g": "PEP,ALM,MLA",
+          "t": "ALE MAP PAL LAMP MALE PALE PALM",
+          "n": "431652211",
+          "e": "ALL ALMA AMP APE ELL ELM LAM LAP MALL MALM PALL PAM PEL PELL PEP",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "10",
+          "name": "",
+          "g": "GREB,RDAE,EDTD",
+          "t": "BED RED READ GREAT",
+          "n": "122111211111",
+          "e": "ADD ADDER BEAD BEAT BERG DEAD DEB EAT ERG GREBE READD REB REDD TAD TAE",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "11",
+          "name": "",
+          "g": "HTHE,ATTA",
+          "t": "EAT HAT HEAT THAT",
+          "n": "21122222",
+          "e": "ATT EATH TAE THE",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "12",
+          "name": "",
+          "g": "PIE,NGG,IBI",
+          "t": "BIG BIN EGG PIE PIG",
+          "n": "222122121",
+          "e": "BING GIB GIE GIP IGG NIB",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "13",
+          "name": "",
+          "g": "ESBU,RUNN",
+          "t": "BUN RUN SUN USE SURE",
+          "n": "23112421",
+          "e": "BUNN NUB NUBS NUS RES RUS RUSE SER SUNN USER",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "14",
+          "name": "",
+          "g": "ITE,STA,EAM",
+          "t": "SEA TEA SEAT SITE TEAM",
+          "n": "133312221",
+          "e": "AMA ATT EAT EATS MAE MAES MAT MATS MATT MATTE SEAM SIT TAE TAM TEAT TEATS TIS",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "15",
+          "name": "",
+          "g": "HTFF,ISII,THGT",
+          "t": "FIT HIS HIT SIT FISH GIFT SIGHT",
+          "n": "212134313221",
+          "e": "FIG FIGHT FIST GIFTS GISH GIST HIST IFF SIFT SIGH SITH THIS TIFF TIS",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "16",
+          "name": "",
+          "g": "BAY,OTD,ATI",
+          "t": "BAT BAY TAB BOAT TIDY",
+          "n": "432121121",
+          "e": "ABO ATT BATT BOA BOT BOTA BOTT DIT DITA DITTO OAT OBA TAO TAY",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "17",
+          "name": "",
+          "g": "CEEN,AKAT",
+          "t": "EAT CAKE KEEN TAKE",
+          "n": "13211322",
+          "e": "ACE AKE AKEE CEE EEK KAE KAT NEAT NEE TAE TAKA",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "18",
+          "name": "",
+          "g": "TRA,RNN,AIG",
+          "t": "GIN INN RAN RAIN RANG TRAIN",
+          "n": "122243242",
+          "e": "AIN ART GNAR INR RAI",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "19",
+          "name": "",
+          "g": "SEET,HOMH,HOTE",
+          "t": "HOT MET SEE THE HOME SEEM SHOE SHOOT",
+          "n": "434233311221",
+          "e": "EMO ETH HET HOE HOES HOOT METH MOO MOOT OES OHS OOH OOHS OOT SEETHE SHH SHOO TEE TEES TOO TOOM",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        },
+        {
+          "id": "20",
+          "name": "",
+          "g": "ELR,ROE,LOV",
+          "t": "LOVE OVER ROLE LOVER",
+          "n": "112113233",
+          "e": "LOO LORE OLE ORE REV ROE",
+          "lv": "",
+          "ty": "",
+          "curtains": []
+        }
+      ]
+    }
+  ],
+  "daily": []
+}

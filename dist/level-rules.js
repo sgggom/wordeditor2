@@ -1,13 +1,28 @@
 import { calculateLevelStatistics } from "./level-statistics.js";
 import { createPathSafetyChecker } from "./path-safety.js";
 
-export function createDuplicateCheck(records, ranges) {
+export function createDuplicateCheck(records, ranges, beforePosition = null) {
+  let history = records;
+  if (beforePosition !== null) {
+    if (!Number.isSafeInteger(beforePosition) || beforePosition < 1) throw new Error("当前关号需为正整数。");
+    const latest = new Map();
+    for (const [index, record] of records.entries()) {
+      const sourcePosition = record.level.sourceConfig?.position;
+      const position = Number.isSafeInteger(sourcePosition) && sourcePosition > 0 ? sourcePosition : index + 1;
+      if (position >= beforePosition) continue;
+      const previous = latest.get(position);
+      // A rerun appends a new record. Use the newest version of each earlier
+      // level, even if the saved list has since been reordered.
+      if (!previous || !Number.isSafeInteger(previous.id) || !Number.isSafeInteger(record.id) || record.id > previous.id) latest.set(position, record);
+    }
+    history = [...latest.entries()].sort(([a], [b]) => a - b).map(([, record]) => record);
+  }
   return Object.fromEntries(["target", "extra"].map(kind => {
     const range = ranges[kind];
     if (!Number.isSafeInteger(range) || range < 0) {
       throw new Error(`${kind === "target" ? "目标词" : "额外词"}查重范围需为大于或等于 0 的整数。`);
     }
-    const recent = range === 0 ? [] : records.slice(-range);
+    const recent = range === 0 ? [] : history.slice(-range);
     return [kind, {
       range,
       levelIds: recent.map(record => record.id),
@@ -18,11 +33,14 @@ export function createDuplicateCheck(records, ranges) {
 }
 
 export function findDuplicateWords(level, duplicateCheck) {
+  const fixed = new Set(level.fixedWords ?? []);
+  const initial = new Set(level.initialWords?.map(entry => entry.word) ?? []);
+  const exemptions = new Set((level.fixedWordExemptions ?? []).filter(word => fixed.has(word) && initial.has(word)));
   return Object.fromEntries(["target", "extra"].map(kind => {
     const previous = new Set(duplicateCheck[kind].range > 0
       ? duplicateCheck[kind].words.map(word => word.toUpperCase()) : []);
     return [kind, [...new Set(level[`${kind}Words`].map(entry => entry.word.toUpperCase()))]
-      .filter(word => previous.has(word))];
+      .filter(word => previous.has(word) && !(kind === "target" && exemptions.has(word)))];
   }));
 }
 

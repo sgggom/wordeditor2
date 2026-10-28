@@ -14,6 +14,14 @@ export function normalizeFixedWords(value = []) {
   return words;
 }
 
+export function normalizeFixedWordExemptions(config) {
+  if (config.fixedWordExemptions !== undefined && !Array.isArray(config.fixedWordExemptions)) throw new Error("固定词豁免需为单词列表。");
+  const exemptions = normalizeFixedWords(config.fixedWordExemptions);
+  const fixed = new Set(normalizeFixedWords(config.fixedWords));
+  if (exemptions.some(word => !fixed.has(word))) throw new Error("豁免只适用于已指定的初始固定词。");
+  return exemptions;
+}
+
 export function fixedLayoutLetters(rows, columns, placements) {
   const letters = Array(rows * columns).fill("");
   for (const { word, path } of placements) {

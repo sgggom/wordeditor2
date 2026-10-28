@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "versions": [
+    {
+      "id": "2026-10-28-v1",
+      "date": "2026-10-28",
+      "version": 1,
+      "label": "2026-10-28 · 版本 1",
+      "levelCount": 20,
+      "levels": "./versions/2026-10-28-v1/levels.json",
+      "gameFile": "./versions/2026-10-28-v1/word-tiles-levels.json",
+      "configs": "./versions/2026-10-28-v1/configs.json",
+      "notes": [
+        "生成并保留前20关，编号001～020。",
+        "保留指定词，调整目标数量、词长及必要的固定位置；第7关保留5个指定目标。",
+        "通过完整顺序生成、目标路径安全、情绪分及历史查重校验。",
+        "增加独立预设关卡列表，收录Word Tiles list 0完整1500关；本版本与参考关卡分开保存。"
+      ],
+      "gitTag": "local-2026-10-28-v1"
+    }
+  ]
+}
