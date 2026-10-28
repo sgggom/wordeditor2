@@ -9,11 +9,10 @@ import { createGenerationClient, defaultGenerationWorkers } from "./generation-c
 import { gameExportText } from "./level-export.js";
 import { normalizeFixedWords, normalizeFixedLayout, normalizeFixedWordExemptions } from "./fixed-words.js";
 import { createPathSafetyChecker } from "./path-safety.js";
-import { setupPresetLevelLists } from "./preset-level-lists.js";
+import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists.js";
 
 (() => {
   "use strict";
-  setupPresetLevelLists();
 
   const DEFAULT_SIZE = Object.freeze({ rows: 3, columns: 4 });
   const LIMITS = Object.freeze({ rows: [2, 3], columns: [3, 5] });
@@ -111,6 +110,9 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
   let generationWorkers = 0;
   let displayedStatistics = null;
   let savedLevels = [];
+  let presetView = null;
+  let presetDictionaryPromise;
+  let editorBeforePreset = null;
   let activeSavedLevelId = null;
   let savedLevelEdited = false;
   let savedLevelsLoading = true;
@@ -191,14 +193,18 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
   }
 
   function renderSavedLevels() {
+    const displayedLevels = presetView?.records ?? savedLevels;
     const busy = generating || savingLevel || updatingLevelList || batchRunning;
-    importLevelsButton.disabled = busy || exportingLevels || !levelLibraryReady;
+    importLevelsButton.disabled = Boolean(presetView) || busy || exportingLevels || !levelLibraryReady;
     importLevelsButton.textContent = updatingLevelList ? "处理中…" : "导入关卡";
-    savedLevelCount.textContent = String(savedLevels.length);
-    exportLevelsButton.disabled = exportingLevels || savingLevel || updatingLevelList || batchRunning || !levelLibraryReady || !savedLevels.length;
+    savedLevelCount.textContent = String(displayedLevels.length);
+    document.querySelector("#viewed-level-list-name").textContent = presetView?.label ?? "当前编辑关卡";
+    document.querySelector("#return-to-edited-levels").hidden = !presetView;
+    form.inert = Boolean(presetView);
+    exportLevelsButton.disabled = exportingLevels || savingLevel || updatingLevelList || batchRunning || !levelLibraryReady || !displayedLevels.length;
     exportLevelsButton.textContent = exportingLevels ? "导出中…" : "导出关卡";
-    addLevelButton.disabled = !level || busy || !levelLibraryReady || (activeSavedLevelId !== null && !savedLevelEdited);
-    addLevelButton.textContent = savingLevel ? "保存中…" : activeSavedLevelId !== null
+    addLevelButton.disabled = Boolean(presetView) || !level || busy || !levelLibraryReady || (activeSavedLevelId !== null && !savedLevelEdited);
+    addLevelButton.textContent = presetView ? "预设关卡" : savingLevel ? "保存中…" : activeSavedLevelId !== null
       ? (savedLevelEdited ? "保存修改" : "已加入") : "加入关卡列表";
     if (!savedLevelListDirty && displayedSavedLevelId === activeSavedLevelId && displayedLevelListBusy === busy) return;
     savedLevelListDirty = false;
@@ -207,13 +213,13 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
     const scrollTop = savedLevelList.scrollTop;
     const scrollLeft = savedLevelList.scrollLeft;
     const fragment = document.createDocumentFragment();
-    if (!savedLevels.length) {
+    if (!displayedLevels.length) {
       const empty = document.createElement("p");
       empty.className = "saved-level-empty";
       empty.textContent = savedLevelsLoading ? "加载中…" : "暂无关卡";
       fragment.append(empty);
     }
-    for (const [index, record] of savedLevels.entries()) {
+    for (const [index, record] of displayedLevels.entries()) {
       const saved = record.level;
       const card = document.createElement("div");
       card.className = "saved-level-card";
@@ -259,7 +265,8 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
         control.disabled = busy || (action === "up" && index === 0) || (action === "down" && index === savedLevels.length - 1);
         controls.append(control);
       }
-      footer.append(score, controls);
+      footer.append(score);
+      if (!presetView) footer.append(controls);
       card.append(button, footer);
       fragment.append(card);
     }
@@ -270,7 +277,7 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
 
   function openSavedLevel(id) {
     if (batchRunning) return;
-    const record = savedLevels.find(entry => entry.id === id);
+    const record = (presetView?.records ?? savedLevels).find(entry => entry.id === id);
     if (!record) return;
     stopGeneration();
     level = structuredClone(record.level);
@@ -638,7 +645,7 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
         checkbox.type = "checkbox";
         checkbox.dataset.targetWord = entry.word;
         checkbox.checked = membership.target.has(entry.word);
-        checkbox.disabled = membership.initial.has(entry.word) || generating || savingLevel || updatingLevelList || batchRunning;
+        checkbox.disabled = Boolean(presetView) || membership.initial.has(entry.word) || generating || savingLevel || updatingLevelList || batchRunning;
         checkbox.setAttribute("aria-label", `${entry.word} 设为目标词`);
         selection.title = membership.initial.has(entry.word) ? "初始词不能移除" : checkbox.checked ? "移出目标词" : "加入目标词";
         selection.append(checkbox);
@@ -779,7 +786,7 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
   }
 
   function renderGenerationButton() {
-    generateButton.disabled = batchRunning || (!generating && (savingLevel || updatingLevelList || (Object.values(configuredDuplicateRanges).some(range => range > 0) && !levelLibraryReady)));
+    generateButton.disabled = Boolean(presetView) || batchRunning || (!generating && (savingLevel || updatingLevelList || (Object.values(configuredDuplicateRanges).some(range => range > 0) && !levelLibraryReady)));
     generateButton.setAttribute("aria-busy", String(generating));
     generateButton.textContent = generating ? "停止生成" : level ? "重新生成" : "生成关卡";
     generateButton.title = generating
@@ -861,8 +868,8 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
     renderWords();
     renderStatistics();
     renderSavedLevels();
-    form.inert = batchRunning;
-    saveSize();
+    form.inert = batchRunning || Boolean(presetView);
+    if (!presetView) saveSize();
     fitBoard();
   }
 
@@ -1050,7 +1057,7 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
     savedLevelError.hidden = true;
     renderSavedLevels();
     try {
-      const records = await (await getLevelStore()).getSavedLevels();
+      const records = presetView?.records ?? await (await getLevelStore()).getSavedLevels();
       const text = gameExportText(records);
       const url = URL.createObjectURL(new Blob([text], { type: "application/json;charset=utf-8" }));
       const link = document.createElement("a");
@@ -1292,6 +1299,7 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
   async function runConfigList(jobs, onUpdate) {
     if (batchRunning || savingLevel || updatingLevelList) throw new Error("请等待当前保存或运行完成。");
     if (!levelLibraryReady) throw new Error("关卡列表尚未加载完成，暂时不能批量生成。");
+    returnToEditedLevels();
     stopGeneration();
     generationClient?.close();
     generationClient = null;
@@ -1348,6 +1356,49 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
 
   stopBatchButton.addEventListener("click", () => batchRunner?.stop());
 
+  function returnToEditedLevels() {
+    if (!presetView) return;
+    presetView = null;
+    if (editorBeforePreset) {
+      ({ level, activeSavedLevelId, savedLevelEdited, selectedWord } = editorBeforePreset);
+      applyEditorConfig(editorBeforePreset.config);
+      editorBeforePreset = null;
+    }
+    savedLevelListDirty = true;
+    render();
+  }
+
+  document.querySelector("#return-to-edited-levels").addEventListener("click", returnToEditedLevels);
+  setupPresetLevelLists({
+    onSelect: async ({ preset, data, isCurrent }) => {
+      if (savingLevel || updatingLevelList || batchRunning) throw new Error("请等待当前保存或运行完成后再切换预设。");
+      let dictionary = [];
+      if (preset.format === "word-tiles") {
+        presetDictionaryPromise ??= Promise.all(["required-words.json", "extra-words.json"].map(async (file, index) => {
+          const response = await fetch(new URL(`./data/${file}`, import.meta.url));
+          if (!response.ok) throw new Error("词库读取失败，请重试。");
+          return (await response.json()).map(record => ({ ...record, onlyExtra: index === 1 }));
+        })).then(groups => groups.flat()).catch(error => { presetDictionaryPromise = null; throw error; });
+        dictionary = await presetDictionaryPromise;
+      }
+      if (!isCurrent()) return;
+      const records = createPresetRecords(data, preset.format, dictionary);
+      if (!isCurrent()) return;
+      if (savingLevel || updatingLevelList || batchRunning) throw new Error("请等待当前保存或运行完成后再切换预设。");
+      stopGeneration();
+      editorBeforePreset ??= { level, activeSavedLevelId, savedLevelEdited, selectedWord,
+        config: { ...size, targetCount: configuredTargetCount, targetLengthPlan: configuredTargetLengthPlan,
+          initialMaxWordLength: configuredInitialMaxWordLength, maxWordLength: configuredMaxWordLength,
+          initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters,
+          fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout, fixedWordExemptions: configuredFixedWordExemptions,
+          targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra } };
+      presetView = { label: preset.label, records };
+      savedLevelListDirty = true;
+      openSavedLevel(records[0].id);
+      savedLevelList.scrollTop = 0;
+    },
+  });
+
   setupConfigList({
     getConfig: () => structuredClone({
       ...size, targetCount: configuredTargetCount, targetLengthPlan: configuredTargetLengthPlan,
@@ -1359,6 +1410,7 @@ import { setupPresetLevelLists } from "./preset-level-lists.js";
     }),
     loadConfig: config => {
       if (batchRunning) return;
+      returnToEditedLevels();
       clearLevel();
       applyEditorConfig(config);
       render();

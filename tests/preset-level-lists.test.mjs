@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { normalizePresetLevels, findPresetWordPath } from "../dist/preset-level-lists.js";
+import { normalizePresetLevels, findPresetWordPath, createPresetRecords } from "../dist/preset-level-lists.js";
 import { createGameExport } from "../dist/level-export.js";
 
 const read = path => JSON.parse(readFileSync(new URL(`../dist/data/${path}`, import.meta.url)));
@@ -53,4 +53,18 @@ test("preview paths do not reuse cells or wrap across rows", () => {
   assert.equal(findPresetWordPath(level, "CD"), null);
   assert.equal(findPresetWordPath(level, "ABA"), null);
   assert.throws(() => normalizePresetLevels([], "word-tiles"), /为空/);
+});
+
+test("reference levels can open in the main editor without changing the original local version", () => {
+  const records = createPresetRecords(read("presets/word-tiles-list0.json"), "word-tiles");
+  assert.equal(records.length, 1500);
+  assert.equal(records[0].id, -1);
+  assert.deepEqual(records[0].level.targetWords.map(entry => entry.word), ["ICE", "JOB", "SUN"]);
+  assert.equal(records[1499].id, -1500);
+  const snapshot = read("versions/2026-10-28-v1/levels.json");
+  const before = JSON.stringify(snapshot);
+  const local = createPresetRecords(snapshot, "editor");
+  local[0].level.cells[0].letter = "Z";
+  assert.equal(JSON.stringify(snapshot), before);
+  assert.equal(local.length, 20);
 });

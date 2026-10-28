@@ -1,3 +1,21 @@
+import { importGameLevels } from "./level-import.js";
+
+export function createPresetRecords(data, format, dictionary = []) {
+  if (format !== "word-tiles") return structuredClone(data.records).map((record, index) => ({ ...record, id: -index - 1 }));
+  const sources = normalizePresetLevels(data, format).map(level => {
+    const counts = Array(level.letters.length).fill(0);
+    for (const entry of level.targetWords) {
+      const path = findPresetWordPath(level, entry.word);
+      if (!path) throw new Error(`${entry.word} 无法在参考棋盘中连接。`);
+      for (const cell of path) counts[cell]++;
+    }
+    return { g: Array.from({ length: level.rows }, (_, row) => level.letters.slice(row * level.columns, (row + 1) * level.columns).join("")).join(","),
+      t: level.targetWords.map(entry => entry.word).join(" "), e: level.extraWords.map(entry => entry.word).join(" "),
+      n: counts.map(count => count.toString(36)).join("") };
+  });
+  return importGameLevels({ books: [{ levels: sources }], daily: [] }, dictionary).map((level, index) => ({ id: -index - 1, level }));
+}
+
 export function normalizePresetLevels(data, format) {
   const levels = format === "word-tiles" ? data : data?.records?.map(record => record.level);
   if (!Array.isArray(levels) || !levels.length) throw new Error("预设关卡列表为空。");
@@ -39,7 +57,7 @@ export function findPresetWordPath(level, word) {
   return null;
 }
 
-export function setupPresetLevelLists() {
+export function setupPresetLevelLists({ onSelect = async () => {} } = {}) {
   const dialog = document.querySelector("#preset-level-dialog");
   const source = document.querySelector("#preset-level-source");
   const list = document.querySelector("#preset-level-items");
@@ -138,9 +156,12 @@ export function setupPresetLevelLists() {
     download.hidden = true;
     summary.textContent = "读取中…";
     try {
-      const result = normalizePresetLevels(await read(preset.file), preset.format);
+      const data = await read(preset.file);
+      const result = normalizePresetLevels(data, preset.format);
       if (token !== request) return;
       if (result.length !== preset.levelCount) throw new Error("预设关卡数量与记录不一致。");
+      await onSelect({ preset, data, isCurrent: () => token === request });
+      if (token !== request) return;
       levels = result;
       summary.textContent = `${preset.label} · ${levels.length} 关`;
       jump.max = String(levels.length);
@@ -174,7 +195,7 @@ export function setupPresetLevelLists() {
     if (dialog.open) return;
     dialog.showModal();
     error.hidden = true;
-    if (presets.length) return;
+    if (presets.length) { await loadPreset(); return; }
     source.disabled = true;
     try {
       const [reference, history] = await Promise.all([read("preset-level-lists.json"), read("local-versions.json")]);
