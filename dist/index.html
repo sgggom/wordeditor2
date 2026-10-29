@@ -14,6 +14,9 @@
       <div class="header-inner">
         <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <h1 class="app-name">关卡编辑器</h1>
+        <label class="global-target-switch" title="统一控制单关生成和所有配置列表的目标数量、逐个词长限制">
+          <input id="global-target-limits-enabled" type="checkbox" checked />全局目标限制
+        </label>
         <button type="button" id="open-config-list" class="reset-button" aria-haspopup="dialog">关卡配置列表</button>
         <button type="button" id="open-preset-levels" class="reset-button" aria-haspopup="dialog">预设关卡列表</button>
       </div>
@@ -36,12 +39,15 @@
                     <input type="radio" name="rows" value="3" checked />
                     <span class="choice-surface"><strong>3</strong><span>行</span></span>
                   </label>
+                  <label class="choice"><input type="radio" name="rows" value="4" /><span class="choice-surface"><strong>4</strong><span>行</span></span></label>
+                  <label class="choice"><input type="radio" name="rows" value="5" /><span class="choice-surface"><strong>5</strong><span>行</span></span></label>
                 </div>
               </fieldset>
 
               <fieldset>
                 <legend>列数</legend>
                 <div class="choices columns-choices">
+                  <label class="choice"><input type="radio" name="columns" value="2" /><span class="choice-surface"><strong>2</strong><span>列</span></span></label>
                   <label class="choice">
                     <input type="radio" name="columns" value="3" />
                     <span class="choice-surface"><strong>3</strong><span>列</span></span>
@@ -116,6 +122,7 @@
                 <h2 id="target-config-title">关卡目标词</h2>
                 <button type="button" class="filter-close" popovertarget="target-config-panel" popovertargetaction="hide" aria-label="关闭关卡目标词配置">×</button>
               </div>
+              <p id="target-limits-hint" class="target-limits-hint" hidden>全局目标限制已关闭。先生成棋盘，再手动增减目标词；可在顶部打开全局开关，恢复数量和词长配额。</p>
               <div class="target-config-count">
                 <label for="target-count">目标数量</label>
                 <input id="target-count" name="targetCount" type="number" min="1" step="1" value="6" inputmode="numeric" required />
@@ -193,6 +200,7 @@
         <section class="word-card all-words-panel" aria-labelledby="words-title">
           <header class="word-panel-heading">
             <h2 id="words-title">当前关卡所有词</h2>
+            <div id="path-share-bar" class="path-share-bar" role="img" aria-label="目标词路径占比：暂无目标词"></div>
             <div class="word-counts">
               <span class="target-word-count">目标词 <output id="target-word-count" aria-label="目标词数量">0</output></span>
               <span>额外词 <output id="extra-word-count" aria-label="额外词数量">0</output></span>
@@ -218,7 +226,7 @@
           <header class="preview-header">
             <div class="preview-title-group">
               <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.4" /><path d="M3 8h14M3 12h14M8 3v14M12 3v14" stroke="currentColor" stroke-width="1.2" /></svg>
-              <h2 id="preview-title">棋盘预览</h2>
+              <h2 id="preview-title">棋盘预览</h2><span class="board-shape-hint">点击格子启用 / 禁用；修改后需重新生成</span>
             </div>
             <div class="emotion-summary">
               <span id="emotion-score-label">情绪总分</span>
@@ -230,7 +238,7 @@
             </div>
             <div class="preview-actions">
               <output id="size-summary" class="size-summary" aria-live="polite" aria-atomic="true">3 行 × 4 列</output>
-              <button type="button" id="level-data-toggle" class="reset-button" popovertarget="level-data-panel" disabled>关卡数据</button>
+              <button type="button" id="level-data-toggle" class="reset-button" popovertarget="level-data-panel">关卡数据</button>
             </div>
           </header>
 
@@ -267,6 +275,16 @@
           <h2 id="level-data-title">关卡数据</h2>
           <button type="button" class="filter-close" popovertarget="level-data-panel" popovertargetaction="hide" aria-label="关闭关卡数据">×</button>
         </div>
+        <div class="single-level-data">
+          <label for="single-level-json">单关 JSON 数据</label>
+          <textarea id="single-level-json" rows="6" spellcheck="false" placeholder="粘贴单关 JSON 数据，然后点击读取数据"></textarea>
+          <div class="single-level-data-actions">
+            <button type="button" id="copy-single-level" class="reset-button" disabled>复制本关</button>
+            <button type="button" id="read-single-level" class="generate-button">读取数据</button>
+            <span class="single-level-data-hint">读取到编辑区后，可加入关卡列表保存。</span>
+          </div>
+          <p id="single-level-status" role="status" aria-live="polite" hidden></p>
+        </div>
         <div id="level-data-content" class="level-data-content" tabindex="0" aria-label="关卡统计数据"></div>
       </section>
 
@@ -277,6 +295,16 @@
         <h2 id="config-list-title">关卡配置列表 <span>共 <output id="config-list-count">0</output> 关</span></h2>
         <button type="button" class="filter-close" data-close-config-list aria-label="关闭关卡配置列表">×</button>
       </header>
+      <div class="config-list-toolbar config-library-toolbar">
+        <label for="config-list-select">当前列表</label>
+        <select id="config-list-select" aria-label="切换配置列表"></select>
+        <button type="button" id="new-config-list" class="reset-button">新建列表</button>
+        <button type="button" id="manage-config-lists" class="reset-button">列表管理</button>
+        <label class="global-target-switch" title="对单关生成和所有配置列表统一生效">
+          <input id="config-global-target-limits-enabled" type="checkbox" checked />全局目标限制
+        </label>
+        <span class="config-library-hint">切换或新建时自动保存当前配置</span>
+      </div>
       <div class="config-list-toolbar">
         <label for="config-add-count">新增</label>
         <input id="config-add-count" type="number" min="1" max="1500" step="1" value="10" aria-label="新增关数" />
@@ -298,7 +326,7 @@
             <th class="config-select-column"><input id="config-select-all" type="checkbox" aria-label="全选关卡配置" /></th>
             <th class="config-index-column">关卡</th>
             <th class="config-size-column">行</th><th class="config-size-column">列</th>
-            <th>目标数量</th><th class="config-plan-column">目标词长</th><th class="config-fixed-column">固定单词</th>
+            <th>目标数量</th><th class="config-plan-column">目标词长</th><th class="config-fixed-column">棋盘编辑</th>
             <th>初始词最长</th><th>最长单词</th><th>初始正向 %</th>
             <th>目标查重</th><th>额外查重</th><th>词库筛选</th><th class="config-use-column">操作</th>
           </tr></thead>
@@ -317,6 +345,42 @@
         <button type="button" class="reset-button" data-close-config-list>关闭</button>
         <button type="button" id="save-config-list" class="generate-button">保存配置</button>
       </footer>
+    </dialog>
+
+    <dialog id="config-list-manager" class="config-detail-dialog config-list-manager" aria-labelledby="config-list-manager-title">
+      <header class="filter-panel-heading">
+        <h2 id="config-list-manager-title">列表管理</h2>
+        <button type="button" class="filter-close" data-close-list-manager aria-label="关闭列表管理">×</button>
+      </header>
+      <div id="config-list-manager-items" class="config-list-manager-items"></div>
+      <div id="config-list-delete-confirm" class="config-list-delete-confirm" hidden>
+        <p id="config-list-delete-message"></p>
+        <div class="config-list-manager-actions">
+          <button type="button" id="cancel-delete-config-list" class="reset-button">取消</button>
+          <button type="button" id="confirm-delete-config-list" class="reset-button config-list-delete-button">确认删除</button>
+        </div>
+      </div>
+      <p id="config-list-manager-error" class="config-list-error" role="alert" hidden></p>
+      <footer class="filter-footer">
+        <button type="button" id="manager-new-config-list" class="generate-button">新建列表</button>
+        <button type="button" class="reset-button" data-close-list-manager>关闭</button>
+      </footer>
+    </dialog>
+
+    <dialog id="config-list-name-dialog" class="config-detail-dialog config-list-name-dialog" aria-labelledby="config-list-name-title">
+      <header class="filter-panel-heading">
+        <h2 id="config-list-name-title">新建列表</h2>
+        <button type="button" class="filter-close" data-close-list-name aria-label="关闭列表名称设置">×</button>
+      </header>
+      <form id="config-list-name-form">
+        <label for="config-list-name">列表名称</label>
+        <input id="config-list-name" type="text" maxlength="40" required autocomplete="off" />
+        <p id="config-list-name-error" class="config-list-error" role="alert" hidden></p>
+        <footer class="filter-footer">
+          <button type="button" class="reset-button" data-close-list-name>取消</button>
+          <button type="submit" id="submit-config-list-name" class="generate-button">创建</button>
+        </footer>
+      </form>
     </dialog>
 
     <dialog id="config-run-range-dialog" class="config-detail-dialog config-run-range-dialog" aria-labelledby="config-run-range-title">

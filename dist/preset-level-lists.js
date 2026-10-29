@@ -23,7 +23,7 @@ export function normalizePresetLevels(data, format) {
     const reference = format === "word-tiles";
     const rows = reference ? level.height : level.rows;
     const columns = reference ? level.width : level.columns;
-    const letters = reference ? [...level.letters.replaceAll(",", "")] : level.cells.map(cell => cell.letter);
+    let letters = reference ? [...level.letters.replaceAll(",", "")] : level.cells.map(cell => cell.letter);
     const targetWords = (reference ? level.target_words : level.targetWords).map(entry => ({ ...entry }));
     const extraWords = (reference ? level.extra_words : level.extraWords).map(entry => ({ ...entry }));
     if (![2, 3].includes(rows) || ![3, 4, 5].includes(columns) || letters.length !== rows * columns ||
@@ -31,6 +31,9 @@ export function normalizePresetLevels(data, format) {
         [...targetWords, ...extraWords].some(entry => !/^[A-Z]+$/.test(entry.word))) {
       throw new Error(`第 ${index + 1} 关数据无效。`);
     }
+    // Reference rows run bottom to top; editor cell indices run top to bottom.
+    if (reference) letters = Array.from({ length: rows }, (_, row) =>
+      letters.slice((rows - row - 1) * columns, (rows - row) * columns)).flat();
     return { rows, columns, letters, targetWords, extraWords, sourceId: reference ? level.id : null };
   });
 }

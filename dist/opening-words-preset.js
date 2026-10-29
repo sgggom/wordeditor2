@@ -1,4 +1,4 @@
-import { CONFIG_LIST_STORAGE_KEY, validateConfigList } from "./level-config.js";
+import { readConfigLists, writeConfigLists, validateConfigList } from "./level-config.js";
 import { countTargetLengthPlan, targetLengthGroup } from "./level-generator.js";
 
 export const OPENING_WORDS_PRESET_ID = "opening-fixed-words-20261028-v1";
@@ -50,10 +50,12 @@ export function configureOpeningWords(records) {
 }
 
 export function installOpeningWordsPreset(storage = localStorage) {
-  const saved = JSON.parse(storage.getItem(CONFIG_LIST_STORAGE_KEY));
-  if (saved?.openingWordsPresetId === OPENING_WORDS_PRESET_ID) return false;
-  if (saved?.version !== 1) throw new Error("关卡配置列表尚未就绪。");
-  const records = configureOpeningWords(saved.records);
-  storage.setItem(CONFIG_LIST_STORAGE_KEY, JSON.stringify({ ...saved, records, openingWordsPresetId: OPENING_WORDS_PRESET_ID }));
+  const library = readConfigLists(storage);
+  if (!library) throw new Error("关卡配置列表尚未就绪。");
+  const saved = library.lists.find(list => list.id === library.activeListId);
+  if (saved.openingWordsPresetId === OPENING_WORDS_PRESET_ID) return false;
+  saved.records = configureOpeningWords(saved.records);
+  saved.openingWordsPresetId = OPENING_WORDS_PRESET_ID;
+  writeConfigLists(library, storage);
   return true;
 }

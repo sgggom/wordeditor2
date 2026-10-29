@@ -5,8 +5,8 @@ export const pathCellMask = path => path.reduce((mask, cell) => mask | (1 << cel
 export function createPathSafetyChecker(level, { allowEmpty = false } = {}) {
   const { rows, columns } = level ?? {};
   const letters = level?.letters ?? level?.cells?.map(cell => cell.letter) ?? [];
-  const validBoard = [2, 3].includes(rows) && [3, 4, 5].includes(columns) &&
-    letters.length === rows * columns && letters.every(letter => /^[A-Z]$/.test(letter) || (allowEmpty && letter === ""));
+  const validBoard = [2, 3, 4, 5].includes(rows) && [2, 3, 4, 5].includes(columns) &&
+    letters.length === rows * columns && letters.every((letter, cell) => /^[A-Z]$/.test(letter) || (letter === "" && (allowEmpty || level.disabledCells?.includes(cell) || level.cells?.[cell]?.disabled)));
   const neighbors = letters.map((_, cell) => [
     ...(cell >= columns ? [cell - columns] : []),
     ...(cell + columns < letters.length ? [cell + columns] : []),
@@ -21,7 +21,7 @@ export function createPathSafetyChecker(level, { allowEmpty = false } = {}) {
     let safe = true;
     const complete = () => !safe || (firstMask !== null && word.length === letters.length);
     function visit(cell, step, mask) {
-      if (complete() || letters[cell] !== word[step]) return;
+      if (complete() || level.disabledCells?.includes(cell) || level.cells?.[cell]?.disabled || letters[cell] !== word[step]) return;
       mask |= 1 << cell;
       if (step === word.length - 1) {
         firstMask ??= mask;
@@ -35,4 +35,10 @@ export function createPathSafetyChecker(level, { allowEmpty = false } = {}) {
     results.set(word, result);
     return result;
   };
+}
+
+export function assertSafeTargetPaths(level) {
+  const check = createPathSafetyChecker(level);
+  const unsafe = (level.targetWords ?? []).filter(entry => !check(entry.word)).map(entry => entry.word);
+  if (unsafe.length) throw new Error(`目标词 ${unsafe.join("、")} 存在使用不同格子的路径，可能导致关卡无法完成，请重新生成或调整目标词。`);
 }

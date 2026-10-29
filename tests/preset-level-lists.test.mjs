@@ -17,7 +17,8 @@ test("the complete reference list preserves source data and every word has an or
   assert.equal(levels.length, 1500);
   assert.equal(levels.length, manifest.levelCount);
   assert.deepEqual(levels[0].targetWords.map(entry => entry.word), ["ICE", "JOB", "SUN"]);
-  for (const level of levels) {
+  for (const [index, level] of levels.entries()) {
+    assert.equal(level.letters.join(""), source[index].letters.split(",").reverse().join(""));
     for (const entry of [...level.targetWords, ...level.extraWords]) {
       const path = findPresetWordPath(level, entry.word);
       assert.ok(path, `Reference ${level.sourceId}: ${entry.word}`);
@@ -60,10 +61,13 @@ test("reference levels can open in the main editor without changing the original
   assert.equal(records.length, 1500);
   assert.equal(records[0].id, -1);
   assert.deepEqual(records[0].level.targetWords.map(entry => entry.word), ["ICE", "JOB", "SUN"]);
+  assert.equal(records[0].level.cells.map(cell => cell.letter).join(""), "SUNJICOBE");
+  assert.deepEqual(records[0].level.targetWords.find(entry => entry.word === "ICE").path, [4, 5, 8]);
   assert.equal(records[1499].id, -1500);
   const snapshot = read("versions/2026-10-28-v1/levels.json");
   const before = JSON.stringify(snapshot);
   const local = createPresetRecords(snapshot, "editor");
+  assert.deepEqual(local[0].level.cells, snapshot.records[0].level.cells);
   local[0].level.cells[0].letter = "Z";
   assert.equal(JSON.stringify(snapshot), before);
   assert.equal(local.length, 20);

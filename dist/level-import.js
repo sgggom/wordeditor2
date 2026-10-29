@@ -11,8 +11,10 @@ export function importGameLevels(data, records = []) {
     const fail = message => { throw new Error(`第 ${index + 1} 关：${message}`); };
     const grid = typeof source?.g === "string" ? source.g.split(",") : [];
     const rows = grid.length, columns = grid[0]?.length;
-    if (![2, 3].includes(rows) || ![3, 4, 5].includes(columns) || grid.some(row => row.length !== columns || !/^[A-Z]+$/.test(row))) fail("棋盘尺寸或字母无效。");
-    const letters = [...grid.join("")];
+    if (![2, 3, 4, 5].includes(rows) || ![2, 3, 4, 5].includes(columns) || grid.some(row => row.length !== columns || !/^[A-Z-]+$/.test(row))) fail("棋盘尺寸或字母无效。");
+    const letters = [...grid.join("")].map(letter => letter === "-" ? "" : letter);
+    const disabledCells = letters.flatMap((letter, index) => letter ? [] : [index]);
+    if (disabledCells.length === letters.length) fail("棋盘没有启用格子。");
     const words = value => {
       if (typeof value !== "string") fail("单词字段无效。");
       const result = value.trim() ? value.trim().split(/\s+/) : [];
@@ -65,14 +67,29 @@ export function importGameLevels(data, records = []) {
         assigned: describePath(entry.path, columns), representative: descriptions[0] };
       delete entry.paths;
     }
-    const level = { rows, columns, name: source.name ?? "", targetCount: targets.length,
+    const level = { rows, columns, disabledCells, name: source.name ?? "", targetCount: targets.length,
       targetLengthPlan: null, targetLengthRatios: null, targetLengthCounts: null,
       initialMaxWordLength: columns, maxWordLength: Math.max(...targets.map(word => word.length)),
       initialForwardProbability: 50, filters: {}, initialWords: [],
-      candidateWords: entries.filter(entry => !entry.onlyExtra && entry.pathAnalysis.safe), targetWords: targetEntries,
+      candidateWords: entries.filter(entry => !entry.onlyExtra), targetWords: targetEntries,
       extraWords: entries.slice(targets.length),
-      cells: letters.map((letter, cell) => ({ letter, count: parseInt(source.n[cell], 36) })),
+      cells: letters.map((letter, cell) => ({ letter, count: parseInt(source.n[cell], 36), ...(disabledCells.includes(cell) ? { disabled: true } : {}) })),
     };
     return { ...level, statistics: calculateLevelStatistics(level) };
   });
+}
+
+export function importSingleGameLevel(text, records = []) {
+  let data;
+  try { data = JSON.parse(text.replace(/^\uFEFF/, "")); }
+  catch { throw new Error("JSON 格式无效，请粘贴完整的单关数据。"); }
+  const pack = data && typeof data === "object" && !Array.isArray(data) && Object.hasOwn(data, "g")
+    ? { books: [{ levels: [data] }], daily: [] } : data;
+  if (!pack || !Array.isArray(pack.books) || !Array.isArray(pack.daily) || pack.books.some(book => !Array.isArray(book?.levels))) {
+    throw new Error("请粘贴包含 g、t、n、e 的单关 JSON 对象。");
+  }
+  if (pack.books.reduce((count, book) => count + book.levels.length, 0) + pack.daily.length !== 1) {
+    throw new Error("每次只能读取一关数据。");
+  }
+  return importGameLevels(pack, records)[0];
 }

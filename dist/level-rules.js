@@ -1,5 +1,5 @@
-import { calculateLevelStatistics } from "./level-statistics.js";
 import { createPathSafetyChecker } from "./path-safety.js";
+import { calculateLevelStatistics } from "./level-statistics.js";
 
 export function createDuplicateCheck(records, ranges, beforePosition = null) {
   let history = records;
@@ -49,11 +49,12 @@ export function setTargetWord(level, word, selected) {
   const candidate = level.candidateWords.find(entry => entry.word === word);
   const wasSelected = level.targetWords.some(entry => entry.word === word);
   if ((!candidate || candidate.onlyExtra) && (selected || !wasSelected)) throw new Error("只能从候选词中选择目标词。");
-  if (selected && !createPathSafetyChecker(level)(word)) throw new Error(`${word} 存在使用不同格子的连接路径，不能设为目标词。`);
-  if (!selected && level.initialWords.some(entry => entry.word === word)) {
+  if (!selected && level.targetLimitsEnabled !== false && level.initialWords.some(entry => entry.word === word)) {
     throw new Error("初始词不能移出关卡目标。");
   }
+  if (!selected && level.targetLimitsEnabled === false && level.fixedWords?.includes(word)) throw new Error("固定单词不能移出关卡目标。");
   if (wasSelected === selected) return level;
+  if (selected && !createPathSafetyChecker(level)(word)) throw new Error(`${word} 存在使用不同格子的路径，可能导致关卡无法完成，不能加入目标词。`);
   const allWords = [...level.targetWords, ...level.extraWords];
   const targetNames = new Set(level.targetWords.map(entry => entry.word));
   if (selected) targetNames.add(word);
@@ -63,6 +64,9 @@ export function setTargetWord(level, word, selected) {
   const cells = level.cells.map(cell => ({ ...cell, count: 0 }));
   for (const entry of targetWords) {
     for (const cell of entry.path) cells[cell].count += 1;
+  }
+  if (level.targetLimitsEnabled === false && cells.some((cell, index) => !cell.disabled && !level.disabledCells?.includes(index) && cell.count < 1)) {
+    throw new Error("移除后有格子没有目标词覆盖，请先勾选覆盖这些格子的其他目标词。");
   }
   // Generation settings remain the template for the next generation. Statistics
   // and the word arrays describe the actual, manually edited target selection.

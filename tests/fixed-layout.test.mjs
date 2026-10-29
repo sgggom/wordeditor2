@@ -43,7 +43,7 @@ test("overlapping presets share matching letters and all remain targets on a ful
   assert.deepEqual(fixedLayoutLetters(2, 3, remaining), [..."CATORE"], "Removing a word must preserve letters shared by other words");
 });
 
-test("malformed, conflicting, stale-size and permanently ambiguous layouts fail before generation", () => {
+test("malformed, conflicting and stale-size layouts fail; different-cell paths are accepted", () => {
   const base = settings();
   for (const patch of [
     { rows: 2 },
@@ -57,8 +57,7 @@ test("malformed, conflicting, stale-size and permanently ambiguous layouts fail 
   ]) assert.throws(() => normalizeFixedLayout({ ...base, fixedLayout: { ...base.fixedLayout, ...patch } }));
   const unsafe = { ...base, fixedWords: ["CAT", "COT"], fixedLayout: { rows: 3, columns: 3,
     placements: [{ word: "CAT", path: [0, 1, 2] }, { word: "COT", path: [0, 3, 4] }] } };
-  assert.throws(() => createGenerator(records(["CAT", "COT", "HEN"])).generate(unsafe),
-    error => error.code !== "GENERATION_RETRY" && /CAT.*不同格子/.test(error.message));
+  assert.deepEqual(normalizeFixedLayout(unsafe), unsafe.fixedLayout);
 });
 
 test("pinned overlap counts as covered cells rather than summed word lengths in coverage checks", () => {
@@ -68,7 +67,7 @@ test("pinned overlap counts as covered cells rather than summed word lengths in 
   assert.throws(() => generator.generate(config), error => error.code !== "GENERATION_RETRY" && /无法填满/.test(error.message));
 });
 
-test("legacy unpositioned words remain supported, and unsafe completions retry without moving pins", () => {
+test("legacy automatic words keep pinned paths while ambiguous completions retry", () => {
   const generator = createGenerator(records(["CAT", "DOG", "HEN"]));
   const config = settings();
   config.fixedLayout.placements.pop();
@@ -77,8 +76,8 @@ test("legacy unpositioned words remain supported, and unsafe completions retry w
   assert.ok(level.targetWords.some(entry => entry.word === "DOG"));
   const unsafe = { ...settings(), rows: 2, targetLengthPlan: null, fixedWords: ["CAT", "CO"], fixedLayout: { rows: 2, columns: 3,
     placements: [{ word: "CAT", path: [0, 1, 2] }, { word: "CO", path: [0, 3] }] } };
-  assert.throws(() => createGenerator(records(["CAT", "CO", "COT", "TOT"])).generate(unsafe),
-    error => error.code === "GENERATION_RETRY" && /不同格子/.test(error.message));
+  assert.throws(() => createGenerator(records(["CAT", "CO", "COT", "TOT"])).generate({ ...unsafe, random: randomFrom(3) }),
+    error => error.code === "GENERATION_RETRY" && /填满棋盘/.test(error.message));
   assert.deepEqual(unsafe.fixedLayout.placements[0].path, [0, 1, 2]);
 });
 
@@ -117,7 +116,6 @@ test("automatic-only preset words follow the initial direction preference withou
     assert.ok(level.fixedWords.every(word => level.initialWords.some(entry => entry.word === word)));
     const first = level.initialWords[0].path;
     assert.equal(first[1] > first[0], initialForwardProbability === 100);
-    assert.ok(level.targetWords.every(entry => entry.pathAnalysis.safe));
   }
 });
 
@@ -134,4 +132,26 @@ test("switching presets to automatic keeps the words and can be applied across d
     assert.ok(level.fixedWords.every(word => level.targetWords.some(entry => entry.word === word)));
     assert.ok(level.cells.every(cell => cell.letter && cell.count > 0));
   }
+});
+
+test("board editing applies dimensions, disabled cells and pinned words together to selected configurations", () => {
+  const source = [{ id: "a", config: settings() }, { id: "b", config: { ...settings(), rows: 2, fixedLayout: null } }, { id: "c", config: settings() }];
+  const before = structuredClone(source);
+  const patch = { rows: 5, columns: 4, disabledCells: [10, 19], fixedWords: ["CAT", "DOG"],
+    fixedLayout: { rows: 5, columns: 4, placements: [
+      { word: "CAT", path: [0, 1, 2] }, { word: "DOG", path: [4, 5, 6] },
+    ] } };
+  const updated = patchLevelConfigs(source, ["a", "b"], patch);
+  for (const record of updated.slice(0, 2)) {
+    assert.equal(record.config.rows, 5);
+    assert.equal(record.config.columns, 4);
+    assert.deepEqual(record.config.disabledCells, [10, 19]);
+    assert.deepEqual(record.config.fixedLayout, patch.fixedLayout);
+  }
+  updated[0].config.disabledCells.push(18);
+  assert.deepEqual(updated[1].config.disabledCells, [10, 19]);
+  assert.equal(updated[2], source[2]);
+  assert.deepEqual(source, before);
+  assert.throws(() => patchLevelConfigs(source, ["a", "b"], { ...patch, disabledCells: [1] }), /路径/);
+  assert.deepEqual(source, before);
 });

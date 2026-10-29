@@ -1,3 +1,4 @@
+import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
 import { normalizeFixedWords, validateFixedWords, normalizeFixedLayout, fixedLayoutLetters } from "./fixed-words.js";
 import { countTargetLengthPlan } from "./level-generator.js";
 import { describePath } from "./level-statistics.js";
@@ -25,8 +26,13 @@ const element = (tag, className, text) => {
 };
 
 export function mountFixedBoardEditor(container, config, { configs = [config], onError = () => {} } = {}) {
-  const { rows, columns } = config;
-  const canPin = configs.every(settings => settings.rows === rows && settings.columns === columns);
+  config = structuredClone(config);
+  let { rows, columns } = config;
+  let disabledCells = normalizeDisabledCells(config);
+  let canPin = configs.every(settings => settings.rows === rows && settings.columns === columns &&
+    JSON.stringify(normalizeDisabledCells(settings)) === JSON.stringify(disabledCells));
+  let boardChanged = false;
+  let editMode = "shape";
   let words = normalizeFixedWords(config.fixedWords);
   // Keep coordinates when the user changes the size. Words outside the new
   // board need an explicit new placement or a switch to automatic placement.
@@ -34,7 +40,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   let placements = (config.fixedLayout?.placements ?? []).flatMap(entry => {
     const oldColumns = config.fixedLayout.columns;
     const coordinates = entry.path.map(cell => [Math.floor(cell / oldColumns), cell % oldColumns]);
-    if (coordinates.every(([row, column]) => row < rows && column < columns)) {
+    if (coordinates.every(([row, column]) => row < rows && column < columns && !config.disabledCells?.includes(row * columns + column))) {
       return [{ word: entry.word, path: coordinates.map(([row, column]) => row * columns + column) }];
     }
     pendingPins.add(entry.word);
@@ -42,7 +48,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   });
   let activeWord = null, activePath = [], selectedWord = null;
   let vocabulary = null, byWord = new Map(), disposed = false;
-  container.innerHTML = '<div class="fixed-board-editor"><section class="fixed-board-side"><div class="fixed-board-heading"><strong id="fixed-board-size"></strong><button type="button" class="reset-button" data-fixed-action="clear">清空</button></div><div class="fixed-board-stage"><div class="fixed-board-grid" role="group" aria-label="固定单词棋盘"></div></div><div class="fixed-placement-status" aria-live="polite"></div><div class="fixed-placement-actions"><button type="button" class="reset-button" data-fixed-action="undo">撤销一格</button><button type="button" class="reset-button" data-fixed-action="cancel">取消摆放</button></div><div class="fixed-preset-list" aria-label="已添加的固定单词"></div></section><section class="fixed-search-side"><label for="fixed-word-search">搜索单词</label><input id="fixed-word-search" type="search" placeholder="输入单词或释义" autocomplete="off" spellcheck="false" /><div class="fixed-search-count" aria-live="polite"></div><div class="fixed-search-results"></div><button type="button" class="reset-button" data-fixed-action="retry" hidden>重新加载词库</button></section></div>';
+  container.innerHTML = '<div class="fixed-board-editor"><section class="fixed-board-side"><div class="fixed-board-heading"><strong id="fixed-board-size"></strong><button type="button" class="reset-button" data-fixed-action="clear">清空单词</button></div><div class="board-edit-controls"><label>行 <select data-board-dimension="rows" aria-label="棋盘行数"></select></label><label>列 <select data-board-dimension="columns" aria-label="棋盘列数"></select></label><button type="button" class="reset-button" data-board-mode="shape">调整棋盘</button><button type="button" class="reset-button" data-board-mode="words">固定单词</button></div><div class="fixed-board-stage"><div class="fixed-board-grid" role="group" aria-label="固定单词棋盘"></div></div><div class="fixed-placement-status" aria-live="polite"></div><div class="fixed-placement-actions"><button type="button" class="reset-button" data-fixed-action="undo">撤销一格</button><button type="button" class="reset-button" data-fixed-action="cancel">取消摆放</button></div><div class="fixed-preset-list" aria-label="已添加的固定单词"></div></section><section class="fixed-search-side"><label for="fixed-word-search">搜索单词</label><input id="fixed-word-search" type="search" placeholder="输入单词或释义" autocomplete="off" spellcheck="false" /><div class="fixed-search-count" aria-live="polite"></div><div class="fixed-search-results"></div><button type="button" class="reset-button" data-fixed-action="retry" hidden>重新加载词库</button></section></div>';
   const grid = container.querySelector(".fixed-board-grid");
   const status = container.querySelector(".fixed-placement-status");
   const list = container.querySelector(".fixed-preset-list");
@@ -54,11 +60,48 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   const retry = container.querySelector('[data-fixed-action="retry"]');
   container.querySelector("#fixed-board-size").textContent = `${rows} 行 × ${columns} 列`;
   grid.style.setProperty("--fixed-columns", columns);
+  for (const select of container.querySelectorAll("[data-board-dimension]")) {
+    for (let size = 2; size <= 5; size++) select.add(new Option(String(size), String(size)));
+    select.value = String(config[select.dataset.boardDimension]);
+  }
+
+  function draftSettings(settings) {
+    return boardChanged || configs.length === 1 ? { ...settings, rows, columns, disabledCells } : settings;
+  }
+
+  function updateBoard(next) {
+    const nextDisabled = normalizeDisabledCells(next);
+    placements = placements.flatMap(entry => {
+      const coordinates = entry.path.map(cell => [Math.floor(cell / columns), cell % columns]);
+      if (coordinates.some(([row, column]) => row >= next.rows || column >= next.columns || nextDisabled.includes(row * next.columns + column))) {
+        pendingPins.add(entry.word);
+        return [];
+      }
+      return [{ ...entry, path: coordinates.map(([row, column]) => row * next.columns + column) }];
+    });
+    rows = next.rows; columns = next.columns; disabledCells = nextDisabled;
+    config = { ...config, rows, columns, disabledCells };
+    boardChanged = true; canPin = true;
+    activeWord = null; activePath = []; selectedWord = null;
+    for (const select of container.querySelectorAll("[data-board-dimension]")) select.value = String(config[select.dataset.boardDimension]);
+    onError(""); renderBoard(); renderSearch();
+  }
+
+  const changeDimension = event => {
+    const dimension = event.target.dataset.boardDimension;
+    if (!dimension) return;
+    const next = { rows, columns, [dimension]: Number(event.target.value) };
+    try {
+      next.disabledCells = resizeDisabledCells({ rows, columns, disabledCells }, next);
+      updateBoard(next);
+    } catch (error) { event.target.value = String(config[dimension]); onError(error.message); }
+  };
 
   function wordIssue(word) {
     const entry = byWord.get(word);
     if (!entry) return vocabulary ? "不在可用初始词库中" : "词库加载中";
-    for (const settings of configs) {
+    for (const original of configs) {
+      const settings = draftSettings(original);
       const exempt = settings.fixedWordExemptions?.includes(word) ?? false;
       try {
         validateFixedWords({ ...settings, fixedWords: [...new Set([...words, word])] }, countTargetLengthPlan(settings.targetCount, settings.targetLengthPlan));
@@ -92,6 +135,9 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   }
 
   function renderBoard() {
+    container.querySelector("#fixed-board-size").textContent = `${rows} 行 × ${columns} 列 · ${rows * columns - disabledCells.length} 格`;
+    grid.style.setProperty("--fixed-columns", columns);
+    for (const button of container.querySelectorAll("[data-board-mode]")) button.setAttribute("aria-pressed", String(button.dataset.boardMode === editMode));
     const base = placements.filter(entry => entry.word !== activeWord);
     const letters = fixedLayoutLetters(rows, columns, base);
     activePath.forEach((cell, index) => { letters[cell] = activeWord[index]; });
@@ -100,16 +146,21 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
     for (let cell = 0; cell < letters.length; cell++) {
       const button = element("button", `fixed-board-cell${letters[cell] ? " is-filled" : ""}${path.includes(cell) ? " is-selected" : ""}`);
       button.type = "button"; button.dataset.fixedCell = cell;
-      button.setAttribute("aria-label", `第 ${Math.floor(cell / columns) + 1} 行，第 ${cell % columns + 1} 列，${letters[cell] || "空白"}`);
+      const disabled = disabledCells.includes(cell);
+      button.disabled = editMode === "words" && disabled;
+      button.classList.toggle("is-disabled", disabled);
+      button.setAttribute("aria-pressed", String(!disabled));
+      button.title = editMode === "shape" ? (disabled ? "点击启用格子" : "点击禁用格子") : "点击摆放固定单词";
+      button.setAttribute("aria-label", `第 ${Math.floor(cell / columns) + 1} 行，第 ${cell % columns + 1} 列，${disabled ? "已禁用" : letters[cell] || "空白"}`);
       button.append(element("span", "fixed-cell-letter", letters[cell]));
       if (path.includes(cell)) button.append(element("span", "fixed-cell-step", String(path.indexOf(cell) + 1)));
       fragment.append(button);
     }
     grid.replaceChildren(fragment); drawPath(path);
-    status.textContent = activeWord
+    status.textContent = editMode === "shape" ? `点击格子启用 / 禁用${configs.length > 1 ? "；完成后将统一所选关卡的棋盘" : ""}` : activeWord
       ? `${activeWord} · ${activePath.length}/${activeWord.length} 格${activePath.length < activeWord.length ? ` · 下一字母 ${activeWord[activePath.length]}` : " · 请调整路径"}`
       : selectedWord ? `${selectedWord} · ${placements.some(entry => entry.word === selectedWord) ? "位置已固定" : pendingPins.has(selectedWord) ? "需重新摆放或改为自动" : "生成时自动摆放"}`
-      : canPin ? "可选择自动摆放，或在棋盘上固定位置" : "所选棋盘尺寸不同，可选择自动摆放";
+      : canPin ? "可选择自动摆放，或在棋盘上固定位置" : "所选棋盘不同，可自动摆词；调整棋盘后可统一固定位置";
     undo.disabled = !activePath.length;
     cancel.disabled = !activeWord;
     const items = document.createDocumentFragment();
@@ -121,7 +172,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
       const state = element("span", "fixed-preset-state", word === activeWord ? "摆放中" : placed ? "固定位置" : pendingPins.has(word) ? "需重新摆放" : "自动摆放");
       const edit = element("button", "reset-button", placed ? "重摆" : "固定位置"); edit.type = "button"; edit.dataset.fixedWord = word;
       edit.disabled = !canPin;
-      if (!canPin) edit.title = "所选关卡尺寸不同，不能批量固定位置";
+      if (!canPin) edit.title = "所选棋盘不同，调整棋盘后可统一固定位置";
       const remove = element("button", "reset-button fixed-remove", "删除"); remove.type = "button"; remove.dataset.fixedRemove = word;
       row.append(label, state);
       if (placed || activeWord === word || pendingPins.has(word)) {
@@ -155,7 +206,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
       automatic.disabled = Boolean(issue) || (selected && !pinned && !pendingPins.has(entry.word) && activeWord !== entry.word);
       const manual = element("button", "reset-button", pinned ? "重摆" : "固定位置"); manual.type = "button"; manual.dataset.fixedWord = entry.word;
       manual.disabled = Boolean(issue) || !canPin;
-      if (!canPin) manual.title = "所选关卡尺寸不同，不能批量固定位置";
+      if (!canPin) manual.title = "所选棋盘不同，调整棋盘后可统一固定位置";
       actions.append(automatic, manual);
       card.append(heading, element("span", "fixed-result-definition", issue || entry.definitionZh || entry.definitionEn || "暂无释义"), actions);
       fragment.append(card);
@@ -164,10 +215,11 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   }
 
   function startWord(word) {
-    if (!canPin) { onError("所选关卡尺寸不同，请选择自动摆放。"); return; }
+    if (!canPin) { onError("所选棋盘不同，请先调整棋盘以统一布局，或选择自动摆放。"); return; }
     const issue = wordIssue(word);
     if (issue) { onError(`${word}：${issue}`); return; }
     if (!words.includes(word)) words.push(word);
+    editMode = "words";
     activeWord = word; activePath = []; selectedWord = null;
     onError(""); renderBoard(); renderSearch();
   }
@@ -184,6 +236,14 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   }
 
   function chooseCell(cell) {
+    if (editMode === "shape") {
+      const disabled = new Set(disabledCells);
+      if (disabled.has(cell)) disabled.delete(cell); else disabled.add(cell);
+      try { updateBoard({ rows, columns, disabledCells: [...disabled] }); }
+      catch (error) { onError(error.message); }
+      grid.querySelector(`[data-fixed-cell="${cell}"]`)?.focus({ preventScroll: true });
+      return;
+    }
     if (!activeWord) {
       const entry = placements.find(placement => placement.path.includes(cell));
       if (entry) { selectedWord = entry.word; renderBoard(); }
@@ -206,7 +266,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
       const nextWords = [...new Set([...words, activeWord])];
       const nextLayout = { rows, columns, placements: [...base, { word: activeWord, path: [...activePath] }] };
       try {
-        normalizeFixedLayout({ rows, columns, fixedWords: nextWords, fixedLayout: nextLayout });
+        normalizeFixedLayout({ ...config, rows, columns, fixedWords: nextWords, fixedLayout: nextLayout });
         words = nextWords; placements = nextLayout.placements; selectedWord = activeWord;
         pendingPins.delete(activeWord);
         activeWord = null; activePath = []; renderSearch();
@@ -219,6 +279,11 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   const click = event => {
     const button = event.target.closest("button");
     if (!button || button.disabled) return;
+    if (button.dataset.boardMode) {
+      editMode = button.dataset.boardMode;
+      activeWord = null; activePath = []; selectedWord = null;
+      onError(""); renderBoard(); return;
+    }
     if (button.dataset.fixedAutomatic) { useAutomatic(button.dataset.fixedAutomatic); return; }
     if (button.dataset.fixedWord) { startWord(button.dataset.fixedWord); return; }
     if (button.dataset.fixedCell !== undefined) { chooseCell(Number(button.dataset.fixedCell)); return; }
@@ -248,17 +313,61 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
     }
   }
   container.addEventListener("click", click);
+  container.addEventListener("change", changeDimension);
   search.addEventListener("input", renderSearch);
   renderBoard(); load();
   return {
     getValue() {
       if (activeWord) throw new Error(`请先摆完 ${activeWord}，或将它改为自动摆放。`);
-      if (pendingPins.size) throw new Error(`棋盘尺寸已变化，请重新摆放 ${[...pendingPins].join("、")} 或将其改为自动摆放。`);
-      if (placements.length && !canPin) throw new Error("所选棋盘尺寸不同，请将固定位置的词改为自动摆放后应用。");
+      if (pendingPins.size) throw new Error(`棋盘已调整，请重新摆放 ${[...pendingPins].join("、")} 或将其改为自动摆放。`);
+      if (placements.length && !canPin) throw new Error("所选棋盘不同，请先调整棋盘以统一布局，或将固定词改为自动摆放后应用。");
       for (const word of words) { const issue = wordIssue(word); if (issue) throw new Error(`${word}：${issue}`); }
       const fixedLayout = placements.length ? { rows, columns, placements: structuredClone(placements) } : null;
-      return { fixedWords: [...words], fixedLayout: normalizeFixedLayout({ rows, columns, fixedWords: words, fixedLayout }) };
+      return { ...(boardChanged || configs.length === 1 ? { rows, columns, disabledCells: [...disabledCells] } : {}), fixedWords: [...words], fixedLayout: normalizeFixedLayout({ ...config, rows, columns, fixedWords: words, fixedLayout }) };
     },
-    destroy() { disposed = true; container.removeEventListener("click", click); search.removeEventListener("input", renderSearch); },
+    destroy() { disposed = true; container.removeEventListener("click", click); container.removeEventListener("change", changeDimension); search.removeEventListener("input", renderSearch); },
   };
+}
+
+export function createConfigBoardPreview(config) {
+  const { rows, columns } = config;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.classList.add("config-board-preview");
+  if (![rows, columns].every(value => Number.isInteger(value) && value >= 2 && value <= 5)) {
+    svg.setAttribute("viewBox", "0 0 104 64");
+    return svg;
+  }
+  const gap = 1;
+  const cellSize = Math.min((100 - (columns - 1) * gap) / columns, (52 - (rows - 1) * gap) / rows);
+  const width = columns * cellSize + (columns - 1) * gap + 8;
+  svg.setAttribute("viewBox", `0 0 ${width} 60`);
+  svg.setAttribute("width", String(width));
+  svg.setAttribute("height", "60");
+  svg.setAttribute("aria-hidden", "true");
+  const letters = Array(rows * columns).fill("");
+  const layout = config.fixedLayout;
+  for (const entry of layout?.placements ?? []) {
+    entry.path.forEach((cell, step) => {
+      const row = Math.floor(cell / layout.columns), column = cell % layout.columns;
+      if (row < rows && column < columns) letters[row * columns + column] = entry.word[step];
+    });
+  }
+  for (let cell = 0; cell < rows * columns; cell++) {
+    const disabled = config.disabledCells?.includes(cell);
+    const x = (cell % columns) * (cellSize + gap) + 4;
+    const y = Math.floor(cell / columns) * (cellSize + gap) + (60 - (rows * cellSize + (rows - 1) * gap)) / 2;
+    const rect = document.createElementNS(svg.namespaceURI, "rect");
+    for (const [key, value] of Object.entries({ x: x + 0.4, y: y + 0.4, width: cellSize - 0.8, height: cellSize - 0.8, rx: 2,
+      fill: disabled ? "none" : "#fffefa", stroke: disabled ? "#b9c3b2" : "#dce3d3", "stroke-width": 0.8 })) rect.setAttribute(key, String(value));
+    if (disabled) rect.setAttribute("stroke-dasharray", "2 2");
+    svg.append(rect);
+    if (!disabled && letters[cell]) {
+      const text = document.createElementNS(svg.namespaceURI, "text");
+      text.setAttribute("x", String(x + cellSize / 2)); text.setAttribute("y", String(y + cellSize / 2));
+      text.setAttribute("text-anchor", "middle"); text.setAttribute("dominant-baseline", "central");
+      text.setAttribute("fill", "#334d36"); text.setAttribute("font-size", String(Math.min(14, cellSize * 0.7))); text.setAttribute("font-weight", "800");
+      text.textContent = letters[cell]; svg.append(text);
+    }
+  }
+  return svg;
 }

@@ -1,4 +1,4 @@
-import { createPathSafetyChecker } from "./path-safety.js";
+import { normalizeDisabledCells } from "./board-shape.js";
 
 export function normalizeFixedWords(value = []) {
   const entries = typeof value === "string" ? value.split(/[\s,，、;；]+/) : value;
@@ -37,7 +37,7 @@ export function normalizeFixedLayout(config) {
   const layout = config.fixedLayout;
   if (layout === null || layout === undefined) return null;
   if (!layout || typeof layout !== "object" || !Array.isArray(layout.placements) ||
-      ![2, 3].includes(layout.rows) || ![3, 4, 5].includes(layout.columns)) throw new Error("固定单词棋盘格式无效。");
+      ![2, 3, 4, 5].includes(layout.rows) || ![2, 3, 4, 5].includes(layout.columns)) throw new Error("固定单词棋盘格式无效。");
   if (layout.rows !== config.rows || layout.columns !== config.columns) throw new Error("棋盘尺寸已变化，请打开固定单词重新确认摆放位置。");
   const words = new Set(normalizeFixedWords(config.fixedWords));
   const seen = new Set();
@@ -47,7 +47,7 @@ export function normalizeFixedLayout(config) {
     seen.add(word);
     const path = entry.path;
     if (!Array.isArray(path) || path.length !== word.length || new Set(path).size !== path.length || path.some((cell, index) => {
-      if (!Number.isInteger(cell) || cell < 0 || cell >= config.rows * config.columns) return true;
+      if (!Number.isInteger(cell) || cell < 0 || cell >= config.rows * config.columns || config.disabledCells?.includes(cell)) return true;
       if (!index) return false;
       const previous = path[index - 1];
       return Math.abs(Math.floor(cell / config.columns) - Math.floor(previous / config.columns)) + Math.abs(cell % config.columns - previous % config.columns) !== 1;
@@ -55,19 +55,18 @@ export function normalizeFixedLayout(config) {
     return { word, path: [...path] };
   });
   if (!placements.length) return null;
-  const letters = fixedLayoutLetters(config.rows, config.columns, placements);
-  const check = createPathSafetyChecker({ rows: config.rows, columns: config.columns, letters }, { allowEmpty: true });
-  for (const { word } of placements) if (!check(word)) throw new Error(`固定单词 ${word} 已存在使用不同格子的路径，请调整摆放位置。`);
+  fixedLayoutLetters(config.rows, config.columns, placements);
   return { rows: config.rows, columns: config.columns, placements };
 }
 
 export function validateFixedWords(config, targetLengthCounts = null) {
+  const capacity = config.rows * config.columns - normalizeDisabledCells(config).length;
   const words = normalizeFixedWords(config.fixedWords);
-  if (words.length > config.targetCount) throw new Error("固定单词数量不能超过目标数量。");
-  const remaining = targetLengthCounts ? { ...targetLengthCounts } : null;
+  if (config.targetLimitsEnabled !== false && words.length > config.targetCount) throw new Error("固定单词数量不能超过目标数量。");
+  const remaining = config.targetLimitsEnabled !== false && targetLengthCounts ? { ...targetLengthCounts } : null;
   const requiredLetters = new Map();
   for (const word of words) {
-    if (word.length > config.rows * config.columns) throw new Error(`固定单词 ${word} 的长度超过棋盘格子数。`);
+    if (word.length > capacity) throw new Error(`固定单词 ${word} 的长度超过棋盘格子数。`);
     if (word.length > config.initialMaxWordLength) throw new Error(`固定单词 ${word} 超过初始词最长限制。`);
     if (word.length > config.maxWordLength) throw new Error(`固定单词 ${word} 超过最长单词限制。`);
     const group = word.length === 3 ? "short" : word.length === 4 ? "medium" : word.length >= 5 ? "long" : null;
@@ -76,7 +75,7 @@ export function validateFixedWords(config, targetLengthCounts = null) {
     for (const letter of word) letters.set(letter, (letters.get(letter) ?? 0) + 1);
     for (const [letter, count] of letters) requiredLetters.set(letter, Math.max(requiredLetters.get(letter) ?? 0, count));
   }
-  if ([...requiredLetters.values()].reduce((sum, count) => sum + count, 0) > config.rows * config.columns) {
+  if ([...requiredLetters.values()].reduce((sum, count) => sum + count, 0) > capacity) {
     throw new Error("固定单词所需的字母格子超过棋盘容量。");
   }
   return words;

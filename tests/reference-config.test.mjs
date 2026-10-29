@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { CONFIG_LIST_STORAGE_KEY, hasConfigPreset, installConfigPreset, readConfigList, saveConfigList } from "../dist/level-config.js";
+import { CONFIG_LIST_STORAGE_KEY, hasConfigPreset, installConfigPreset, readConfigList, readConfigLists, saveConfigList } from "../dist/level-config.js";
 import { initialCoverageLimit, REFERENCE_CONFIG_ID, referenceFilters, referenceForwardProbability } from "../dist/reference-config.js";
 import { countTargetLengthPlan, targetLengthGroup } from "../dist/level-generator.js";
 
@@ -60,12 +60,14 @@ test("forward probability and cumulative library unlocks follow the confirmed ph
   }
 });
 
-test("preset replacement is atomic, creates no backup and never overwrites subsequent edits or deletions", () => {
+test("preset installation keeps existing lists and never overwrites subsequent edits or deletions", () => {
   const values = new Map();
   const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
   saveConfigList([{ id: "old", config: preset.records[0].config }], storage);
   assert.equal(installConfigPreset(preset, storage), true);
   assert.deepEqual(readConfigList(storage), preset.records);
+  assert.equal(readConfigLists(storage).lists.length, 2);
+  assert.deepEqual(readConfigLists(storage).lists[0].records, [{ id: "old", config: preset.records[0].config }]);
   assert.deepEqual([...values.keys()], [CONFIG_LIST_STORAGE_KEY]);
   const edited = readConfigList(storage);
   edited[0].config.initialForwardProbability = 80;

@@ -1,14 +1,15 @@
-import { CONFIG_NUMBER_FIELDS, CONFIG_FILTER_OPTIONS, MAX_CONFIG_ROWS, readConfigList, saveConfigList,
-  patchLevelConfigs, resizeTargetPlan, validateConfigNumber, validateLevelConfig, hasConfigPreset, installConfigPreset, configJobsInRange } from "./level-config.js";
+import { resizeDisabledCells } from "./board-shape.js";
+import { CONFIG_NUMBER_FIELDS, CONFIG_FILTER_OPTIONS, MAX_CONFIG_ROWS, readConfigLists, migrateConfigLists, changeConfigLists, saveConfigList,
+  patchLevelConfigs, resizeTargetPlan, validateConfigNumber, validateLevelConfig, installConfigPreset, configJobsInRange } from "./level-config.js";
 import { countTargetLengthPlan } from "./level-generator.js";
 import { renderTargetPlanChoices } from "./target-plan-controls.js";
 import { REFERENCE_CONFIG_ID } from "./reference-config.js";
 import { formatBatchState } from "./batch-runner.js";
 import { defaultGenerationWorkers, detectedProcessorCount } from "./generation-client.js";
-import { mountFixedBoardEditor } from "./fixed-board-editor.js";
-import { installOpeningWordsPreset } from "./opening-words-preset.js";
+import { mountFixedBoardEditor, createConfigBoardPreview } from "./fixed-board-editor.js";
+import { configureOpeningWords, OPENING_WORDS_PRESET_ID } from "./opening-words-preset.js";
 
-export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) {
+export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, getTargetLimitsEnabled, setTargetLimitsEnabled }) {
   const openButton = document.querySelector("#open-config-list");
   const dialog = document.querySelector("#level-config-dialog");
   const body = document.querySelector("#config-list-body");
@@ -39,6 +40,23 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   const runStatus = document.querySelector("#config-run-status");
   const runMeter = document.querySelector("#config-run-meter");
   const workerInfo = document.querySelector("#config-worker-info");
+  const listSelect = document.querySelector("#config-list-select");
+  const globalTargetLimitsInput = document.querySelector("#config-global-target-limits-enabled");
+  const newListButton = document.querySelector("#new-config-list");
+  const manageListsButton = document.querySelector("#manage-config-lists");
+  const listManager = document.querySelector("#config-list-manager");
+  const managerItems = document.querySelector("#config-list-manager-items");
+  const managerError = document.querySelector("#config-list-manager-error");
+  const deleteConfirm = document.querySelector("#config-list-delete-confirm");
+  const deleteMessage = document.querySelector("#config-list-delete-message");
+  const nameDialog = document.querySelector("#config-list-name-dialog");
+  const nameForm = document.querySelector("#config-list-name-form");
+  const nameInput = document.querySelector("#config-list-name");
+  const nameError = document.querySelector("#config-list-name-error");
+  let library = null;
+  let activeListId = null;
+  let nameAction = null;
+  let pendingDeleteId = null;
   const columns = ["rows", "columns", "targetCount", "targets", "fixedWords", "initialMaxWordLength", "maxWordLength",
     "initialForwardProbability", "targetDuplicateRange", "extraDuplicateRange", "filters"];
   let records = [];
@@ -129,16 +147,18 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     openButton.disabled = true;
     openButton.setAttribute("aria-busy", "true");
     try {
-      if (!hasConfigPreset(REFERENCE_CONFIG_ID)) {
+      library = migrateConfigLists();
+      if (!library) {
         const response = await fetch(new URL("./data/list0-configs.json", import.meta.url));
         if (!response.ok) throw new Error("参考配置加载失败，请刷新重试。");
         const preset = await response.json();
         if (preset.id !== REFERENCE_CONFIG_ID || preset.records?.length !== 1500) throw new Error("参考配置数据不完整。");
-        installConfigPreset(preset);
+        installConfigPreset({ ...preset, records: configureOpeningWords(preset.records), openingWordsPresetId: OPENING_WORDS_PRESET_ID });
+        library = readConfigLists();
       }
-      installOpeningWordsPreset();
+      activeListId = library.activeListId;
     } catch (failure) {
-      presetLoadError = failure.name === "QuotaExceededError" ? "本地存储空间不足，参考配置未写入。" : failure.message;
+      presetLoadError = failure.name === "QuotaExceededError" ? "本地存储空间不足，配置列表初始化未保存。" : failure.message;
     } finally {
       openButton.disabled = false;
       openButton.setAttribute("aria-busy", "false");
@@ -154,9 +174,11 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     saveButton.disabled = false;
     saveButton.textContent = "保存配置";
     error.hidden = true;
+    renderLibrarySelection();
   }
 
   function planSummary(config) {
+    if (!getTargetLimitsEnabled()) return "后选目标";
     try {
       const counts = countTargetLengthPlan(config.targetCount, config.targetLengthPlan);
       return counts ? `短${counts.short} 中${counts.medium} 长${counts.long}` : "不限词长";
@@ -181,14 +203,23 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
 
   function renderRowValidity(row, config) {
     let valid = true;
-    try { validateLevelConfig(config); } catch { valid = false; }
+    try { validateLevelConfig({ ...config, targetLimitsEnabled: getTargetLimitsEnabled() }); } catch { valid = false; }
     row.classList.toggle("is-invalid", !valid);
     for (const input of row.querySelectorAll("input[data-config-field]")) {
       let fieldValid = true;
       try { validateConfigNumber(input.dataset.configField, config[input.dataset.configField]); } catch { fieldValid = false; }
       input.setAttribute("aria-invalid", String(!fieldValid));
+      if (input.dataset.configField === "targetCount") {
+        input.disabled = !getTargetLimitsEnabled();
+        input.placeholder = input.disabled ? "不限" : "";
+        if (input.disabled) input.value = "";
+      }
     }
     row.querySelector("[data-config-action='targets']").textContent = planSummary(config);
+    const preview = row.querySelector("[data-config-action='fixedWords']");
+    preview.replaceChildren(createConfigBoardPreview(config));
+    preview.title = `${config.rows} 行 × ${config.columns} 列 · ${config.rows * config.columns - (config.disabledCells?.length ?? 0)} 格` +
+      (config.fixedWords?.length ? `；固定词：${config.fixedWords.join("、")}` : "；点击编辑棋盘与固定单词");
   }
 
   function renderRows() {
@@ -228,12 +259,14 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
           button.type = "button";
           button.className = "config-cell-button";
           button.dataset.configAction = field;
-          button.textContent = field === "fixedWords" ? record.config.fixedWords?.join(" · ") || "未设置"
-            : field === "targets" ? planSummary(record.config)
-            : Object.keys(record.config.filters).length ? `${Object.keys(record.config.filters).length} 项筛选` : "全部";
-          if (field === "fixedWords") button.title = record.config.fixedWords?.map(word =>
-            `${word}（${record.config.fixedLayout?.placements.some(entry => entry.word === word) ? "固定位置" : "自动摆放"}）`).join("、") || "设置一个或多个固定单词";
-          button.setAttribute("aria-label", `第 ${index + 1} 关${field === "targets" ? "目标词长配置" : field === "fixedWords" ? "固定单词" : "词库筛选"}`);
+          if (field === "fixedWords") {
+            button.classList.add("config-board-button");
+
+          } else {
+            button.textContent = field === "targets" ? planSummary(record.config)
+              : Object.keys(record.config.filters).length ? `${Object.keys(record.config.filters).length} 项筛选` : "全部";
+          }
+          button.setAttribute("aria-label", `第 ${index + 1} 关${field === "targets" ? "目标词长配置" : field === "fixedWords" ? "棋盘编辑" : "词库筛选"}`);
           cell.append(button);
         }
         row.append(cell);
@@ -284,7 +317,8 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   function persist() {
     if (running) return false;
     try {
-      saveConfigList(records);
+      library = changeConfigLists({ type: "save", id: activeListId, draft: { id: activeListId, records } });
+      renderLibrarySelection();
       error.hidden = true;
       saveButton.textContent = "已保存";
       saveButton.disabled = true;
@@ -297,24 +331,28 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   }
 
   function applyPatch(ids, patch) {
-    records = patchLevelConfigs(records, ids, patch);
+    records = patchLevelConfigs(records, ids, { ...patch, targetLimitsEnabled: getTargetLimitsEnabled() });
     changed();
     renderRows();
   }
 
   function renderDetailTargets() {
     const { targetCount, targetLengthPlan } = detailState.config;
+    const enabled = getTargetLimitsEnabled();
+    detailContent.querySelector("#config-detail-target-count").disabled = !enabled;
+    detailContent.querySelector("#config-detail-plan-enabled").disabled = !enabled;
+    detailContent.querySelector(".target-limits-hint").hidden = enabled;
     const container = detailContent.querySelector(".target-plan-slots");
-    container.hidden = targetLengthPlan === null;
-    if (targetLengthPlan !== null) renderTargetPlanChoices(container, targetLengthPlan, "config-detail-plan");
+    container.hidden = !enabled || targetLengthPlan === null;
+    if (enabled && targetLengthPlan !== null) renderTargetPlanChoices(container, targetLengthPlan, "config-detail-plan");
     else container.replaceChildren();
-    detailContent.querySelector(".target-plan-summary").textContent = planSummary({ targetCount, targetLengthPlan });
+    detailContent.querySelector(".target-plan-summary").textContent = planSummary(detailState.config);
   }
 
   function openDetails(kind, ids) {
     const source = records.find(record => ids.includes(record.id));
     if (!source) return;
-    const settings = records.filter(record => ids.includes(record.id)).map(record => record.config);
+    const settings = records.filter(record => ids.includes(record.id)).map(record => ({ ...record.config, targetLimitsEnabled: getTargetLimitsEnabled() }));
     if (kind === "fixedWords") {
       try {
         for (const config of settings) { validateConfigNumber("rows", config.rows); validateConfigNumber("columns", config.columns); }
@@ -322,16 +360,16 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     }
     fixedBoardEditor?.destroy(); fixedBoardEditor = null;
     detail.classList.toggle("fixed-board-dialog", kind === "fixedWords");
-    detailState = { kind, ids: [...ids], config: structuredClone(source.config) };
-    detailTitle.textContent = `${ids.length > 1 ? `所选 ${ids.length} 关 · ` : `第 ${records.indexOf(source) + 1} 关 · `}${kind === "targets" ? "关卡目标词" : kind === "fixedWords" ? "固定单词" : "词库筛选"}`;
+    detailState = { kind, ids: [...ids], config: { ...structuredClone(source.config), targetLimitsEnabled: getTargetLimitsEnabled() } };
+    detailTitle.textContent = `${ids.length > 1 ? `所选 ${ids.length} 关 · ` : `第 ${records.indexOf(source) + 1} 关 · `}${kind === "targets" ? "关卡目标词" : kind === "fixedWords" ? "棋盘编辑" : "词库筛选"}`;
     detailError.hidden = true;
     if (kind === "targets") {
-      detailContent.innerHTML = '<div class="target-config-count"><label for="config-detail-target-count">目标数量</label><input id="config-detail-target-count" type="number" min="1" step="1" /></div><label class="target-plan-switch"><input id="config-detail-plan-enabled" type="checkbox" />逐个配置词长</label><div class="target-plan-slots"></div><output class="target-plan-summary"></output>';
+      detailContent.innerHTML = '<p class="target-limits-hint" hidden>全局目标限制已关闭；可在配置列表顶部统一开启。各关原有数量和词长设置会保留。</p><div class="target-config-count"><label for="config-detail-target-count">目标数量</label><input id="config-detail-target-count" type="number" min="1" step="1" /></div><label class="target-plan-switch"><input id="config-detail-plan-enabled" type="checkbox" />逐个配置词长</label><div class="target-plan-slots"></div><output class="target-plan-summary"></output>';
       detailContent.querySelector("#config-detail-target-count").value = String(source.config.targetCount);
       detailContent.querySelector("#config-detail-plan-enabled").checked = source.config.targetLengthPlan !== null;
       renderDetailTargets();
     } else if (kind === "fixedWords") {
-      fixedBoardEditor = mountFixedBoardEditor(detailContent, source.config, { configs: settings, onError: message => {
+      fixedBoardEditor = mountFixedBoardEditor(detailContent, detailState.config, { configs: settings, onError: message => {
         detailError.hidden = !message;
         detailError.textContent = message;
       } });
@@ -345,25 +383,161 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     detail.showModal();
   }
 
+  function renderLibrarySelection() {
+    globalTargetLimitsInput.checked = getTargetLimitsEnabled();
+    globalTargetLimitsInput.disabled = running;
+    listSelect.replaceChildren(...(library?.lists ?? []).map(list => new Option(
+      `${list.name}（${list.id === activeListId ? records.length : list.records.length} 关）`, list.id)));
+    listSelect.value = activeListId ?? "";
+    listSelect.disabled = newListButton.disabled = manageListsButton.disabled = running || !activeListId;
+  }
+
+  function renderListManager() {
+    const fragment = document.createDocumentFragment();
+    for (const list of library?.lists ?? []) {
+      const current = list.id === activeListId;
+      const row = document.createElement("div");
+      row.className = `config-list-manager-item${current ? " is-active" : ""}`;
+      row.dataset.listId = list.id;
+      const info = document.createElement("div"); info.className = "config-list-manager-info";
+      const title = document.createElement("strong"); title.textContent = list.name;
+      const meta = document.createElement("span");
+      meta.textContent = `${current ? records.length : list.records.length} 关配置${current ? " · 当前列表" : ""}`;
+      info.append(title, meta);
+      const actions = document.createElement("div"); actions.className = "config-list-manager-actions";
+      for (const [action, label] of [["switch", current ? "当前" : "切换"], ["rename", "重命名"], ["copy", "复制"], ["delete", "删除"]]) {
+        const button = document.createElement("button");
+        button.type = "button"; button.className = `reset-button${action === "delete" ? " config-list-delete-button" : ""}`;
+        button.dataset.listAction = action; button.textContent = label;
+        button.disabled = running || (action === "switch" && current) || (action === "delete" && library.lists.length === 1);
+        if (action === "delete" && library.lists.length === 1) button.title = "至少保留一个列表";
+        button.setAttribute("aria-label", `${label} ${list.name}`);
+        actions.append(button);
+      }
+      row.append(info, actions); fragment.append(row);
+    }
+    managerItems.replaceChildren(fragment);
+  }
+
+  function adoptLibrary(next) {
+    const switched = activeListId !== next.activeListId;
+    library = next; activeListId = next.activeListId;
+    records = structuredClone(next.lists.find(list => list.id === activeListId).records);
+    if (switched) { selected.clear(); runState = null; runProgress.hidden = true; }
+    else selected = new Set([...selected].filter(id => records.some(record => record.id === id)));
+    saveButton.disabled = true; saveButton.textContent = "已保存"; error.hidden = true;
+    renderLibrarySelection(); renderRows(); renderBatchField();
+    if (listManager.open) renderListManager();
+  }
+
+  function performListAction(action, output = error) {
+    if (running || !activeListId) return false;
+    try {
+      const next = changeConfigLists({ ...action, draft: { id: activeListId, records } });
+      adoptLibrary(next);
+      output.hidden = true;
+      return true;
+    } catch (failure) {
+      showError(failure.name === "QuotaExceededError" ? "本地存储空间不足，列表操作未保存。" : failure.message || "列表操作失败，请重试。", output);
+      listSelect.value = activeListId;
+      return false;
+    }
+  }
+
+  function suggestedListName(base) {
+    let name = base.slice(0, 40), index = 2;
+    while (library.lists.some(list => list.name.toLowerCase() === name.toLowerCase())) {
+      const suffix = ` ${index++}`;
+      name = base.slice(0, 40 - suffix.length) + suffix;
+    }
+    return name;
+  }
+
+  function openListName(type, id) {
+    if (running || !library) return;
+    const list = library.lists.find(entry => entry.id === id);
+    if (type !== "create" && !list) return;
+    nameAction = { type, ...(id ? { id } : {}) };
+    document.querySelector("#config-list-name-title").textContent = { create: "新建列表", rename: "重命名列表", copy: "复制列表" }[type];
+    document.querySelector("#submit-config-list-name").textContent = type === "rename" ? "保存名称" : "创建";
+    nameInput.value = type === "rename" ? list.name : suggestedListName(type === "copy" ? `${list.name.slice(0, 36)} 副本` : "新列表");
+    nameError.hidden = true; deleteConfirm.hidden = true; pendingDeleteId = null;
+    nameDialog.showModal(); nameInput.focus(); nameInput.select();
+  }
+
+  globalTargetLimitsInput.addEventListener("change", () => {
+    if (running) return;
+    setTargetLimitsEnabled(globalTargetLimitsInput.checked);
+    globalTargetLimitsInput.checked = getTargetLimitsEnabled();
+    renderRows(); renderBatchField();
+  });
+  newListButton.addEventListener("click", () => openListName("create"));
+  document.querySelector("#manager-new-config-list").addEventListener("click", () => openListName("create"));
+  listSelect.addEventListener("change", () => {
+    if (listSelect.value !== activeListId) performListAction({ type: "switch", id: listSelect.value });
+  });
+  manageListsButton.addEventListener("click", () => {
+    if (running || !library) return;
+    managerError.hidden = true; deleteConfirm.hidden = true; pendingDeleteId = null;
+    renderListManager(); listManager.showModal();
+  });
+  for (const button of listManager.querySelectorAll("[data-close-list-manager]")) button.addEventListener("click", () => listManager.close());
+  for (const button of nameDialog.querySelectorAll("[data-close-list-name]")) button.addEventListener("click", () => nameDialog.close());
+  nameDialog.addEventListener("close", () => { nameAction = null; });
+  nameInput.addEventListener("input", () => { nameError.hidden = true; });
+  nameForm.addEventListener("submit", event => {
+    event.preventDefault();
+    if (nameAction && performListAction({ ...nameAction, name: nameInput.value }, nameError)) nameDialog.close();
+  });
+  managerItems.addEventListener("click", event => {
+    const button = event.target.closest("button[data-list-action]");
+    if (!button || button.disabled || running) return;
+    const id = button.closest("[data-list-id]").dataset.listId;
+    const type = button.dataset.listAction;
+    managerError.hidden = true; deleteConfirm.hidden = true; pendingDeleteId = null;
+    if (type === "rename" || type === "copy") openListName(type, id);
+    else if (type === "switch") performListAction({ type, id }, managerError);
+    else if (type === "delete") {
+      const list = library.lists.find(entry => entry.id === id);
+      pendingDeleteId = id;
+      deleteMessage.textContent = `确定删除“${list.name}”（${id === activeListId ? records.length : list.records.length} 关配置）？`;
+      deleteConfirm.hidden = false;
+      document.querySelector("#cancel-delete-config-list").focus();
+    }
+  });
+  document.querySelector("#cancel-delete-config-list").addEventListener("click", () => { deleteConfirm.hidden = true; pendingDeleteId = null; });
+  document.querySelector("#confirm-delete-config-list").addEventListener("click", () => {
+    if (pendingDeleteId && performListAction({ type: "delete", id: pendingDeleteId }, managerError)) {
+      deleteConfirm.hidden = true; pendingDeleteId = null;
+    }
+  });
+
   for (const [value, label] of [...Object.entries(CONFIG_NUMBER_FIELDS).map(([key, rule]) => [key, rule.label]),
-    ["targets", "关卡目标词"], ["fixedWords", "固定单词"], ["filters", "词库筛选"]]) batchField.add(new Option(label, value));
+    ["targets", "关卡目标词"], ["fixedWords", "棋盘编辑"], ["filters", "词库筛选"]]) batchField.add(new Option(label, value));
 
   openButton.addEventListener("click", () => {
     workerInfo.textContent = `自动并行 ${defaultGenerationWorkers()} 路`;
     workerInfo.title = `检测到 ${detectedProcessorCount()} 个逻辑核心；并行数按核心数减 1 计算，至少 1 路。`;
     error.hidden = true;
     try {
-      const saved = readConfigList();
-      records = saved ?? [{ id: crypto.randomUUID(), config: structuredClone(getConfig()) }];
-      saveButton.textContent = saved ? "已保存" : "保存配置";
-      saveButton.disabled = saved !== null;
+      library = readConfigLists();
+      if (!library) {
+        saveConfigList([{ id: crypto.randomUUID(), config: structuredClone(getConfig()) }]);
+        library = readConfigLists();
+      }
+      activeListId = library.activeListId;
+      records = structuredClone(library.lists.find(list => list.id === activeListId).records);
+      saveButton.textContent = "已保存";
+      saveButton.disabled = true;
     } catch (failure) {
+      library = null; activeListId = null;
       records = [];
       saveButton.textContent = "保存配置";
       saveButton.disabled = false;
       showError(`配置列表读取失败：${failure.message}`);
     }
     selected = runState ? new Set([...selected].filter(id => records.some(record => record.id === id))) : new Set();
+    renderLibrarySelection();
     renderRows();
     renderBatchField();
     if (running) lockRunControls(true);
@@ -451,7 +625,12 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     if (!field) return;
     const row = event.target.closest("tr");
     const record = records.find(record => record.id === row.dataset.configId);
+    const previousSize = { rows: record.config.rows, columns: record.config.columns, disabledCells: record.config.disabledCells };
     record.config[field] = event.target.valueAsNumber;
+    if (["rows", "columns"].includes(field) && [previousSize.rows, previousSize.columns, record.config.rows, record.config.columns]
+      .every(value => Number.isInteger(value) && value >= 2 && value <= 5)) {
+      record.config.disabledCells = resizeDisabledCells(previousSize, record.config);
+    }
     if (field === "targetCount") {
       try { record.config.targetLengthPlan = resizeTargetPlan(record.config.targetLengthPlan, record.config.targetCount); } catch { /* Preserve the plan while an incomplete count is being edited. */ }
     }
@@ -473,6 +652,8 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     detailError.hidden = true;
     if (detailState?.kind !== "targets") return;
     const config = detailState.config;
+    config.targetLimitsEnabled = getTargetLimitsEnabled();
+    if (!config.targetLimitsEnabled) { renderDetailTargets(); return; }
     if (event.target.matches("input[data-target-index]")) {
       config.targetLengthPlan[Number(event.target.dataset.targetIndex)] = event.target.value;
       detailContent.querySelector(".target-plan-summary").textContent = planSummary(config);
@@ -491,8 +672,11 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     let patch;
     if (kind === "targets") {
       // Validate the currently visible draft, including the count when length selection is off.
-      patch = { targetCount: detailContent.querySelector("#config-detail-target-count").valueAsNumber,
-        targetLengthPlan: detailContent.querySelector("#config-detail-plan-enabled").checked ? config.targetLengthPlan ?? [] : null };
+      const enabled = getTargetLimitsEnabled();
+      patch = enabled ? { targetLimitsEnabled: true,
+        targetCount: detailContent.querySelector("#config-detail-target-count").valueAsNumber,
+        targetLengthPlan: detailContent.querySelector("#config-detail-plan-enabled").checked ? config.targetLengthPlan ?? [] : null }
+        : { targetLimitsEnabled: false };
     } else if (kind === "fixedWords") {
       try { patch = fixedBoardEditor.getValue(); }
       catch (failure) { showError(failure.message, detailError); return; }

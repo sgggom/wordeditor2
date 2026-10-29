@@ -14,7 +14,7 @@ test("configuration values enforce the editor bounds while preserving independen
     targetLengthPlan: null, initialForwardProbability: 0, targetDuplicateRange: 0, extraDuplicateRange: 0,
     filters: { scope: [] } };
   assert.equal(validateLevelConfig(valid), valid);
-  for (const [field, value] of [["rows", 4], ["columns", 2], ["targetCount", 0], ["targetCount", NaN],
+  for (const [field, value] of [["rows", 6], ["columns", 1], ["targetCount", 0], ["targetCount", NaN],
     ["initialMaxWordLength", 0], ["maxWordLength", 2.5], ["initialForwardProbability", 101],
     ["targetDuplicateRange", -1], ["extraDuplicateRange", "20"]]) {
     assert.throws(() => validateLevelConfig({ ...config(), [field]: value }));

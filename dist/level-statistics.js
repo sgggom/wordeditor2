@@ -54,7 +54,8 @@ export function calculateRarityTotal(words) {
 }
 
 export function calculateLevelStatistics(level) {
-  const { rows, columns, cells, targetWords, extraWords, candidateWords } = level;
+  const { rows, columns, targetWords, extraWords, candidateWords } = level;
+  const cells = level.cells.filter((cell, index) => !cell.disabled && !level.disabledCells?.includes(index));
   const targetCount = targetWords.length;
   const allWordCount = targetCount + extraWords.length;
   const lengths = targetWords.map(entry => entry.word.length);

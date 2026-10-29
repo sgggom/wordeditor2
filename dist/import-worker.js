@@ -1,4 +1,4 @@
-import { importGameLevels } from "./level-import.js";
+import { importGameLevels, importSingleGameLevel } from "./level-import.js";
 
 self.onmessage = async ({ data }) => {
   try {
@@ -7,7 +7,11 @@ self.onmessage = async ({ data }) => {
       if (!response.ok) throw new Error("词库读取失败，请重试。");
       return (await response.json()).map(record => ({ ...record, onlyExtra: index === 1 }));
     }));
-    self.postMessage({ levels: importGameLevels(JSON.parse(data.replace(/^\uFEFF/, "")), records.flat()) });
+    if (data?.type === "single") {
+      self.postMessage({ levels: [importSingleGameLevel(data.text, records.flat())] });
+    } else {
+      self.postMessage({ levels: importGameLevels(JSON.parse(data.replace(/^\uFEFF/, "")), records.flat()) });
+    }
   } catch (error) {
     self.postMessage({ error: error.message || "无法读取关卡文件。" });
   }

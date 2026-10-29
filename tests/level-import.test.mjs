@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { importGameLevels } from "../dist/level-import.js";
+import { importGameLevels, importSingleGameLevel } from "../dist/level-import.js";
 import { createGameExport } from "../dist/level-export.js";
 
 const fixture = () => ({ books: [{ levels: [{ name: "测试", g: "ABC,DEF", t: "ABC DEF", e: "FED", n: "111111" }] }], daily: [] });
@@ -33,4 +33,24 @@ test("invalid files, words, paths and inconsistent counts fail before saving", (
     Object.assign(data.books[0].levels[0], patch);
     assert.throws(() => importGameLevels(data), /第 1 关/);
   }
+});
+
+test("single-level JSON reads an object or one-level pack and preserves disabled cells", () => {
+  const single = { name: "造型测试", g: "CD-,AO-,TG-", t: "CAT DOG", e: "", n: "110110110" };
+  const level = importSingleGameLevel("\uFEFF" + JSON.stringify(single), [{ word: "CAT", rarityLevel: 1 }]);
+  assert.deepEqual(level.disabledCells, [2, 5, 8]);
+  assert.equal(level.targetWords[0].rarityLevel, 1);
+  const exported = createGameExport([{ level }]).books[0].levels[0];
+  for (const key of Object.keys(single)) assert.equal(exported[key], single[key]);
+  assert.deepEqual(importSingleGameLevel(JSON.stringify(fixture())).cells,
+    importGameLevels(fixture())[0].cells);
+});
+
+test("single-level reading rejects malformed JSON, multiple levels and invalid paths", () => {
+  assert.throws(() => importSingleGameLevel("{"), /JSON 格式/);
+  assert.throws(() => importSingleGameLevel("null"), /单关/);
+  const pack = fixture();
+  pack.books[0].levels.push(structuredClone(pack.books[0].levels[0]));
+  assert.throws(() => importSingleGameLevel(JSON.stringify(pack)), /只能读取一关/);
+  assert.throws(() => importSingleGameLevel(JSON.stringify({ ...fixture().books[0].levels[0], n: "111112" })), /不一致/);
 });

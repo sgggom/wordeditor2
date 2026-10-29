@@ -77,7 +77,6 @@ function verifyLevel(level, targetCount) {
   assert.ok(replay.every(Boolean));
   const counts = Array(level.cells.length).fill(0);
   for (const entry of level.targetWords) {
-    assert.equal(entry.pathAnalysis.safe, true);
     assert.ok(candidates.has(entry.word) && !extras.has(entry.word));
     assert.ok(!onlyExtraNames.has(entry.word));
     verifyPath(entry, level);
@@ -155,7 +154,7 @@ test("numbered word lengths are enforced in order across every board size", () =
 
 test("placement prefers empty cells and allows multiple existing letters anywhere in a word", () => {
   const priority = createGenerator(entries(["ABC"]));
-  const letters = ["A", "", "", "A", "B", "C"];
+  const letters = ["A", "", "", "D", "B", "C"];
   const placement = priority.findPlacement({ rows: 2, columns: 3, letters, random: seededRandom(1) });
   assert.equal(placement.path.filter(cell => !letters[cell]).length, 2);
 
@@ -189,7 +188,7 @@ test("initial forward probability controls direction preference when both direct
 test("direction preference preserves empty-cell priority and falls back when its direction cannot fit", () => {
   const simple = createGenerator(entries(["ABC"]));
   const options = { rows: 2, columns: 3, random: seededRandom(4) };
-  const letters = ["A", "C", "B", "B", "", ""];
+  const letters = ["Z", "C", "Z", "B", "", ""];
   const placement = simple.findPlacement({ ...options, letters, initialForwardProbability: 100 });
   assert.deepEqual(placement.path, [5, 4, 1]);
   assert.equal(placement.path.filter(cell => !letters[cell]).length, 2);
@@ -225,7 +224,7 @@ test("candidate enumeration is exhaustive across both banks and does not calcula
   const expected = new Set([...normal, ...onlyExtra].filter(entry => canSpell(entry.word, letters, 3, 4)).map(entry => entry.word));
   assert.deepEqual(new Set(found.map(entry => entry.word)), expected);
   assert.deepEqual(new Set([...level.targetWords, ...level.extraWords].map(entry => entry.word)), expected);
-  assert.deepEqual(new Set(level.candidateWords.map(entry => entry.word)), new Set(found.filter(entry => !entry.onlyExtra && entry.pathAnalysis.safe).map(entry => entry.word)));
+  assert.deepEqual(new Set(level.candidateWords.map(entry => entry.word)), new Set(found.filter(entry => !entry.onlyExtra).map(entry => entry.word)));
   assert.ok(found.every(entry => !("count" in entry)));
 });
 

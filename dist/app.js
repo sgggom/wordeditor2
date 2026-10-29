@@ -1,3 +1,5 @@
+import { createPathSafetyChecker, assertSafeTargetPaths } from "./path-safety.js";
+import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
 import { createDuplicateCheck, findDuplicateWords, setTargetWord } from "./level-rules.js";
 import { allocateTargetLengths, countTargetLengthPlan, targetLengthGroup } from "./level-generator.js";
 import { TARGET_LENGTH_OPTIONS, MAX_TARGET_PLAN_SLOTS } from "./level-config.js";
@@ -6,17 +8,17 @@ import { setupConfigList } from "./config-list.js";
 import { calculateRarityTotal } from "./level-statistics.js";
 import { createBatchRunner, formatBatchState } from "./batch-runner.js";
 import { createGenerationClient, defaultGenerationWorkers } from "./generation-client.js";
-import { gameExportText } from "./level-export.js";
+import { gameExportText, createGameExport } from "./level-export.js";
 import { normalizeFixedWords, normalizeFixedLayout, normalizeFixedWordExemptions } from "./fixed-words.js";
-import { createPathSafetyChecker } from "./path-safety.js";
 import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists.js";
 
 (() => {
   "use strict";
 
   const DEFAULT_SIZE = Object.freeze({ rows: 3, columns: 4 });
-  const LIMITS = Object.freeze({ rows: [2, 3], columns: [3, 5] });
+  const LIMITS = Object.freeze({ rows: [2, 5], columns: [2, 5] });
   const STORAGE_KEY = "fangge.level-size.v1";
+  const TARGET_LIMITS_STORAGE_KEY = "fangge.level-target-limits-enabled.v1";
   const TARGET_STORAGE_KEY = "fangge.level-target-count.v1";
   const LEGACY_TARGET_RATIOS_STORAGE_KEY = "fangge.level-target-length-ratios.v1";
   const TARGET_PLAN_STORAGE_KEY = "fangge.level-target-length-plan.v1";
@@ -45,6 +47,12 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   const levelDataButton = document.querySelector("#level-data-toggle");
   const levelDataPanel = document.querySelector("#level-data-panel");
   const levelDataContent = document.querySelector("#level-data-content");
+  const singleLevelJson = document.querySelector("#single-level-json");
+  const copySingleLevelButton = document.querySelector("#copy-single-level");
+  const readSingleLevelButton = document.querySelector("#read-single-level");
+  const singleLevelStatus = document.querySelector("#single-level-status");
+  let readingSingleLevel = false;
+  let copyingSingleLevel = false;
   const addLevelButton = document.querySelector("#add-level-to-list");
   const exportLevelsButton = document.querySelector("#export-levels");
   const importLevelsButton = document.querySelector("#import-levels");
@@ -61,6 +69,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   const errorMessage = document.querySelector("#generation-error");
   const wordList = document.querySelector("#word-list");
   const wordCount = document.querySelector("#word-count");
+  const pathShareBar = document.querySelector("#path-share-bar");
   const targetWordCount = document.querySelector("#target-word-count");
   const extraWordCount = document.querySelector("#extra-word-count");
   const targetInput = document.querySelector("#target-count");
@@ -68,6 +77,8 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   const targetConfigSummary = document.querySelector("#target-config-summary");
   const targetConfigPanel = document.querySelector("#target-config-panel");
   const targetConfigError = document.querySelector("#target-config-error");
+  const globalTargetLimitsInput = document.querySelector("#global-target-limits-enabled");
+  const targetLimitsHint = document.querySelector("#target-limits-hint");
   const targetPlanEnabled = document.querySelector("#target-plan-enabled");
   const targetPlanFields = document.querySelector("#target-plan-fields");
   const targetPlanSlots = document.querySelector("#target-plan-slots");
@@ -88,6 +99,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   ));
 
   let size = readSize();
+  let globalTargetLimitsEnabled = readTargetLimitsEnabled();
   let configuredTargetCount = readTargetCount();
   let configuredTargetLengthPlan = readTargetLengthPlan();
   let draftTargetLengthPlan = [];
@@ -138,7 +150,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (saved?.version === 1 && isValidSize(saved)) {
-        return { rows: saved.rows, columns: saved.columns };
+        return { rows: saved.rows, columns: saved.columns, disabledCells: normalizeDisabledCells(saved) };
       }
     } catch {
       // Invalid saved data or unavailable storage must not prevent editing.
@@ -149,6 +161,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   function saveSize() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, ...size }));
+      localStorage.setItem(TARGET_LIMITS_STORAGE_KEY, String(globalTargetLimitsEnabled));
       localStorage.setItem(TARGET_STORAGE_KEY, String(configuredTargetCount));
       localStorage.setItem(TARGET_PLAN_STORAGE_KEY, JSON.stringify(configuredTargetLengthPlan));
       localStorage.setItem(LENGTH_STORAGE_KEY, String(configuredMaxWordLength));
@@ -284,7 +297,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     activeSavedLevelId = record.id;
     savedLevelEdited = false;
     selectedWord = null;
-    size = { rows: level.rows, columns: level.columns };
+    size = { rows: level.rows, columns: level.columns, disabledCells: level.disabledCells ?? [] };
     configuredTargetCount = level.targetCount;
     configuredTargetLengthPlan = isValidTargetPlan(level.targetCount, level.targetLengthPlan) && level.targetLengthPlan
       ? [...level.targetLengthPlan] : legacyTargetPlan(level.targetCount, level.targetLengthRatios, level.targetWords);
@@ -303,7 +316,13 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     initialForwardInput.value = String(configuredInitialForwardProbability);
     for (const [kind, input] of Object.entries(duplicateRangeInputs)) input.value = String(configuredDuplicateRanges[kind]);
     restoreFilterInputs();
-    showPathSafetyWarning();
+    clearError();
+    const safePath = createPathSafetyChecker(level);
+    const unsafe = level.targetWords.filter(entry => !safePath(entry.word)).map(entry => entry.word);
+    if (unsafe.length) {
+      errorMessage.textContent = `当前关卡的 ${unsafe.join("、")} 存在用格歧义，可能导致无法完成，请重新生成。`;
+      errorMessage.hidden = false;
+    }
     wordList.parentElement.scrollTop = 0;
     render();
     savedLevelList.querySelector(`[data-saved-level-id="${record.id}"]`)?.focus({ preventScroll: true });
@@ -321,6 +340,24 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
 
   function isValidTargetCount(value) {
     return Number.isSafeInteger(value) && value >= 1;
+  }
+
+  function setGlobalTargetLimitsEnabled(enabled) {
+    if (generating || savingLevel || updatingLevelList || batchRunning || copyingSingleLevel) {
+      globalTargetLimitsInput.checked = globalTargetLimitsEnabled;
+      return;
+    }
+    globalTargetLimitsEnabled = enabled;
+    try { localStorage.setItem(TARGET_LIMITS_STORAGE_KEY, String(enabled)); } catch { /* Keep the switch usable without storage. */ }
+    restoreTargetConfigInputs();
+    render();
+  }
+
+  globalTargetLimitsInput.addEventListener("change", () => setGlobalTargetLimitsEnabled(globalTargetLimitsInput.checked));
+
+  function readTargetLimitsEnabled() {
+    try { return localStorage.getItem(TARGET_LIMITS_STORAGE_KEY) !== "false"; }
+    catch { return true; }
   }
 
   function readTargetCount() {
@@ -378,7 +415,10 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   }
 
   function renderTargetConfigPreview() {
-    const enabled = targetPlanEnabled.checked;
+    const limitsEnabled = globalTargetLimitsEnabled;
+    targetInput.disabled = targetPlanEnabled.disabled = !limitsEnabled;
+    targetLimitsHint.hidden = limitsEnabled;
+    const enabled = limitsEnabled && targetPlanEnabled.checked;
     targetPlanFields.hidden = !enabled;
     targetPlanSlots.replaceChildren();
     if (!enabled) return;
@@ -564,10 +604,9 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
 
   function renderWords() {
     const scrollTop = wordList.parentElement.scrollTop;
-    const checkPath = createPathSafetyChecker(level);
     const roles = [
       { key: "initial", label: "初始词", words: new Set(level?.initialWords.map(entry => entry.word) ?? []) },
-      { key: "candidate", label: "候选词", words: new Set(level?.candidateWords.filter(entry => checkPath(entry.word)).map(entry => entry.word) ?? []) },
+      { key: "candidate", label: "候选词", words: new Set(level?.candidateWords.map(entry => entry.word) ?? []) },
       { key: "target", label: "关卡目标", words: new Set(level?.targetWords.map(entry => entry.word) ?? []) },
       { key: "extra", label: "额外词", words: new Set(level?.extraWords.map(entry => entry.word) ?? []) },
     ];
@@ -591,6 +630,25 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     wordCount.textContent = String(entries.length);
     targetWordCount.textContent = String(membership.target.size);
     extraWordCount.textContent = String(membership.extra.size);
+    const bands = [0, 0, 0, 0];
+    const targets = level?.targetWords ?? [];
+    for (const entry of targets) bands[Math.min(3, entry.pathAnalysis.assigned.difficultyScore)] += 1;
+    const colors = ["绿（0分）", "蓝（1分）", "黄（2分）", "红（3分及以上）"];
+    const summary = targets.length
+      ? bands.map((count, band) => `${colors[band]} ${(count / targets.length * 100).toFixed(1)}%（${count}词）`).join("，")
+      : "暂无目标词";
+    pathShareBar.setAttribute("aria-label", `目标词路径占比：${summary}`);
+    pathShareBar.title = `目标词路径占比：${summary}`;
+    pathShareBar.replaceChildren();
+    bands.forEach((count, band) => {
+      if (!count) return;
+      const segment = document.createElement("span");
+      segment.dataset.scoreBand = String(band);
+      segment.style.width = `${count / targets.length * 100}%`;
+      segment.setAttribute("aria-hidden", "true");
+      pathShareBar.append(segment);
+    });
+    const safePath = level ? createPathSafetyChecker(level) : () => false;
     const buttons = document.createDocumentFragment();
     for (const entry of entries) {
       const row = document.createElement("div");
@@ -645,13 +703,15 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
         checkbox.type = "checkbox";
         checkbox.dataset.targetWord = entry.word;
         checkbox.checked = membership.target.has(entry.word);
-        checkbox.disabled = Boolean(presetView) || membership.initial.has(entry.word) || generating || savingLevel || updatingLevelList || batchRunning;
+        const locked = level.targetLimitsEnabled === false ? level.fixedWords?.includes(entry.word) : membership.initial.has(entry.word);
+        checkbox.disabled = Boolean(presetView) || locked || generating || savingLevel || updatingLevelList || batchRunning || (!checkbox.checked && !safePath(entry.word));
         checkbox.setAttribute("aria-label", `${entry.word} 设为目标词`);
-        selection.title = membership.initial.has(entry.word) ? "初始词不能移除" : checkbox.checked ? "移出目标词" : "加入目标词";
+        selection.title = locked ? (level.targetLimitsEnabled === false ? "固定单词不能移除" : "初始词不能移除") : checkbox.checked ? "移出目标词" : "加入目标词";
+        if (!checkbox.checked && !safePath(entry.word)) selection.title = "该词存在用格歧义，可能导致关卡无法完成，不能设为目标词";
         selection.append(checkbox);
       } else {
         selection.textContent = "—";
-        selection.title = !checkPath(entry.word) ? "存在使用不同格子的连接路径，不能设为目标词" : "只有候选词可选为目标词";
+        selection.title = "只有候选词可选为目标词";
       }
       row.append(button, selection);
       buttons.append(row);
@@ -667,13 +727,18 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
 
   function renderStatistics() {
     const stats = level?.statistics;
-    levelDataButton.disabled = !stats;
+    const busy = generating || savingLevel || updatingLevelList || batchRunning || exportingLevels;
+    levelDataButton.disabled = batchRunning;
+    copySingleLevelButton.disabled = !level || busy || copyingSingleLevel;
+    readSingleLevelButton.disabled = busy || copyingSingleLevel;
+    readSingleLevelButton.textContent = readingSingleLevel ? "读取中…" : "读取数据";
+    singleLevelJson.disabled = readingSingleLevel;
     if (displayedStatistics === stats) return;
     displayedStatistics = stats;
     levelDataContent.replaceChildren();
     levelDataContent.scrollTop = 0;
     if (!stats) {
-      if (levelDataPanel.matches(":popover-open")) levelDataPanel.hidePopover();
+      levelDataContent.textContent = "暂无关卡，可粘贴单关 JSON 数据读取。";
       return;
     }
     const number = (value, decimals = 0) => Number.isFinite(value) ? value.toFixed(decimals) : "—";
@@ -786,6 +851,8 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   }
 
   function renderGenerationButton() {
+    globalTargetLimitsInput.checked = globalTargetLimitsEnabled;
+    globalTargetLimitsInput.disabled = generating || savingLevel || updatingLevelList || batchRunning || copyingSingleLevel;
     generateButton.disabled = Boolean(presetView) || batchRunning || (!generating && (savingLevel || updatingLevelList || (Object.values(configuredDuplicateRanges).some(range => range > 0) && !levelLibraryReady)));
     generateButton.setAttribute("aria-busy", String(generating));
     generateButton.textContent = generating ? "停止生成" : level ? "重新生成" : "生成关卡";
@@ -812,11 +879,17 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
       for (let columnIndex = 0; columnIndex < columns; columnIndex += 1) {
         const index = rowIndex * columns + columnIndex;
         const value = level?.cells[index] ?? { letter: "", count: 0 };
-        const cell = document.createElement("div");
-        cell.className = `board-cell${(rowIndex + columnIndex) % 2 === 1 ? " alternate" : ""}`;
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.dataset.cell = String(index);
+        const disabled = size.disabledCells?.includes(index) ?? false;
+        cell.setAttribute("aria-pressed", String(!disabled));
+        cell.disabled = Boolean(presetView) || batchRunning || savingLevel || updatingLevelList;
+        cell.className = "board-cell";
         cell.classList.toggle("path-selected", steps.has(index));
-        cell.setAttribute("role", "cell");
-        cell.setAttribute("aria-label", `第 ${rowIndex + 1} 行，第 ${columnIndex + 1} 列，${value.letter || "空白"}，${value.count} 个目标词使用${steps.has(index) ? `，路径第 ${steps.get(index)} 步` : ""}`);
+        cell.classList.toggle("is-disabled", disabled);
+        cell.title = disabled ? "点击启用格子" : "点击禁用格子";
+        cell.setAttribute("aria-label", `第 ${rowIndex + 1} 行，第 ${columnIndex + 1} 列，${disabled ? "已禁用" : value.letter || "空白"}，${value.count} 个目标词使用${steps.has(index) ? `，路径第 ${steps.get(index)} 步` : ""}`);
         cell.dataset.row = String(rowIndex + 1);
         cell.dataset.column = String(columnIndex + 1);
         const letter = document.createElement("span");
@@ -844,11 +917,11 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     form.elements.namedItem("rows").value = String(rows);
     form.elements.namedItem("columns").value = String(columns);
     summary.textContent = `${rows} 行 × ${columns} 列`;
-    count.textContent = String(rows * columns);
-    targetConfigSummary.textContent = `${configuredTargetCount} 词`;
-    targetConfigButton.classList.toggle("is-active", configuredTargetLengthPlan !== null);
+    count.textContent = String(rows * columns - (size.disabledCells?.length ?? 0));
+    targetConfigSummary.textContent = globalTargetLimitsEnabled ? `${configuredTargetCount} 词` : "后选目标";
+    targetConfigButton.classList.toggle("is-active", !globalTargetLimitsEnabled || configuredTargetLengthPlan !== null);
     const targetLengthCounts = countTargetLengthPlan(configuredTargetCount, configuredTargetLengthPlan);
-    targetConfigButton.title = targetLengthCounts
+    targetConfigButton.title = !globalTargetLimitsEnabled ? "目标数量和逐个词长配额已关闭，生成后手动筛选目标" : targetLengthCounts
       ? `短词 ${targetLengthCounts.short} · 中词 ${targetLengthCounts.medium} · 长词 ${targetLengthCounts.long}` : "仅配置数量";
     emotionScore.textContent = formatEmotionScore();
     const rarityTotal = level ? calculateRarityTotal(level.targetWords) : null;
@@ -856,7 +929,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     const emotionTotal = level?.statistics.emotion.total;
     emotionScore.classList.toggle("is-positive", Number.isFinite(emotionTotal) && emotionTotal > 0);
     emotionScore.classList.toggle("is-negative", Number.isFinite(emotionTotal) && emotionTotal < 0);
-    resetButton.disabled = rows === DEFAULT_SIZE.rows && columns === DEFAULT_SIZE.columns;
+    resetButton.disabled = rows === DEFAULT_SIZE.rows && columns === DEFAULT_SIZE.columns && !size.disabledCells?.length;
     renderGenerationButton();
     const activeFilters = Object.keys(configuredFilters).length;
     filterSummary.textContent = activeFilters ? `${activeFilters}项` : "全部";
@@ -868,7 +941,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     renderWords();
     renderStatistics();
     renderSavedLevels();
-    form.inert = batchRunning || Boolean(presetView);
+    form.inert = batchRunning || Boolean(presetView) || readingSingleLevel;
     if (!presetView) saveSize();
     fitBoard();
   }
@@ -892,11 +965,9 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     errorMessage.textContent = "";
   }
 
-  function showPathSafetyWarning() {
-    const checkPath = createPathSafetyChecker(level);
-    const unsafeTargets = level?.targetWords.filter(entry => !checkPath(entry.word)).map(entry => entry.word) ?? [];
-    errorMessage.hidden = unsafeTargets.length === 0;
-    errorMessage.textContent = unsafeTargets.length ? `目标词 ${unsafeTargets.join("、")} 存在使用不同格子的连接路径，请重新生成或调整目标词；修复前不能导出。` : "";
+  function clearError() {
+    errorMessage.hidden = true;
+    errorMessage.textContent = "";
   }
 
   function showError(message) {
@@ -980,7 +1051,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     render();
     try {
       const duplicateCheck = createDuplicateCheck(savedLevels, configuredDuplicateRanges);
-      const generated = await getGenerationClient().generate({ ...size, targetCount, targetLengthPlan,
+      const generated = await getGenerationClient().generate({ ...size, targetCount, targetLengthPlan, targetLimitsEnabled: globalTargetLimitsEnabled,
         initialMaxWordLength, maxWordLength, initialForwardProbability, filters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
         fixedWordExemptions: configuredFixedWordExemptions }, duplicateCheck, {
         signal: controller.signal,
@@ -1038,7 +1109,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
       }
     } catch (error) {
       savedLevelError.textContent = error.name === "QuotaExceededError"
-        ? "本地存储空间不足，未能保存关卡。" : "关卡保存失败，请重试。";
+        ? "本地存储空间不足，未能保存关卡。" : error.message || "关卡保存失败，请重试。";
       savedLevelError.hidden = false;
     } finally {
       savingLevel = false;
@@ -1073,6 +1144,86 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     } finally {
       exportingLevels = false;
       renderSavedLevels();
+    }
+  });
+
+  function setSingleLevelStatus(message, isError = false) {
+    singleLevelStatus.textContent = message;
+    singleLevelStatus.classList.toggle("is-error", isError);
+    singleLevelStatus.hidden = !message;
+  }
+
+  function currentSingleLevelText() {
+    return JSON.stringify(createGameExport([{ level }]).books[0].levels[0], null, 2);
+  }
+
+  levelDataPanel.addEventListener("beforetoggle", event => {
+    if (event.newState !== "open") return;
+    setSingleLevelStatus("");
+    if (level) {
+      try { singleLevelJson.value = currentSingleLevelText(); }
+      catch (error) { setSingleLevelStatus(error.message, true); }
+    }
+    renderStatistics();
+  });
+
+  copySingleLevelButton.addEventListener("click", async () => {
+    if (copySingleLevelButton.disabled) return;
+    copyingSingleLevel = true;
+    renderStatistics();
+    try {
+      singleLevelJson.value = currentSingleLevelText();
+      try {
+        await navigator.clipboard.writeText(singleLevelJson.value);
+      } catch {
+        singleLevelJson.focus();
+        singleLevelJson.select();
+        if (!document.execCommand("copy")) throw new Error("无法访问剪贴板，请选中文本手动复制。");
+      }
+      setSingleLevelStatus("已复制本关数据。");
+    } catch (error) {
+      setSingleLevelStatus(error.message || "复制失败，请手动复制。", true);
+    } finally {
+      copyingSingleLevel = false;
+      renderStatistics();
+    }
+  });
+
+  readSingleLevelButton.addEventListener("click", async () => {
+    if (readSingleLevelButton.disabled) return;
+    const text = singleLevelJson.value.trim();
+    if (!text) {
+      setSingleLevelStatus("请先粘贴单关 JSON 数据。", true);
+      singleLevelJson.focus();
+      return;
+    }
+    readingSingleLevel = true;
+    updatingLevelList = true;
+    setSingleLevelStatus("正在读取关卡数据…");
+    render();
+    let worker;
+    try {
+      const [imported] = await new Promise((resolve, reject) => {
+        worker = new Worker("./import-worker.js", { type: "module" });
+        worker.onmessage = ({ data }) => data.error ? reject(new Error(data.error)) : resolve(data.levels);
+        worker.onerror = () => reject(new Error("关卡读取失败，请刷新重试。"));
+        worker.postMessage({ type: "single", text });
+      });
+      assertSafeTargetPaths(imported);
+      returnToEditedLevels();
+      clearLevel();
+      applyEditorConfig({ ...imported, targetDuplicateRange: configuredDuplicateRanges.target,
+        extraDuplicateRange: configuredDuplicateRanges.extra });
+      level = imported;
+      singleLevelJson.value = currentSingleLevelText();
+      setSingleLevelStatus("已读取到编辑区，可加入关卡列表保存。");
+    } catch (error) {
+      setSingleLevelStatus(`读取失败：${error.message || "数据无效。"}`, true);
+    } finally {
+      worker?.terminate();
+      readingSingleLevel = false;
+      updatingLevelList = false;
+      render();
     }
   });
 
@@ -1154,7 +1305,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     try {
       level = setTargetWord(level, checkbox.dataset.targetWord, checkbox.checked);
       if (activeSavedLevelId !== null) savedLevelEdited = true;
-      showPathSafetyWarning();
+      clearError();
       render();
     } catch (error) {
       showError(error.message);
@@ -1226,9 +1377,29 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     if (!(event.target instanceof HTMLInputElement) || !(event.target.name in LIMITS)) return;
     const nextSize = { ...size, [event.target.name]: Number(event.target.value) };
     if (!isValidSize(nextSize)) return;
+    nextSize.disabledCells = resizeDisabledCells(size, nextSize);
     size = nextSize;
     clearLevel();
     render();
+  });
+
+  board.addEventListener("click", event => {
+    const cell = event.target.closest("[data-cell]");
+    if (!cell || cell.disabled) return;
+    const index = Number(cell.dataset.cell);
+    const disabled = new Set(size.disabledCells ?? []);
+    if (disabled.has(index)) disabled.delete(index); else disabled.add(index);
+    if (disabled.size === size.rows * size.columns) {
+      showError("棋盘至少需要保留一个启用格子。");
+      return;
+    }
+    size = { ...size, disabledCells: [...disabled].sort((a, b) => a - b) };
+    if (configuredFixedLayout?.placements.some(entry => entry.path.some(position => disabled.has(position)))) {
+      configuredFixedLayout = null;
+    }
+    clearLevel();
+    render();
+    board.querySelector(`[data-cell="${index}"]`)?.focus({ preventScroll: true });
   });
 
   resetButton.addEventListener("click", () => {
@@ -1257,8 +1428,9 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     }
   });
   document.querySelector("#apply-target-config").addEventListener("click", () => {
-    const targetCount = targetInput.valueAsNumber;
-    const plan = targetPlanEnabled.checked ? [...draftTargetLengthPlan] : null;
+    const limitsEnabled = globalTargetLimitsEnabled;
+    const targetCount = limitsEnabled ? targetInput.valueAsNumber : configuredTargetCount;
+    const plan = limitsEnabled ? (targetPlanEnabled.checked ? [...draftTargetLengthPlan] : null) : configuredTargetLengthPlan;
     if (!isValidTargetCount(targetCount) || !isValidTargetPlan(targetCount, plan)) {
       targetConfigError.textContent = !isValidTargetCount(targetCount)
         ? "目标数量需为大于 0 的整数。" : targetCount > MAX_TARGET_PLAN_SLOTS
@@ -1277,7 +1449,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   });
 
   function applyEditorConfig(config) {
-    size = { rows: config.rows, columns: config.columns };
+    size = { rows: config.rows, columns: config.columns, disabledCells: config.disabledCells ?? [] };
     configuredTargetCount = config.targetCount;
     configuredTargetLengthPlan = config.targetLengthPlan;
     configuredInitialMaxWordLength = config.initialMaxWordLength;
@@ -1343,7 +1515,9 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
         onUpdate(state);
       },
     });
-    try { return await batchRunner.run(jobs); }
+    const generationJobs = jobs.map(job => ({ ...job,
+      config: { ...job.config, targetLimitsEnabled: globalTargetLimitsEnabled } }));
+    try { return await batchRunner.run(generationJobs); }
     finally {
       client.close();
       batchRunner = null;
@@ -1387,7 +1561,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
       if (savingLevel || updatingLevelList || batchRunning) throw new Error("请等待当前保存或运行完成后再切换预设。");
       stopGeneration();
       editorBeforePreset ??= { level, activeSavedLevelId, savedLevelEdited, selectedWord,
-        config: { ...size, targetCount: configuredTargetCount, targetLengthPlan: configuredTargetLengthPlan,
+        config: { ...size, targetCount: configuredTargetCount, targetLengthPlan: configuredTargetLengthPlan, targetLimitsEnabled: globalTargetLimitsEnabled,
           initialMaxWordLength: configuredInitialMaxWordLength, maxWordLength: configuredMaxWordLength,
           initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters,
           fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout, fixedWordExemptions: configuredFixedWordExemptions,
@@ -1400,8 +1574,10 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   });
 
   setupConfigList({
+    getTargetLimitsEnabled: () => globalTargetLimitsEnabled,
+    setTargetLimitsEnabled: setGlobalTargetLimitsEnabled,
     getConfig: () => structuredClone({
-      ...size, targetCount: configuredTargetCount, targetLengthPlan: configuredTargetLengthPlan,
+      ...size, targetCount: configuredTargetCount, targetLengthPlan: configuredTargetLengthPlan, targetLimitsEnabled: globalTargetLimitsEnabled,
       initialMaxWordLength: configuredInitialMaxWordLength, maxWordLength: configuredMaxWordLength,
       initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
       fixedWordExemptions: configuredFixedWordExemptions,
