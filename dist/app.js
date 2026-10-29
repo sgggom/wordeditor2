@@ -1,9 +1,6 @@
 import { createPathSafetyChecker, assertSafeTargetPaths } from "./path-safety.js";
 import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
 import { createDuplicateCheck, findDuplicateWords, setTargetWord } from "./level-rules.js";
-import { allocateTargetLengths, countTargetLengthPlan, targetLengthGroup } from "./level-generator.js";
-import { TARGET_LENGTH_OPTIONS, MAX_TARGET_PLAN_SLOTS } from "./level-config.js";
-import { renderTargetPlanChoices } from "./target-plan-controls.js";
 import { setupConfigList } from "./config-list.js";
 import { calculateRarityTotal } from "./level-statistics.js";
 import { createBatchRunner, formatBatchState } from "./batch-runner.js";
@@ -11,20 +8,16 @@ import { createGenerationClient, defaultGenerationWorkers } from "./generation-c
 import { gameExportText, createGameExport } from "./level-export.js";
 import { normalizeFixedWords, normalizeFixedLayout, normalizeFixedWordExemptions } from "./fixed-words.js";
 import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists.js";
+import { bindWordTooltip, setupWordTooltips } from "./word-tooltip.js";
+import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } from "./level-file.js";
 
 (() => {
   "use strict";
+  setupWordTooltips();
 
   const DEFAULT_SIZE = Object.freeze({ rows: 3, columns: 4 });
   const LIMITS = Object.freeze({ rows: [2, 5], columns: [2, 5] });
   const STORAGE_KEY = "fangge.level-size.v1";
-  const TARGET_LIMITS_STORAGE_KEY = "fangge.level-target-limits-enabled.v1";
-  const TARGET_STORAGE_KEY = "fangge.level-target-count.v1";
-  const LEGACY_TARGET_RATIOS_STORAGE_KEY = "fangge.level-target-length-ratios.v1";
-  const TARGET_PLAN_STORAGE_KEY = "fangge.level-target-length-plan.v1";
-  const LEGACY_LENGTH_STORAGE_KEY = "fangge.level-max-word-length.v1";
-  const LENGTH_STORAGE_KEY = "fangge.level-max-word-length.v2";
-  const INITIAL_LENGTH_STORAGE_KEY = "fangge.level-initial-max-word-length.v1";
   const FORWARD_STORAGE_KEY = "fangge.level-initial-forward-probability.v1";
   const FILTER_STORAGE_KEY = "fangge.level-word-filters.v1";
   const FIXED_WORDS_STORAGE_KEY = "fangge.level-fixed-words.v1";
@@ -54,6 +47,8 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   let readingSingleLevel = false;
   let copyingSingleLevel = false;
   const addLevelButton = document.querySelector("#add-level-to-list");
+  const saveFileButton = document.querySelector("#save-local-level-file");
+  const saveFileAsButton = document.querySelector("#save-local-level-file-as");
   const exportLevelsButton = document.querySelector("#export-levels");
   const importLevelsButton = document.querySelector("#import-levels");
   const importLevelsFile = document.querySelector("#import-levels-file");
@@ -72,19 +67,6 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   const pathShareBar = document.querySelector("#path-share-bar");
   const targetWordCount = document.querySelector("#target-word-count");
   const extraWordCount = document.querySelector("#extra-word-count");
-  const targetInput = document.querySelector("#target-count");
-  const targetConfigButton = document.querySelector("#target-config-toggle");
-  const targetConfigSummary = document.querySelector("#target-config-summary");
-  const targetConfigPanel = document.querySelector("#target-config-panel");
-  const targetConfigError = document.querySelector("#target-config-error");
-  const globalTargetLimitsInput = document.querySelector("#global-target-limits-enabled");
-  const targetLimitsHint = document.querySelector("#target-limits-hint");
-  const targetPlanEnabled = document.querySelector("#target-plan-enabled");
-  const targetPlanFields = document.querySelector("#target-plan-fields");
-  const targetPlanSlots = document.querySelector("#target-plan-slots");
-  const targetPlanSummary = document.querySelector("#target-plan-summary");
-  const maxWordLengthInput = document.querySelector("#max-word-length");
-  const initialMaxWordLengthInput = document.querySelector("#initial-max-word-length");
   const initialForwardInput = document.querySelector("#initial-forward-probability");
   const duplicateRangeInputs = {
     target: document.querySelector("#target-duplicate-range"), extra: document.querySelector("#extra-duplicate-range"),
@@ -99,12 +81,6 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   ));
 
   let size = readSize();
-  let globalTargetLimitsEnabled = readTargetLimitsEnabled();
-  let configuredTargetCount = readTargetCount();
-  let configuredTargetLengthPlan = readTargetLengthPlan();
-  let draftTargetLengthPlan = [];
-  let configuredMaxWordLength = readMaxWordLength();
-  let configuredInitialMaxWordLength = readMaxWordLength(INITIAL_LENGTH_STORAGE_KEY, LEGACY_LENGTH_STORAGE_KEY);
   let configuredInitialForwardProbability = readInitialForwardProbability();
   let configuredFilters = readFilters();
   let configuredFixedWords = readFixedWords();
@@ -123,6 +99,9 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   let displayedStatistics = null;
   let savedLevels = [];
   let presetView = null;
+  let fileView = null;
+  const localFiles = [];
+  let fileManager;
   let presetDictionaryPromise;
   let editorBeforePreset = null;
   let activeSavedLevelId = null;
@@ -161,11 +140,6 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   function saveSize() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, ...size }));
-      localStorage.setItem(TARGET_LIMITS_STORAGE_KEY, String(globalTargetLimitsEnabled));
-      localStorage.setItem(TARGET_STORAGE_KEY, String(configuredTargetCount));
-      localStorage.setItem(TARGET_PLAN_STORAGE_KEY, JSON.stringify(configuredTargetLengthPlan));
-      localStorage.setItem(LENGTH_STORAGE_KEY, String(configuredMaxWordLength));
-      localStorage.setItem(INITIAL_LENGTH_STORAGE_KEY, String(configuredInitialMaxWordLength));
       localStorage.setItem(FORWARD_STORAGE_KEY, String(configuredInitialForwardProbability));
       localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(configuredFilters));
       localStorage.setItem(FIXED_WORDS_STORAGE_KEY, JSON.stringify(configuredFixedWords));
@@ -206,19 +180,30 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   }
 
   function renderSavedLevels() {
-    const displayedLevels = presetView?.records ?? savedLevels;
+    const displayedLevels = presetView?.records ?? fileView?.records ?? savedLevels;
     const busy = generating || savingLevel || updatingLevelList || batchRunning;
-    importLevelsButton.disabled = Boolean(presetView) || busy || exportingLevels || !levelLibraryReady;
-    importLevelsButton.textContent = updatingLevelList ? "处理中…" : "导入关卡";
+    const view = currentListView();
+    importLevelsButton.hidden = Boolean(presetView || fileView);
+    importLevelsButton.disabled = busy || exportingLevels || !levelLibraryReady;
+    importLevelsButton.textContent = updatingLevelList ? "处理中…" : "追加导入到浏览器";
     savedLevelCount.textContent = String(displayedLevels.length);
-    document.querySelector("#viewed-level-list-name").textContent = presetView?.label ?? "当前编辑关卡";
-    document.querySelector("#return-to-edited-levels").hidden = !presetView;
-    form.inert = Boolean(presetView);
-    exportLevelsButton.disabled = exportingLevels || savingLevel || updatingLevelList || batchRunning || !levelLibraryReady || !displayedLevels.length;
-    exportLevelsButton.textContent = exportingLevels ? "导出中…" : "导出关卡";
+    document.querySelector("#viewed-level-list-name").textContent = view.label;
+    const status = document.querySelector("#level-source-status");
+    status.textContent = view.status; status.classList.toggle("is-dirty", Boolean(view.dirty));
+    document.querySelector("#return-to-edited-levels").hidden = !presetView && !fileView;
+    form.inert = Boolean(presetView) || savingLevel || updatingLevelList || batchRunning || readingSingleLevel;
+    saveFileButton.hidden = saveFileAsButton.hidden = !fileView;
+    saveFileButton.textContent = savingLevel ? "保存中…" : view.saveLabel ?? "保存文件";
+    saveFileButton.disabled = busy || (Boolean(fileView?.handle) && !view.dirty) || view.pending;
+    saveFileAsButton.disabled = busy || view.pending;
+    saveFileAsButton.hidden ||= !view.canSaveAs;
+    exportLevelsButton.hidden = Boolean(fileView);
+    exportLevelsButton.disabled = exportingLevels || busy || !displayedLevels.length;
+    exportLevelsButton.textContent = exportingLevels ? "导出中…" : "导出文件";
+    addLevelButton.hidden = Boolean(fileView);
     addLevelButton.disabled = Boolean(presetView) || !level || busy || !levelLibraryReady || (activeSavedLevelId !== null && !savedLevelEdited);
-    addLevelButton.textContent = presetView ? "预设关卡" : savingLevel ? "保存中…" : activeSavedLevelId !== null
-      ? (savedLevelEdited ? "保存修改" : "已加入") : "加入关卡列表";
+    addLevelButton.textContent = presetView ? "自带预设 · 只读" : savingLevel ? "保存中…" : activeSavedLevelId !== null
+      ? (savedLevelEdited ? "保存修改到浏览器" : "已保存到浏览器") : "加入浏览器关卡";
     if (!savedLevelListDirty && displayedSavedLevelId === activeSavedLevelId && displayedLevelListBusy === busy) return;
     savedLevelListDirty = false;
     displayedSavedLevelId = activeSavedLevelId;
@@ -240,7 +225,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
       button.type = "button";
       button.className = "saved-level-item";
       button.dataset.savedLevelId = String(record.id);
-      button.disabled = updatingLevelList || batchRunning;
+      button.disabled = savingLevel || updatingLevelList || batchRunning;
       if (saved.sourceConfig) button.title = `来自配置 ${String(saved.sourceConfig.position).padStart(3, "0")}`;
       button.setAttribute("aria-pressed", String(record.id === activeSavedLevelId));
       const heading = document.createElement("span");
@@ -275,7 +260,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
         control.textContent = text;
         control.title = label;
         control.setAttribute("aria-label", `${label}${name.textContent}`);
-        control.disabled = busy || (action === "up" && index === 0) || (action === "down" && index === savedLevels.length - 1);
+        control.disabled = busy || (action === "up" && index === 0) || (action === "down" && index === displayedLevels.length - 1) || (action === "delete" && fileView?.format === "single");
         controls.append(control);
       }
       footer.append(score);
@@ -289,8 +274,8 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   }
 
   function openSavedLevel(id) {
-    if (batchRunning) return;
-    const record = (presetView?.records ?? savedLevels).find(entry => entry.id === id);
+    if (batchRunning || savingLevel) return;
+    const record = (presetView?.records ?? fileView?.records ?? savedLevels).find(entry => entry.id === id);
     if (!record) return;
     stopGeneration();
     level = structuredClone(record.level);
@@ -298,21 +283,13 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     savedLevelEdited = false;
     selectedWord = null;
     size = { rows: level.rows, columns: level.columns, disabledCells: level.disabledCells ?? [] };
-    configuredTargetCount = level.targetCount;
-    configuredTargetLengthPlan = isValidTargetPlan(level.targetCount, level.targetLengthPlan) && level.targetLengthPlan
-      ? [...level.targetLengthPlan] : legacyTargetPlan(level.targetCount, level.targetLengthRatios, level.targetWords);
-    configuredMaxWordLength = level.maxWordLength;
-    configuredInitialMaxWordLength = level.initialMaxWordLength;
-    configuredInitialForwardProbability = level.initialForwardProbability;
-    configuredFilters = level.filters;
+    configuredInitialForwardProbability = level.initialForwardProbability ?? 50;
+    configuredFilters = level.filters ?? {};
     configuredFixedWords = normalizeFixedWords(level.fixedWords ?? []);
     configuredFixedWordExemptions = normalizeFixedWordExemptions(level);
     configuredFixedLayout = structuredClone(level.fixedLayout ?? null);
     configuredDuplicateRanges = Object.fromEntries(Object.keys(duplicateRangeInputs).map(kind =>
       [kind, level.duplicateCheck?.[kind]?.range ?? level.duplicateCheck?.range ?? configuredDuplicateRanges[kind]]));
-    restoreTargetConfigInputs();
-    maxWordLengthInput.value = String(configuredMaxWordLength);
-    initialMaxWordLengthInput.value = String(configuredInitialMaxWordLength);
     initialForwardInput.value = String(configuredInitialForwardProbability);
     for (const [kind, input] of Object.entries(duplicateRangeInputs)) input.value = String(configuredDuplicateRanges[kind]);
     restoreFilterInputs();
@@ -336,130 +313,6 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
       fragment.append(label);
     }
     return fragment;
-  }
-
-  function isValidTargetCount(value) {
-    return Number.isSafeInteger(value) && value >= 1;
-  }
-
-  function setGlobalTargetLimitsEnabled(enabled) {
-    if (generating || savingLevel || updatingLevelList || batchRunning || copyingSingleLevel) {
-      globalTargetLimitsInput.checked = globalTargetLimitsEnabled;
-      return;
-    }
-    globalTargetLimitsEnabled = enabled;
-    try { localStorage.setItem(TARGET_LIMITS_STORAGE_KEY, String(enabled)); } catch { /* Keep the switch usable without storage. */ }
-    restoreTargetConfigInputs();
-    render();
-  }
-
-  globalTargetLimitsInput.addEventListener("change", () => setGlobalTargetLimitsEnabled(globalTargetLimitsInput.checked));
-
-  function readTargetLimitsEnabled() {
-    try { return localStorage.getItem(TARGET_LIMITS_STORAGE_KEY) !== "false"; }
-    catch { return true; }
-  }
-
-  function readTargetCount() {
-    try {
-      const saved = Number(localStorage.getItem(TARGET_STORAGE_KEY));
-      if (isValidTargetCount(saved)) return saved;
-    } catch {
-      // Use the default when browser storage is unavailable.
-    }
-    return 6;
-  }
-
-  function isValidTargetPlan(targetCount, plan) {
-    try {
-      countTargetLengthPlan(targetCount, plan);
-      return plan === null || (Array.isArray(plan) && plan.length <= MAX_TARGET_PLAN_SLOTS);
-    } catch {
-      return false;
-    }
-  }
-
-  function legacyTargetPlan(targetCount, ratios, targetWords = []) {
-    if (!ratios || targetCount > MAX_TARGET_PLAN_SLOTS) return null;
-    try {
-      const counts = allocateTargetLengths(targetCount, ratios);
-      const actualPlan = targetWords.map(entry => targetLengthGroup(entry.word.length));
-      if (isValidTargetPlan(targetCount, actualPlan)) {
-        const actualCounts = countTargetLengthPlan(targetCount, actualPlan);
-        if (Object.keys(counts).every(key => actualCounts[key] === counts[key])) return actualPlan;
-      }
-      return Object.entries(counts).flatMap(([group, amount]) => Array(amount).fill(group));
-    } catch {
-      return null;
-    }
-  }
-
-  function readTargetLengthPlan() {
-    try {
-      const raw = localStorage.getItem(TARGET_PLAN_STORAGE_KEY);
-      if (raw !== null) {
-        const saved = JSON.parse(raw);
-        return isValidTargetPlan(configuredTargetCount, saved) ? saved : null;
-      }
-      return legacyTargetPlan(configuredTargetCount, JSON.parse(localStorage.getItem(LEGACY_TARGET_RATIOS_STORAGE_KEY)));
-    } catch {
-      return null;
-    }
-  }
-
-  function renderTargetPlanSummary() {
-    const targetCount = targetInput.valueAsNumber;
-    const counts = isValidTargetPlan(targetCount, draftTargetLengthPlan)
-      ? countTargetLengthPlan(targetCount, draftTargetLengthPlan) : null;
-    targetPlanSummary.textContent = counts ? `短词 ${counts.short} · 中词 ${counts.medium} · 长词 ${counts.long}` : "—";
-  }
-
-  function renderTargetConfigPreview() {
-    const limitsEnabled = globalTargetLimitsEnabled;
-    targetInput.disabled = targetPlanEnabled.disabled = !limitsEnabled;
-    targetLimitsHint.hidden = limitsEnabled;
-    const enabled = limitsEnabled && targetPlanEnabled.checked;
-    targetPlanFields.hidden = !enabled;
-    targetPlanSlots.replaceChildren();
-    if (!enabled) return;
-    const targetCount = targetInput.valueAsNumber;
-    if (!isValidTargetCount(targetCount) || targetCount > MAX_TARGET_PLAN_SLOTS) {
-      targetPlanSummary.textContent = "—";
-      if (targetCount > MAX_TARGET_PLAN_SLOTS) {
-        targetConfigError.textContent = `逐个配置最多支持 ${MAX_TARGET_PLAN_SLOTS} 个目标词。`;
-        targetConfigError.hidden = false;
-      }
-      return;
-    }
-    draftTargetLengthPlan = Array.from({ length: targetCount }, (_, index) =>
-      draftTargetLengthPlan[index] ?? Object.keys(TARGET_LENGTH_OPTIONS)[index % 3]);
-    renderTargetPlanChoices(targetPlanSlots, draftTargetLengthPlan);
-    renderTargetPlanSummary();
-  }
-
-  function restoreTargetConfigInputs() {
-    targetInput.value = String(configuredTargetCount);
-    targetPlanEnabled.checked = configuredTargetLengthPlan !== null;
-    draftTargetLengthPlan = [...(configuredTargetLengthPlan ?? [])];
-    targetConfigError.hidden = true;
-    targetConfigError.textContent = "";
-    renderTargetConfigPreview();
-  }
-
-  function isValidMaxWordLength(value) {
-    return Number.isSafeInteger(value) && value >= 1;
-  }
-
-  function readMaxWordLength(storageKey = LENGTH_STORAGE_KEY, legacyKey) {
-    try {
-      for (const key of [storageKey, legacyKey].filter(Boolean)) {
-        const saved = Number(localStorage.getItem(key));
-        if (isValidMaxWordLength(saved)) return saved;
-      }
-    } catch {
-      // Use the default when browser storage is unavailable.
-    }
-    return 8;
   }
 
   function isValidInitialForwardProbability(value) {
@@ -667,7 +520,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
       text.textContent = entry.word;
       const definition = [entry.definitionZh, entry.definitionEn]
         .find(value => typeof value === "string" && value.trim())?.trim() ?? "暂无释义";
-      text.title = definition;
+      bindWordTooltip(text, entry, button);
       button.setAttribute("aria-description", definition);
       const rarity = document.createElement("span");
       rarity.className = "word-value-cell";
@@ -703,10 +556,10 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
         checkbox.type = "checkbox";
         checkbox.dataset.targetWord = entry.word;
         checkbox.checked = membership.target.has(entry.word);
-        const locked = level.targetLimitsEnabled === false ? level.fixedWords?.includes(entry.word) : membership.initial.has(entry.word);
+        const locked = level.fixedWords?.includes(entry.word);
         checkbox.disabled = Boolean(presetView) || locked || generating || savingLevel || updatingLevelList || batchRunning || (!checkbox.checked && !safePath(entry.word));
         checkbox.setAttribute("aria-label", `${entry.word} 设为目标词`);
-        selection.title = locked ? (level.targetLimitsEnabled === false ? "固定单词不能移除" : "初始词不能移除") : checkbox.checked ? "移出目标词" : "加入目标词";
+        selection.title = locked ? "固定单词不能移除" : checkbox.checked ? "移出目标词" : "加入目标词";
         if (!checkbox.checked && !safePath(entry.word)) selection.title = "该词存在用格歧义，可能导致关卡无法完成，不能设为目标词";
         selection.append(checkbox);
       } else {
@@ -851,9 +704,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   }
 
   function renderGenerationButton() {
-    globalTargetLimitsInput.checked = globalTargetLimitsEnabled;
-    globalTargetLimitsInput.disabled = generating || savingLevel || updatingLevelList || batchRunning || copyingSingleLevel;
-    generateButton.disabled = Boolean(presetView) || batchRunning || (!generating && (savingLevel || updatingLevelList || (Object.values(configuredDuplicateRanges).some(range => range > 0) && !levelLibraryReady)));
+    generateButton.disabled = Boolean(presetView) || batchRunning || (!generating && (savingLevel || updatingLevelList || (!fileView && Object.values(configuredDuplicateRanges).some(range => range > 0) && !levelLibraryReady)));
     generateButton.setAttribute("aria-busy", String(generating));
     generateButton.textContent = generating ? "停止生成" : level ? "重新生成" : "生成关卡";
     generateButton.title = generating
@@ -918,11 +769,6 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     form.elements.namedItem("columns").value = String(columns);
     summary.textContent = `${rows} 行 × ${columns} 列`;
     count.textContent = String(rows * columns - (size.disabledCells?.length ?? 0));
-    targetConfigSummary.textContent = globalTargetLimitsEnabled ? `${configuredTargetCount} 词` : "后选目标";
-    targetConfigButton.classList.toggle("is-active", !globalTargetLimitsEnabled || configuredTargetLengthPlan !== null);
-    const targetLengthCounts = countTargetLengthPlan(configuredTargetCount, configuredTargetLengthPlan);
-    targetConfigButton.title = !globalTargetLimitsEnabled ? "目标数量和逐个词长配额已关闭，生成后手动筛选目标" : targetLengthCounts
-      ? `短词 ${targetLengthCounts.short} · 中词 ${targetLengthCounts.medium} · 长词 ${targetLengthCounts.long}` : "仅配置数量";
     emotionScore.textContent = formatEmotionScore();
     const rarityTotal = level ? calculateRarityTotal(level.targetWords) : null;
     rarityScore.textContent = Number.isFinite(rarityTotal) ? String(rarityTotal) : "—";
@@ -941,8 +787,8 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     renderWords();
     renderStatistics();
     renderSavedLevels();
-    form.inert = batchRunning || Boolean(presetView) || readingSingleLevel;
-    if (!presetView) saveSize();
+    form.inert = batchRunning || Boolean(presetView) || readingSingleLevel || savingLevel || updatingLevelList;
+    if (!presetView && !fileView) saveSize();
     fitBoard();
   }
 
@@ -958,7 +804,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   function clearLevel() {
     stopGeneration();
     level = null;
-    activeSavedLevelId = null;
+    if (!fileView) activeSavedLevelId = null;
     savedLevelEdited = false;
     selectedWord = null;
     errorMessage.hidden = true;
@@ -994,20 +840,6 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
       render();
       return;
     }
-    const targetCount = configuredTargetCount;
-    const targetLengthPlan = configuredTargetLengthPlan;
-    const initialMaxWordLength = initialMaxWordLengthInput.valueAsNumber;
-    if (!isValidMaxWordLength(initialMaxWordLength)) {
-      showError("初始词最长需为大于 0 的整数。");
-      initialMaxWordLengthInput.focus();
-      return;
-    }
-    const maxWordLength = maxWordLengthInput.valueAsNumber;
-    if (!isValidMaxWordLength(maxWordLength)) {
-      showError("最长单词长度需为大于 0 的整数。");
-      maxWordLengthInput.focus();
-      return;
-    }
     const initialForwardProbability = initialForwardInput.valueAsNumber;
     if (!isValidInitialForwardProbability(initialForwardProbability)) {
       showError("初始正向概率需为 0–100 的整数。");
@@ -1023,16 +855,12 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
       }
       duplicateRanges[kind] = input.valueAsNumber;
     }
-    if (Object.values(duplicateRanges).some(range => range > 0) && !levelLibraryReady) {
+    if (!fileView && Object.values(duplicateRanges).some(range => range > 0) && !levelLibraryReady) {
       showError("请等待关卡列表加载完成后再查重生成。");
       return;
     }
     const filters = filtersFromInputs();
-    if (configuredTargetCount !== targetCount || configuredMaxWordLength !== maxWordLength || configuredInitialMaxWordLength !== initialMaxWordLength ||
-      configuredInitialForwardProbability !== initialForwardProbability || JSON.stringify(configuredFilters) !== JSON.stringify(filters)) clearLevel();
-    configuredTargetCount = targetCount;
-    configuredMaxWordLength = maxWordLength;
-    configuredInitialMaxWordLength = initialMaxWordLength;
+    if (configuredInitialForwardProbability !== initialForwardProbability || JSON.stringify(configuredFilters) !== JSON.stringify(filters)) clearLevel();
     configuredInitialForwardProbability = initialForwardProbability;
     configuredDuplicateRanges = duplicateRanges;
     configuredFilters = filters;
@@ -1050,9 +878,10 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     generationController = controller;
     render();
     try {
-      const duplicateCheck = createDuplicateCheck(savedLevels, configuredDuplicateRanges);
-      const generated = await getGenerationClient().generate({ ...size, targetCount, targetLengthPlan, targetLimitsEnabled: globalTargetLimitsEnabled,
-        initialMaxWordLength, maxWordLength, initialForwardProbability, filters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
+      const fileIndex = fileView?.records.findIndex(record => record.id === activeSavedLevelId) ?? -1;
+      const history = fileView ? fileView.records.slice(0, fileIndex < 0 ? fileView.records.length : fileIndex) : savedLevels;
+      const duplicateCheck = createDuplicateCheck(history, configuredDuplicateRanges);
+      const generated = await getGenerationClient().generate({ ...size, initialForwardProbability, filters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
         fixedWordExemptions: configuredFixedWordExemptions }, duplicateCheck, {
         signal: controller.signal,
         onProgress: ({ attempts, workers }) => {
@@ -1064,8 +893,13 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
       });
       if (currentRequestId !== requestId || controller.signal.aborted || !generated) return;
       generating = false;
+      if (fileView) generated.name = fileView.records.find(record => record.id === activeSavedLevelId)?.level.name ?? generated.name;
+      const previousLevel = level;
       level = generated;
-      activeSavedLevelId = null;
+      if (fileView) {
+        try { stageFileLevel(); } catch (error) { level = previousLevel; throw error; }
+      }
+      else activeSavedLevelId = null;
       savedLevelEdited = false;
       selectedWord = null;
       for (const scroller of document.querySelectorAll(".word-scroll")) scroller.scrollTop = 0;
@@ -1078,7 +912,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   });
 
   addLevelButton.addEventListener("click", async () => {
-    if (!level || generating || savingLevel || updatingLevelList || batchRunning || !levelLibraryReady || (activeSavedLevelId !== null && !savedLevelEdited)) return;
+    if (fileView || presetView || !level || generating || savingLevel || updatingLevelList || batchRunning || !levelLibraryReady || (activeSavedLevelId !== null && !savedLevelEdited)) return;
     const source = level;
     const existingRecord = savedLevels.find(record => record.id === activeSavedLevelId) ?? null;
     if (!existingRecord) {
@@ -1210,13 +1044,15 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
         worker.postMessage({ type: "single", text });
       });
       assertSafeTargetPaths(imported);
-      returnToEditedLevels();
+      updatingLevelList = false;
+      if (!fileView) returnToEditedLevels();
       clearLevel();
       applyEditorConfig({ ...imported, targetDuplicateRange: configuredDuplicateRanges.target,
         extraDuplicateRange: configuredDuplicateRanges.extra });
       level = imported;
+      if (fileView) stageFileLevel();
       singleLevelJson.value = currentSingleLevelText();
-      setSingleLevelStatus("已读取到编辑区，可加入关卡列表保存。");
+      setSingleLevelStatus(fileView ? "已更新当前关卡，点击“保存文件”写回本地文件。" : "已读取到编辑区，可加入浏览器关卡保存。");
     } catch (error) {
       setSingleLevelStatus(`读取失败：${error.message || "数据无效。"}`, true);
     } finally {
@@ -1263,9 +1099,23 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   savedLevelList.addEventListener("click", async event => {
     const control = event.target.closest("button[data-level-action]");
     if (control) {
-      if (generating || savingLevel || updatingLevelList || batchRunning || control.disabled || !levelLibraryReady) return;
+      if (generating || savingLevel || updatingLevelList || batchRunning || control.disabled || (!fileView && !levelLibraryReady)) return;
       const id = Number(control.dataset.levelId);
       const action = control.dataset.levelAction;
+      if (fileView) {
+        try {
+          const index = fileView.records.findIndex(record => record.id === id);
+          changeFileOrder(fileView, id, action);
+          savedLevelListDirty = true;
+          if (action === "delete" && activeSavedLevelId === id) {
+            const next = fileView.records[Math.min(index, fileView.records.length - 1)];
+            if (next) openSavedLevel(next.id);
+            else { activeSavedLevelId = null; clearLevel(); }
+          }
+          render(); fileManager?.refresh();
+        } catch (error) { savedLevelError.textContent = error.message; savedLevelError.hidden = false; }
+        return;
+      }
       const index = savedLevels.findIndex(record => record.id === id);
       if (index < 0) return;
       updatingLevelList = true;
@@ -1302,12 +1152,15 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
   wordList.addEventListener("change", event => {
     const checkbox = event.target.closest("input[data-target-word]");
     if (!checkbox || !level || generating || savingLevel || updatingLevelList || batchRunning) return;
+    const previous = level;
     try {
       level = setTargetWord(level, checkbox.dataset.targetWord, checkbox.checked);
-      if (activeSavedLevelId !== null) savedLevelEdited = true;
+      if (fileView) stageFileLevel();
+      else if (activeSavedLevelId !== null) savedLevelEdited = true;
       clearError();
       render();
     } catch (error) {
+      level = previous;
       showError(error.message);
     }
     wordList.querySelector(`input[data-target-word="${checkbox.dataset.targetWord}"]`)?.focus({ preventScroll: true });
@@ -1323,7 +1176,6 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
 
   form.addEventListener("submit", (event) => event.preventDefault());
   form.addEventListener("change", (event) => {
-    if (targetConfigPanel.contains(event.target)) return;
     const duplicateKind = Object.keys(duplicateRangeInputs).find(kind => event.target === duplicateRangeInputs[kind]);
     if (duplicateKind) {
       clearLevel();
@@ -1338,28 +1190,6 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     if (filterInputs.includes(event.target)) {
       clearLevel();
       configuredFilters = filtersFromInputs();
-      render();
-      return;
-    }
-    if (event.target === initialMaxWordLengthInput) {
-      clearLevel();
-      const initialMaxWordLength = initialMaxWordLengthInput.valueAsNumber;
-      if (!isValidMaxWordLength(initialMaxWordLength)) {
-        showError("初始词最长需为大于 0 的整数。");
-        return;
-      }
-      configuredInitialMaxWordLength = initialMaxWordLength;
-      render();
-      return;
-    }
-    if (event.target === maxWordLengthInput) {
-      clearLevel();
-      const maxWordLength = maxWordLengthInput.valueAsNumber;
-      if (!isValidMaxWordLength(maxWordLength)) {
-        showError("最长单词长度需为大于 0 的整数。");
-        return;
-      }
-      configuredMaxWordLength = maxWordLength;
       render();
       return;
     }
@@ -1415,54 +1245,14 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     render();
   });
 
-  targetConfigPanel.addEventListener("beforetoggle", (event) => {
-    if (event.newState === "open") restoreTargetConfigInputs();
-  });
-  targetConfigPanel.addEventListener("input", event => {
-    targetConfigError.hidden = true;
-    if (event.target.matches("input[type='radio'][data-target-index]") && event.target.checked) {
-      draftTargetLengthPlan[Number(event.target.dataset.targetIndex)] = event.target.value;
-      renderTargetPlanSummary();
-    } else {
-      renderTargetConfigPreview();
-    }
-  });
-  document.querySelector("#apply-target-config").addEventListener("click", () => {
-    const limitsEnabled = globalTargetLimitsEnabled;
-    const targetCount = limitsEnabled ? targetInput.valueAsNumber : configuredTargetCount;
-    const plan = limitsEnabled ? (targetPlanEnabled.checked ? [...draftTargetLengthPlan] : null) : configuredTargetLengthPlan;
-    if (!isValidTargetCount(targetCount) || !isValidTargetPlan(targetCount, plan)) {
-      targetConfigError.textContent = !isValidTargetCount(targetCount)
-        ? "目标数量需为大于 0 的整数。" : targetCount > MAX_TARGET_PLAN_SLOTS
-          ? `逐个配置最多支持 ${MAX_TARGET_PLAN_SLOTS} 个目标词。` : "请为每个目标词选择短词、中词或长词。";
-      targetConfigError.hidden = false;
-      targetInput.focus();
-      return;
-    }
-    if (configuredTargetCount !== targetCount || JSON.stringify(configuredTargetLengthPlan) !== JSON.stringify(plan)) {
-      configuredTargetCount = targetCount;
-      configuredTargetLengthPlan = plan;
-      clearLevel();
-      render();
-    }
-    targetConfigPanel.hidePopover();
-  });
-
   function applyEditorConfig(config) {
     size = { rows: config.rows, columns: config.columns, disabledCells: config.disabledCells ?? [] };
-    configuredTargetCount = config.targetCount;
-    configuredTargetLengthPlan = config.targetLengthPlan;
-    configuredInitialMaxWordLength = config.initialMaxWordLength;
-    configuredMaxWordLength = config.maxWordLength;
     configuredInitialForwardProbability = config.initialForwardProbability;
     configuredDuplicateRanges = { target: config.targetDuplicateRange, extra: config.extraDuplicateRange };
     configuredFilters = config.filters;
     configuredFixedWords = normalizeFixedWords(config.fixedWords ?? []);
     configuredFixedWordExemptions = normalizeFixedWordExemptions(config);
     configuredFixedLayout = structuredClone(config.fixedLayout ?? null);
-    restoreTargetConfigInputs();
-    initialMaxWordLengthInput.value = String(configuredInitialMaxWordLength);
-    maxWordLengthInput.value = String(configuredMaxWordLength);
     initialForwardInput.value = String(configuredInitialForwardProbability);
     for (const [kind, input] of Object.entries(duplicateRangeInputs)) input.value = String(configuredDuplicateRanges[kind]);
     restoreFilterInputs();
@@ -1515,9 +1305,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
         onUpdate(state);
       },
     });
-    const generationJobs = jobs.map(job => ({ ...job,
-      config: { ...job.config, targetLimitsEnabled: globalTargetLimitsEnabled } }));
-    try { return await batchRunner.run(generationJobs); }
+    try { return await batchRunner.run(jobs); }
     finally {
       client.close();
       batchRunner = null;
@@ -1530,22 +1318,152 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
 
   stopBatchButton.addEventListener("click", () => batchRunner?.stop());
 
-  function returnToEditedLevels() {
-    if (!presetView) return;
-    presetView = null;
-    if (editorBeforePreset) {
-      ({ level, activeSavedLevelId, savedLevelEdited, selectedWord } = editorBeforePreset);
-      applyEditorConfig(editorBeforePreset.config);
-      editorBeforePreset = null;
-    }
-    savedLevelListDirty = true;
-    render();
+  function editorSnapshot() {
+    return { level, activeSavedLevelId, savedLevelEdited, selectedWord,
+      config: { ...size, initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters,
+        fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout, fixedWordExemptions: configuredFixedWordExemptions,
+        targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra } };
   }
-
-  document.querySelector("#return-to-edited-levels").addEventListener("click", returnToEditedLevels);
-  setupPresetLevelLists({
+  function rememberEditor() {
+    if (fileView) fileView.editor = editorSnapshot();
+    else if (!presetView) editorBeforePreset = editorSnapshot();
+  }
+  function restoreEditor(snapshot) {
+    ({ level, activeSavedLevelId, savedLevelEdited, selectedWord } = snapshot);
+    applyEditorConfig(snapshot.config);
+  }
+  function canSwitchSource() {
+    if (savingLevel || updatingLevelList || batchRunning) throw new Error("请等待当前保存或运行完成后再切换关卡来源。");
+  }
+  function currentListView() {
+    const busy = generating || savingLevel || updatingLevelList || batchRunning;
+    if (fileView) {
+      const pending = !level && activeSavedLevelId !== null;
+      const saveLabel = fileView.handle ? "保存文件" : window.showSaveFilePicker ? "另存为文件" : "下载文件副本";
+      return { ...fileView, kind: "file", activeId: activeSavedLevelId, busy, pending, saveLabel,
+        canSaveAs: Boolean(fileView.handle && window.showSaveFilePicker),
+        status: pending ? "本地文件 · 当前关卡待生成" : fileView.downloaded ? "副本已下载，原文件未修改" :
+          `本地文件 · ${fileView.dirty ? "未保存修改" : "已保存"}${fileView.handle ? "" : " · 保存将生成副本"}` };
+    }
+    if (presetView) return { ...presetView, kind: "preset", activeId: activeSavedLevelId, busy, status: "自带预设 · 只读" };
+    return { id: "browser", label: "浏览器关卡", kind: "browser", records: savedLevels, activeId: activeSavedLevelId,
+      busy, status: levelLibraryReady ? "保存在当前浏览器；导出文件后可在本地编辑" : savedLevelsLoading ? "正在读取浏览器关卡…" : "浏览器存储不可用，可打开本地文件" };
+  }
+  function stageFileLevel() {
+    activeSavedLevelId = updateFileLevel(fileView, activeSavedLevelId, level);
+    fileView.downloaded = false;
+    savedLevelEdited = false;
+    savedLevelListDirty = true;
+    fileManager?.refresh();
+  }
+  function returnToEditedLevels() {
+    if (!presetView && !fileView) return;
+    canSwitchSource(); stopGeneration(); rememberEditor();
+    presetView = null; fileView = null;
+    if (editorBeforePreset) { restoreEditor(editorBeforePreset); editorBeforePreset = null; }
+    savedLevelListDirty = true; savedLevelError.hidden = true; clearError(); render();
+  }
+  function activateFile(id) {
+    canSwitchSource();
+    const next = localFiles.find(file => file.id === id);
+    if (!next) throw new Error("本地文件未打开。");
+    if (fileView === next) return;
+    stopGeneration(); rememberEditor(); presetView = null; fileView = next;
+    savedLevelListDirty = true; savedLevelError.hidden = true; clearError();
+    if (next.editor) { restoreEditor(next.editor); render(); }
+    else if (next.records.length) openSavedLevel(next.records[0].id);
+    else { activeSavedLevelId = null; clearLevel(); render(); }
+  }
+  async function openLocalFile(file, handle) {
+    canSwitchSource(); stopGeneration();
+    let existing;
+    if (handle) for (const entry of localFiles) {
+      if (entry.handle && await handle.isSameEntry(entry.handle)) { existing = entry; break; }
+    }
+    if (existing?.dirty) { activateFile(existing.id); return; }
+    updatingLevelList = true; render();
+    let parsed, worker;
+    try {
+      const text = await file.text();
+      parsed = await new Promise((resolve, reject) => {
+        worker = new Worker("./import-worker.js", { type: "module" });
+        worker.onmessage = ({ data }) => data.error ? reject(new Error(data.error)) : resolve(data.document);
+        worker.onerror = () => reject(new Error("关卡文件读取失败，请重试。"));
+        worker.postMessage({ type: "level-file", text });
+      });
+    } finally { worker?.terminate(); updatingLevelList = false; render(); }
+    const document = { ...parsed, id: existing?.id ?? `file-${crypto.randomUUID()}`, label: file.name, handle };
+    if (existing) {
+      // The file was clean, so explicitly reopening reads its latest contents.
+      if (fileView === existing) fileView = document;
+      localFiles.splice(localFiles.indexOf(existing), 1, document);
+      if (fileView === document) {
+        savedLevelListDirty = true;
+        if (document.records.length) openSavedLevel(document.records[0].id);
+        else { activeSavedLevelId = null; clearLevel(); render(); }
+        return;
+      }
+    } else localFiles.push(document);
+    activateFile(document.id);
+  }
+  function downloadFile(text, name) {
+    const url = URL.createObjectURL(new Blob([text], { type: "application/json;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = name;
+    document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  async function saveLocalFile(saveAs = false) {
+    canSwitchSource();
+    if (!fileView) throw new Error("请先打开本地关卡文件。");
+    if (generating || currentListView().pending) throw new Error("请先完成当前关卡的生成，再保存文件。");
+    const document = fileView;
+    const picker = (saveAs || !document.handle) && window.showSaveFilePicker
+      ? window.showSaveFilePicker({ id: "level-files", suggestedName: document.label,
+        types: [{ description: "关卡 JSON", accept: { "application/json": [".json"] } }] }) : null;
+    savingLevel = true; savedLevelError.hidden = true; render();
+    try {
+      const handle = picker ? await picker : document.handle;
+      if (handle) {
+        for (const other of localFiles) if (other !== document && other.handle && await handle.isSameEntry(other.handle)) {
+          throw new Error("该文件已在另一个列表中打开，请选择其他文件名。");
+        }
+        await writeLevelFile(document, handle);
+        document.downloaded = false;
+      } else {
+        downloadFile(serializeLevelFile(document), document.label);
+        document.downloaded = true;
+      }
+    } catch (error) {
+      if (error.name === "NotAllowedError") throw new Error("未获得文件写入权限，修改仍保留，可再次保存或另存为。");
+      throw error;
+    } finally { savingLevel = false; render(); fileManager?.refresh(); }
+  }
+  function saveFileFromSidebar(saveAs) {
+    saveLocalFile(saveAs).catch(error => {
+      if (error.name !== "AbortError") { savedLevelError.textContent = error.message; savedLevelError.hidden = false; }
+    });
+  }
+  saveFileButton.addEventListener("click", () => saveFileFromSidebar(false));
+  saveFileAsButton.addEventListener("click", () => saveFileFromSidebar(true));
+  window.addEventListener("beforeunload", event => {
+    if (localFiles.some(file => file.dirty)) { event.preventDefault(); event.returnValue = ""; }
+  });
+  document.addEventListener("keydown", event => {
+    if (fileView && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+      event.preventDefault(); if (event.shiftKey ? !saveFileAsButton.disabled : !saveFileButton.disabled) saveFileFromSidebar(event.shiftKey);
+    }
+  });
+  document.querySelector("#return-to-edited-levels").addEventListener("click", () => {
+    try { returnToEditedLevels(); } catch (error) { savedLevelError.textContent = error.message; savedLevelError.hidden = false; }
+  });
+  fileManager = setupPresetLevelLists({
+    getView: currentListView, getFiles: () => localFiles,
+    onBrowser: returnToEditedLevels, onFile: activateFile, onOpenFile: openLocalFile, onSaveFile: saveLocalFile,
+    onLevelSelect: index => {
+      canSwitchSource();
+      const record = currentListView().records[index]; if (record) openSavedLevel(record.id);
+    },
     onSelect: async ({ preset, data, isCurrent }) => {
-      if (savingLevel || updatingLevelList || batchRunning) throw new Error("请等待当前保存或运行完成后再切换预设。");
+      canSwitchSource();
       let dictionary = [];
       if (preset.format === "word-tiles") {
         presetDictionaryPromise ??= Promise.all(["required-words.json", "extra-words.json", "guide-words.json"].map(async (file, index) => {
@@ -1558,35 +1476,24 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
       if (!isCurrent()) return;
       const records = createPresetRecords(data, preset.format, dictionary);
       if (!isCurrent()) return;
-      if (savingLevel || updatingLevelList || batchRunning) throw new Error("请等待当前保存或运行完成后再切换预设。");
-      stopGeneration();
-      editorBeforePreset ??= { level, activeSavedLevelId, savedLevelEdited, selectedWord,
-        config: { ...size, targetCount: configuredTargetCount, targetLengthPlan: configuredTargetLengthPlan, targetLimitsEnabled: globalTargetLimitsEnabled,
-          initialMaxWordLength: configuredInitialMaxWordLength, maxWordLength: configuredMaxWordLength,
-          initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters,
-          fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout, fixedWordExemptions: configuredFixedWordExemptions,
-          targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra } };
-      presetView = { label: preset.label, records };
-      savedLevelListDirty = true;
-      openSavedLevel(records[0].id);
-      savedLevelList.scrollTop = 0;
+      canSwitchSource(); stopGeneration(); rememberEditor();
+      fileView = null; presetView = { id: preset.id, label: preset.label, records };
+      savedLevelListDirty = true; savedLevelError.hidden = true;
+      openSavedLevel(records[0].id); savedLevelList.scrollTop = 0;
     },
   });
 
   setupConfigList({
-    getTargetLimitsEnabled: () => globalTargetLimitsEnabled,
-    setTargetLimitsEnabled: setGlobalTargetLimitsEnabled,
     getConfig: () => structuredClone({
-      ...size, targetCount: configuredTargetCount, targetLengthPlan: configuredTargetLengthPlan, targetLimitsEnabled: globalTargetLimitsEnabled,
-      initialMaxWordLength: configuredInitialMaxWordLength, maxWordLength: configuredMaxWordLength,
+      ...size,
       initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
       fixedWordExemptions: configuredFixedWordExemptions,
       initialRarityLevel: 1, minimumEmotionScore: 0,
       targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra,
     }),
     loadConfig: config => {
-      if (batchRunning) return;
-      returnToEditedLevels();
+      canSwitchSource();
+      if (!fileView) returnToEditedLevels();
       clearLevel();
       applyEditorConfig(config);
       render();
@@ -1595,9 +1502,6 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
     stopRun: () => batchRunner?.stop(),
   });
 
-  restoreTargetConfigInputs();
-  maxWordLengthInput.value = String(configuredMaxWordLength);
-  initialMaxWordLengthInput.value = String(configuredInitialMaxWordLength);
   initialForwardInput.value = String(configuredInitialForwardProbability);
   for (const [kind, input] of Object.entries(duplicateRangeInputs)) input.value = String(configuredDuplicateRanges[kind]);
   restoreFilterInputs();

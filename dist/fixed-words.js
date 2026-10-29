@@ -59,18 +59,12 @@ export function normalizeFixedLayout(config) {
   return { rows: config.rows, columns: config.columns, placements };
 }
 
-export function validateFixedWords(config, targetLengthCounts = null) {
+export function validateFixedWords(config) {
   const capacity = config.rows * config.columns - normalizeDisabledCells(config).length;
   const words = normalizeFixedWords(config.fixedWords);
-  if (config.targetLimitsEnabled !== false && words.length > config.targetCount) throw new Error("固定单词数量不能超过目标数量。");
-  const remaining = config.targetLimitsEnabled !== false && targetLengthCounts ? { ...targetLengthCounts } : null;
   const requiredLetters = new Map();
   for (const word of words) {
     if (word.length > capacity) throw new Error(`固定单词 ${word} 的长度超过棋盘格子数。`);
-    if (word.length > config.initialMaxWordLength) throw new Error(`固定单词 ${word} 超过初始词最长限制。`);
-    if (word.length > config.maxWordLength) throw new Error(`固定单词 ${word} 超过最长单词限制。`);
-    const group = word.length === 3 ? "short" : word.length === 4 ? "medium" : word.length >= 5 ? "long" : null;
-    if (remaining && !(remaining[group]-- > 0)) throw new Error(`固定单词 ${word} 超出目标词长名额，请调整目标词长配置。`);
     const letters = new Map();
     for (const letter of word) letters.set(letter, (letters.get(letter) ?? 0) + 1);
     for (const [letter, count] of letters) requiredLetters.set(letter, Math.max(requiredLetters.get(letter) ?? 0, count));

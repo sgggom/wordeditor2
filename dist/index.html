@@ -14,11 +14,9 @@
       <div class="header-inner">
         <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <h1 class="app-name">关卡编辑器</h1>
-        <label class="global-target-switch" title="统一控制单关生成和所有配置列表的目标数量、逐个词长限制">
-          <input id="global-target-limits-enabled" type="checkbox" checked />全局目标限制
-        </label>
+
         <button type="button" id="open-config-list" class="reset-button" aria-haspopup="dialog">关卡配置列表</button>
-        <button type="button" id="open-preset-levels" class="reset-button" aria-haspopup="dialog">预设关卡列表</button>
+        <button type="button" id="open-preset-levels" class="reset-button" aria-haspopup="dialog">关卡文件与预设</button>
       </div>
     </header>
 
@@ -64,21 +62,6 @@
               </fieldset>
             </div>
 
-            <div class="target-setting">
-              <label for="target-config-toggle">关卡目标词</label>
-              <button type="button" id="target-config-toggle" class="target-config-toggle" popovertarget="target-config-panel" aria-haspopup="dialog"><span id="target-config-summary">6 词</span><span aria-hidden="true">▾</span></button>
-            </div>
-
-            <div class="target-setting initial-max-length-setting">
-              <label for="initial-max-word-length" title="限制初始词长度，同时受最长单词长度约束。">初始词最长</label>
-              <input id="initial-max-word-length" name="initialMaxWordLength" type="number" min="1" step="1" value="8" inputmode="numeric" required />
-            </div>
-
-            <div class="target-setting max-length-setting">
-              <label for="max-word-length" title="限制所有关卡目标的长度，包括初始词和候选转目标词；额外词仍完整检索。">最长单词长度</label>
-              <input id="max-word-length" name="maxWordLength" type="number" min="1" step="1" value="8" inputmode="numeric" required />
-            </div>
-
             <div class="target-setting forward-probability-setting">
               <label for="initial-forward-probability" title="正向为向右或向下起步。在填充空格数相同的摆法中，0%优先反向，100%优先正向；无可用摆法时尝试另一方向。">初始正向概率</label>
               <div class="percentage-input">
@@ -117,27 +100,6 @@
                 恢复默认
               </button>
             </div>
-            <div id="target-config-panel" class="filter-panel target-config-panel" popover role="dialog" aria-labelledby="target-config-title">
-              <div class="filter-panel-heading">
-                <h2 id="target-config-title">关卡目标词</h2>
-                <button type="button" class="filter-close" popovertarget="target-config-panel" popovertargetaction="hide" aria-label="关闭关卡目标词配置">×</button>
-              </div>
-              <p id="target-limits-hint" class="target-limits-hint" hidden>全局目标限制已关闭。先生成棋盘，再手动增减目标词；可在顶部打开全局开关，恢复数量和词长配额。</p>
-              <div class="target-config-count">
-                <label for="target-count">目标数量</label>
-                <input id="target-count" name="targetCount" type="number" min="1" step="1" value="6" inputmode="numeric" required />
-              </div>
-              <label class="target-plan-switch"><input id="target-plan-enabled" type="checkbox" />逐个配置词长</label>
-              <div id="target-plan-fields" hidden>
-                <div id="target-plan-slots" class="target-plan-slots"></div>
-                <output id="target-plan-summary" class="target-plan-summary" aria-live="polite"></output>
-              </div>
-              <p id="target-config-error" class="generation-error target-config-error" role="alert" hidden></p>
-              <div class="filter-footer">
-                <button type="button" id="apply-target-config" class="generate-button">完成</button>
-              </div>
-            </div>
-
             <div id="word-filter-panel" class="filter-panel" popover aria-labelledby="filter-title">
               <div class="filter-panel-heading">
                 <h2 id="filter-title">词库筛选</h2>
@@ -147,7 +109,7 @@
                 <fieldset>
                   <legend>范围库</legend>
                   <div class="filter-options">
-                    <label><input type="checkbox" data-word-filter="scope" value="0" checked />引导库</label>
+                    <label><input type="checkbox" data-word-filter="scope" value="0" checked />2词库</label>
                     <label><input type="checkbox" data-word-filter="scope" value="1" checked />1</label>
                     <label><input type="checkbox" data-word-filter="scope" value="2" checked />2</label>
                     <label><input type="checkbox" data-word-filter="scope" value="3" checked />3</label>
@@ -258,12 +220,15 @@
             <h2 id="saved-levels-title">关卡列表</h2>
             <output id="saved-level-count" aria-label="已加入的关卡数量">0</output>
           </header>
-          <p id="viewed-level-list-name" class="preset-level-metadata">当前编辑关卡</p>
+          <p id="viewed-level-list-name" class="preset-level-metadata">浏览器关卡</p>
+          <p id="level-source-status" class="level-source-status" aria-live="polite">保存在当前浏览器</p>
           <div class="saved-level-actions">
-            <button type="button" id="return-to-edited-levels" class="reset-button" hidden>返回编辑关卡</button>
+            <button type="button" id="return-to-edited-levels" class="reset-button" hidden>返回浏览器关卡</button>
+            <button type="button" id="save-local-level-file" class="generate-button" hidden>保存文件</button>
+            <button type="button" id="save-local-level-file-as" class="reset-button" hidden>另存为</button>
             <button type="button" id="add-level-to-list" class="generate-button" disabled>加入关卡列表</button>
-            <button type="button" id="export-levels" class="reset-button" title="按列表顺序导出已保存关卡" disabled>导出关卡</button>
-            <button type="button" id="import-levels" class="reset-button" title="读取 JSON 并追加到关卡列表" disabled>导入关卡</button>
+            <button type="button" id="export-levels" class="reset-button" title="将浏览器中的关卡下载为游戏文件" disabled>导出文件</button>
+            <button type="button" id="import-levels" class="reset-button" title="读取游戏 JSON 并追加到浏览器关卡；编辑原文件请使用“关卡文件与预设”" disabled>追加导入到浏览器</button>
             <input type="file" id="import-levels-file" accept=".json,application/json" hidden>
           </div>
           <p id="saved-level-error" class="saved-level-error" role="alert" hidden></p>
@@ -282,7 +247,7 @@
           <div class="single-level-data-actions">
             <button type="button" id="copy-single-level" class="reset-button" disabled>复制本关</button>
             <button type="button" id="read-single-level" class="generate-button">读取数据</button>
-            <span class="single-level-data-hint">读取到编辑区后，可加入关卡列表保存。</span>
+            <span class="single-level-data-hint">本地文件模式下更新当前关卡；浏览器模式下可加入关卡列表。</span>
           </div>
           <p id="single-level-status" role="status" aria-live="polite" hidden></p>
         </div>
@@ -301,9 +266,7 @@
         <select id="config-list-select" aria-label="切换配置列表"></select>
         <button type="button" id="new-config-list" class="reset-button">新建列表</button>
         <button type="button" id="manage-config-lists" class="reset-button">列表管理</button>
-        <label class="global-target-switch" title="对单关生成和所有配置列表统一生效">
-          <input id="config-global-target-limits-enabled" type="checkbox" checked />全局目标限制
-        </label>
+
         <span class="config-library-hint">切换或新建时自动保存当前配置</span>
       </div>
       <div class="config-list-toolbar">
@@ -326,10 +289,9 @@
           <thead><tr>
             <th class="config-select-column"><input id="config-select-all" type="checkbox" aria-label="全选关卡配置" /></th>
             <th class="config-index-column">关卡</th>
-            <th class="config-size-column">行</th><th class="config-size-column">列</th>
-            <th>目标数量</th><th class="config-plan-column">目标词长</th><th class="config-fixed-column">棋盘编辑</th>
-            <th>初始词最长</th><th>最长单词</th><th>初始正向 %</th>
-            <th>目标查重</th><th>额外查重</th><th>词库筛选</th><th class="config-use-column">操作</th>
+            <th class="config-fixed-column">棋盘编辑</th>
+            <th class="config-forward-column">初始正向 %</th>
+            <th class="config-range-column">目标查重</th><th class="config-range-column">额外查重</th><th class="config-filter-column">词库筛选</th><th class="config-use-column">操作</th>
           </tr></thead>
           <tbody id="config-list-body"></tbody>
         </table>
@@ -415,13 +377,20 @@
     </dialog>
     <dialog id="preset-level-dialog" class="preset-level-dialog" aria-labelledby="preset-level-title">
       <header class="filter-panel-heading">
-        <h2 id="preset-level-title">预设关卡列表</h2>
-        <button type="button" id="close-preset-levels" class="filter-close" aria-label="关闭预设关卡列表">×</button>
+        <h2 id="preset-level-title">关卡文件与预设</h2>
+        <button type="button" id="close-preset-levels" class="filter-close" aria-label="关闭关卡文件与预设">×</button>
       </header>
       <div class="preset-level-toolbar">
-        <label>关卡列表 <select id="preset-level-source" aria-label="选择预设关卡列表"></select></label>
+        <label>当前来源 <select id="preset-level-source" aria-label="选择关卡文件或预设"></select></label>
         <label>关号 <input id="preset-level-jump" type="number" min="1" value="1" aria-label="跳转关号" disabled /></label>
         <a id="preset-level-download" class="reset-button" hidden>下载游戏文件</a>
+      </div>
+      <div class="level-file-toolbar">
+        <button type="button" id="open-local-level-file" class="generate-button">打开本地关卡文件</button>
+        <input type="file" id="local-level-file-input" accept=".json,application/json" hidden />
+        <button type="button" id="save-selected-level-file" class="generate-button" hidden>保存文件</button>
+        <button type="button" id="save-selected-level-file-as" class="reset-button" hidden>另存为</button>
+        <span>选中后在主编辑器中查看或编辑</span>
       </div>
       <p id="preset-level-summary" class="preset-level-metadata" aria-live="polite">选择关卡列表</p>
       <p id="preset-level-error" class="config-list-error" role="alert" hidden></p>

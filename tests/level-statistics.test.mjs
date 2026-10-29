@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createGenerator } from "../dist/level-generator.js";
+import { setTargetWord } from "../dist/level-rules.js";
 import { compareRepresentativePaths, describePath } from "../dist/level-statistics.js";
 
 test("turns and same-axis reversals are independent, including multiple reversals", () => {
@@ -47,7 +48,7 @@ test("statistics use all final targets once and separate extras from structure a
     rows: 2, columns: 3, letters: ["A", "B", "C", "F", "E", "D"],
     initialWords: [{ word: "ABC", path: [0, 1, 2] }, { word: "DEF", path: [5, 4, 3] }],
   };
-  const level = generator.selectTargets({ ...options, foundWords: generator.findWords(options), targetCount: 3 });
+  const level = setTargetWord(generator.selectTargets({ ...options, foundWords: generator.findWords(options) }), "ABCDEF", true);
   const stats = level.statistics;
   assert.deepEqual(stats.workload, { targetCount: 3, totalLetters: 12 });
   assert.deepEqual(stats.vocabulary, { rarityDistribution: { 1: 1, 2: 0, 3: 1, 4: 0, 5: 1 }, unknownRarityCount: 0, rarityTotal: 9 });

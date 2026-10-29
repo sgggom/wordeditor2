@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createGenerator, generateUntilComplete } from "../dist/level-generator.js";
+import { setTargetWord } from "../dist/level-rules.js";
 import { calculateRarityTotal } from "../dist/level-statistics.js";
 
 test("only initial words are restricted to rarity one; ordinary abbreviations and other target rarities remain eligible", () => {
@@ -9,7 +10,7 @@ test("only initial words are restricted to rarity one; ordinary abbreviations an
     { word: "ABC", rarityLevel: 5, emotion: 0, abbreviation: 1 },
     { word: "GHIJKL", rarityLevel: 5, emotion: 0 },
   ], [{ word: "CBA", rarityLevel: 4, emotion: 1, abbreviation: 1 }]);
-  const level = generator.generate({ rows: 2, columns: 3, targetCount: 2, initialRarityLevel: 1, minimumEmotionScore: 0, random: () => 0 });
+  const level = setTargetWord(generator.generate({ rows: 2, columns: 3, initialRarityLevel: 1, minimumEmotionScore: 0, random: () => 0 }), "ABC", true);
   assert.deepEqual(level.initialWords.map(entry => [entry.word, entry.rarityLevel]), [["ABCDEF", 1]]);
   assert.ok(level.targetWords.some(entry => entry.word === "ABC" && entry.rarityLevel === 5 && entry.abbreviation === 1));
   assert.ok(level.extraWords.some(entry => entry.word === "CBA" && entry.onlyExtra && entry.abbreviation === 1));

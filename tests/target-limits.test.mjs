@@ -14,7 +14,7 @@ const shape = () => ({ rows: 3, columns: 3, disabledCells: [2, 5, 8], targetCoun
     { word: 'CAT', path: [0, 3, 6] }, { word: 'DOG', path: [1, 4, 7] },
   ] } });
 
-test('turning target limits off ignores count and per-word length quotas while retaining shaped fixed words', () => {
+test('generation ignores all retired limits while preserving shaped fixed words', () => {
   const generator = createGenerator(dictionary);
   const options = shape();
   const before = structuredClone(options);
@@ -22,9 +22,10 @@ test('turning target limits off ignores count and per-word length quotas while r
   assert.equal(level.targetLimitsEnabled, false);
   assert.deepEqual(level.targetWords.map(entry => entry.word), ['CAT', 'DOG']);
   assert.deepEqual(level.targetWords, level.initialWords);
-  assert.equal(level.targetLengthCounts, null);
-  assert.deepEqual(level.targetLengthPlan, ['long'], 'Keep the configured plan for re-enabling later');
-  assert.equal(level.targetCount, 1);
+  for (const key of ['targetLengthPlan', 'targetLengthCounts', 'targetLengthRatios', 'initialMaxWordLength', 'maxWordLength']) {
+    assert.equal(level[key], undefined);
+  }
+  assert.equal(level.targetCount, 2);
   assert.equal(level.statistics.workload.targetCount, 2);
   assert.equal(level.statistics.board.cellCount, 6);
   assert.deepEqual(level.disabledCells, [2, 5, 8]);
@@ -35,12 +36,15 @@ test('turning target limits off ignores count and per-word length quotas while r
   assert.deepEqual(options, before);
   const many = generator.generate({ ...options, targetCount: 100, targetLengthPlan: Array(100).fill('long') });
   assert.equal(many.targetWords.length, 2);
-  assert.throws(() => generator.generate({ ...options, targetLimitsEnabled: true }), /固定单词数量/);
+  for (const value of [true, null, 0, 'false']) {
+    assert.deepEqual(generator.generate({ ...options, targetLimitsEnabled: value, initialMaxWordLength: 1, maxWordLength: 1 }), level);
+  }
 });
 
-test('automatic filling can use more initial words than the disabled target count', () => {
+test('automatic filling can exceed a legacy target count', () => {
   const level = createGenerator(dictionary).generate({ ...shape(), fixedWords: [], fixedLayout: null, random: () => 0.5 });
-  assert.ok(level.initialWords.length > level.targetCount);
+  assert.ok(level.initialWords.length > shape().targetCount);
+  assert.equal(level.targetCount, level.initialWords.length);
   assert.deepEqual(level.targetWords, level.initialWords);
   assert.ok(level.cells.filter(cell => !cell.disabled).every(cell => cell.count > 0));
 });
@@ -74,37 +78,62 @@ test('post-selection keeps explicit fixed words and rejects ambiguous candidate 
   assert.throws(() => setTargetWord(level, 'CAT', true), /不同格子/);
 });
 
-test('disabling target count and quota does not bypass word lengths, filters, duplicate checks or fixed-board safety', () => {
+test('removing limits retains filters, duplicate checks and fixed-board safety', () => {
   const generator = createGenerator(dictionary);
-  assert.throws(() => generator.generate({ ...shape(), initialMaxWordLength: 2 }), /初始词最长/);
-  assert.throws(() => generator.generate({ ...shape(), maxWordLength: 2 }), /最长单词/);
   assert.throws(() => generator.generate({ ...shape(), filters: { scope: [2] } }), /词库筛选/);
   const duplicates = createDuplicateCheck([{ id: 1, level: { targetWords: [{ word: 'CAT' }], extraWords: [] } }], { target: 1, extra: 0 });
   assert.throws(() => generator.generate({ ...shape(), duplicateCheck: duplicates }), /重复/);
-  for (const targetLimitsEnabled of [null, 0, 'false']) assert.throws(() => generator.generate({ ...shape(), targetLimitsEnabled }), /开关/);
 });
 
-test('configuration storage and bulk edits preserve the switch and the previous quantity and length settings', () => {
-  const config = shape(); assert.equal(validateLevelConfig(config), config);
+test('old saved quantity and length values do not block reading, editing or generation', () => {
+  const config = { ...shape(), targetCount: 0, targetLengthPlan: ['invalid'], targetLengthRatios: {},
+    initialMaxWordLength: 0, maxWordLength: 'invalid', targetLimitsEnabled: true };
+  assert.equal(validateLevelConfig(config), config);
   const values = new Map(); const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
   const records = [{ id: 'one', config }, { id: 'two', config: { ...config, fixedWords: [], fixedLayout: null } }];
   saveConfigList(records, storage);
   assert.deepEqual(readConfigList(storage), records);
-  assert.throws(() => patchLevelConfigs(records, ['one'], { targetLimitsEnabled: true }), /固定单词数量/);
-  const enabled = patchLevelConfigs(records, ['two'], { targetLimitsEnabled: true });
-  assert.equal(enabled[0].config.targetLimitsEnabled, false);
-  assert.equal(enabled[1].config.targetLimitsEnabled, true);
-  assert.deepEqual(enabled[1].config.targetLengthPlan, ['long']);
-  assert.throws(() => validateLevelConfig({ ...config, targetLimitsEnabled: 'false' }), /开关/);
+  const updated = patchLevelConfigs(readConfigList(storage), ['one'], { initialForwardProbability: 100 });
+  const level = createGenerator(dictionary).generate(updated[0].config);
+  assert.equal(level.initialForwardProbability, 100);
+  assert.equal(level.targetCount, 2);
+  assert.deepEqual(level.targetWords.map(entry => entry.word), ['CAT', 'DOG']);
 });
 
-test('batch disabling preserves each row\'s own count and length plan for later re-enabling', () => {
-  const a = { ...shape(), targetCount: 2, targetLengthPlan: ['short', 'short'], targetLimitsEnabled: true };
-  const b = { ...shape(), targetCount: 50, targetLengthPlan: Array(50).fill('long'), targetLimitsEnabled: false };
-  const records = [{ id: 'a', config: a }, { id: 'b', config: b }];
-  const updated = patchLevelConfigs(records, ['a', 'b'], { targetLimitsEnabled: false });
-  assert.equal(updated[0].config.targetCount, 2);
-  assert.deepEqual(updated[0].config.targetLengthPlan, ['short', 'short']);
-  assert.equal(updated[1].config.targetCount, 50);
-  assert.deepEqual(updated[1].config.targetLengthPlan, Array(50).fill('long'));
+test('unrestricted words can span a 5 by 5 board and every enabled cell of a shaped board', () => {
+  for (const [rows, columns, disabledCells, word] of [
+    [3, 4, [], 'ABCDEFGHIJKL'],
+    [5, 5, [], 'ABCDEFGHIJKLMNOPQRSTUVWXY'],
+    [5, 5, [4, 9, 14, 19, 24], 'ABCDEFGHIJKLMNOPQRST'],
+  ]) {
+    const generator = createGenerator([{ word }]);
+    for (const targetCount of [0, -1, NaN, 10000, null]) {
+      const options = { rows, columns, disabledCells, targetCount, targetLimitsEnabled: true,
+        targetLengthPlan: ['short'], targetLengthRatios: { short: 100 }, initialMaxWordLength: 1, maxWordLength: 1,
+        random: () => 0.5 };
+      const level = generator.generate(options);
+      assert.equal(level.targetCount, 1);
+      assert.deepEqual(level.targetWords.map(entry => entry.word), [word]);
+      assert.equal(level.initialWords[0].path.length, rows * columns - disabledCells.length);
+      assert.equal(new Set(level.initialWords[0].path).size, word.length);
+      assert.equal(level.initialWords[0].path.map(cell => level.cells[cell].letter).join(''), word);
+      assert.ok(level.cells.every((cell, index) => disabledCells.includes(index) ? cell.count === 0 : cell.count === 1));
+      assert.ok(createPathSafetyChecker(level)(word));
+      assert.ok(createGameExport([{ level }]));
+    }
+  }
+});
+
+test('long candidates remain selectable with stale limits and only-extra words stay excluded', () => {
+  const generator = createGenerator(['ABCDE', 'FGHIJ', 'ABCDEJIHGF'].map(word => ({ word })), [{ word: 'EDCBA' }]);
+  const board = { rows: 2, columns: 5, letters: [...'ABCDEFGHIJ'], initialWords: [
+    { word: 'ABCDE', path: [0, 1, 2, 3, 4] }, { word: 'FGHIJ', path: [5, 6, 7, 8, 9] },
+  ] };
+  const level = generator.selectTargets({ ...board, foundWords: generator.findWords(board),
+    targetCount: 1, maxWordLength: 3, targetLengthPlan: ['short'], targetLimitsEnabled: true });
+  assert.equal(level.candidateWords.find(entry => entry.word === 'ABCDEJIHGF').word.length, 10);
+  const edited = setTargetWord(level, 'ABCDEJIHGF', true);
+  assert.equal(edited.targetCount, 3);
+  assert.ok(edited.cells.every(cell => cell.count === 2));
+  assert.throws(() => setTargetWord(edited, 'EDCBA', true), /候选词/);
 });

@@ -24,12 +24,12 @@ self.onmessage = async ({ data }) => {
     if (activeRun?.requestId === data.requestId) activeRun = null;
     return;
   }
-  const { requestId, rows, columns, disabledCells, targetCount, targetLimitsEnabled, targetLengthPlan, initialMaxWordLength, maxWordLength, initialForwardProbability, filters, fixedWords, fixedLayout, fixedWordExemptions, duplicateCheck } = data;
+  const { requestId, rows, columns, disabledCells, initialForwardProbability, filters, fixedWords, fixedLayout, fixedWordExemptions, duplicateCheck } = data;
   const run = { requestId };
   activeRun = run;
   try {
     const generator = await loadGenerator();
-    const options = { rows, columns, disabledCells, targetCount, targetLimitsEnabled, targetLengthPlan, initialMaxWordLength, maxWordLength, initialForwardProbability,
+    const options = { rows, columns, disabledCells, initialForwardProbability,
       initialRarityLevel: 1, minimumEmotionScore: 0, filters, fixedWords, fixedLayout, fixedWordExemptions, duplicateCheck };
     const level = await generateUntilComplete(generator, options, {
       isCurrent: () => activeRun === run,

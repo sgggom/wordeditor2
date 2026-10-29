@@ -123,13 +123,13 @@ test("an already ambiguous fixed layout is rejected before any random filling st
     error => error.code !== "GENERATION_RETRY" && /固定布局.*用格歧义/.test(error.message));
 });
 
-test("different-cell alternatives remain extras and cannot satisfy target quotas", () => {
+test("different-cell alternatives remain extras while all safe candidates can be selected", () => {
   const options = { ...board, foundWords: generator.findWords(board) };
-  const level = generator.selectTargets({ ...options, targetCount: 3 });
+  let level = generator.selectTargets({ ...options, targetCount: 999, targetLengthPlan: [] });
   assert.ok(!level.candidateWords.some(entry => entry.word === "CAT"));
   assert.ok(level.extraWords.some(entry => entry.word === "CAT"));
-  assert.throws(() => generator.selectTargets({ ...options, targetCount: 4,
-    targetLengthPlan: ["short", "long", "short", "short"] }), /只有 3 个/);
+  for (const word of ["COT", "TOT"]) level = setTargetWord(level, word, true);
+  assert.equal(level.targetWords.length, 3);
   assert.ok(everyChoiceCompletes(level));
 });
 
@@ -163,8 +163,7 @@ test("legacy metadata cannot bypass manual promotion or save/export safety check
   bad.targetWords.forEach(entry => { entry.pathAnalysis.safe = true; });
   assert.throws(() => assertSafeTargetPaths(bad), /CAT/);
   assert.throws(() => createGameExport([{ level: bad }]), /第 1 关.*CAT/);
-  const removed = setTargetWord(bad, "CAT", false);
-  assert.ok(!removed.targetWords.some(entry => entry.word === "CAT"));
+  assert.throws(() => setTargetWord(bad, "CAT", false), /没有目标词覆盖/);
 });
 
 test("all same-cell routes are accepted even when their number exceeds the legacy path cap", () => {
@@ -215,7 +214,7 @@ test("Edge level 41 reproduces the shaped-board deadlock and is rejected even wi
     targetCount: 9, fixedWords, fixedLayout }), /用格歧义/);
 });
 
-test("regenerated level-41 shape keeps its nine length slots and every legal play order can finish", async () => {
+test("regenerated level-41 shape ignores retired slots and every legal play order can finish", async () => {
   const normal = JSON.parse(await readFile(new URL('../dist/data/required-words.json', import.meta.url)));
   const extras = JSON.parse(await readFile(new URL('../dist/data/extra-words.json', import.meta.url)));
   const real = createGenerator(normal, extras);
@@ -228,7 +227,8 @@ test("regenerated level-41 shape keeps its nine length slots and every legal pla
       initialRarityLevel: 1, minimumEmotionScore: 0, filters: { scope: [1, 2] }, random });
     const check = createPathSafetyChecker(level);
     assert.ok(level.targetWords.every(entry => check(entry.word)));
-    assert.deepEqual(level.targetLengthPlan, plan);
+    assert.equal(level.targetLengthPlan, undefined);
+    assert.equal(level.targetCount, level.targetWords.length);
     assert.equal(level.cells[0].count, 0); assert.equal(level.cells[11].count, 0);
     assert.ok(everyChoiceCompletes(level));
     assert.ok(createGameExport([{ level }]));

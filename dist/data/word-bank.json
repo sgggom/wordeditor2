@@ -55,19 +55,32 @@
     },
     {
       "key": "guide",
-      "label": "引导库",
-      "count": 28,
+      "label": "2词库",
+      "count": 30,
       "file": "guide-words.json",
-      "sha256": "9c71cd3b8c9c02d12c08b199846c884899f8273c2fd3ac0a761b5160f38b28f7"
+      "sha256": "1983a0bc52abb2967e55c22f71f2a89fe57afa6f4f2e2cb27a5b496aa60266e6"
     }
   ],
-  "totalCount": 22468,
+  "totalCount": 22470,
   "supplements": [
     {
       "fileName": "guide-words.json",
-      "sha256": "30b2d0702c2587fd0e79928a558534a0dc3f3108fc25ba72a6568ea431516dbc",
+      "sha256": "896ea0ad7b2a642d14e05b182cb45defc9b08489eecaada93f761509798cc724",
       "group": "guide",
-      "count": 28
+      "count": 30
     }
-  ]
+  ],
+  "gameSources": {
+    "file": "word-game-sources.json",
+    "sha256": "dd44eb7369048c4ab6742b57eb435b87f866237e8e97b01245e37ba47cbbacc7",
+    "gameCount": 7,
+    "wordCount": 32268,
+    "source": {
+      "project": "字页关卡台",
+      "file": "data/game_vocab/catalog.json",
+      "sha256": "cb067af2a06d22ad4ad741afa3560a8211bfce61f13122b2ea5f5575e27601cb",
+      "datasetHash": "d7b7a2ecb5603dc00efbd9916b5933239addb5abb22537c8b24ad262846bade6",
+      "sourceDate": "2026-10-19"
+    }
+  }
 }

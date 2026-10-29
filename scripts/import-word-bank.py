@@ -1,5 +1,6 @@
 """Convert the supplied word workbook to static JSON without changing the XLSX."""
 
+import argparse
 import hashlib
 import json
 import posixpath
@@ -13,6 +14,7 @@ from zipfile import ZipFile
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "data" / "source" / "四游戏词库_精简版.xlsx"
 GUIDE_SOURCE = ROOT / "data" / "source" / "guide-words.json"
+GAME_SOURCES = ROOT / "data" / "source" / "word-game-sources.json"
 DESTINATION = ROOT / "dist" / "data"
 NS = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 RELATIONSHIP_ID = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
@@ -100,12 +102,40 @@ def write_atomic(path, content):
         temp_path.unlink(missing_ok=True)
 
 
+def game_sources(catalog_path):
+    if catalog_path is None:
+        return GAME_SOURCES.read_bytes()
+    raw = Path(catalog_path).read_bytes()
+    catalog = json.loads(raw)
+    games = [{key: game[key] for key in ("id", "name", "color")} for game in catalog["games"]]
+    entries = {}
+    for index, game in enumerate(catalog["games"]):
+        for word in game["words"]["all"]:
+            entries[word] = entries.get(word, 0) | (1 << index)
+    zen = next(game for game in catalog["games"] if game["id"] == "06_Zen_Word")
+    payload = {
+        "schemaVersion": 1,
+        "source": {"project": "字页关卡台", "file": "data/game_vocab/catalog.json",
+                   "sha256": hashlib.sha256(raw).hexdigest(), "datasetHash": catalog["datasetHash"],
+                   "sourceDate": catalog["sourceDate"]},
+        "games": games,
+        "zenTwoLetterWords": sorted(word for word in zen["words"]["all"] if re.fullmatch(r"[A-Z]{2}", word)),
+        "entries": dict(sorted(entries.items())),
+    }
+    return (json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--game-catalog", help="从参考项目的 data/game_vocab/catalog.json 更新来源游戏快照")
+    args = parser.parse_args()
     source_bytes = SOURCE.read_bytes()
     guide_bytes = GUIDE_SOURCE.read_bytes()
+    game_source_bytes = game_sources(args.game_catalog)
+    game_source_data = json.loads(game_source_bytes)
     guide_records = json.loads(guide_bytes)
     if not isinstance(guide_records, list):
-        raise ValueError("引导库需为列表。")
+        raise ValueError("2词库需为列表。")
     guide_words = set()
     for record in guide_records:
         word = record.get("word") if isinstance(record, dict) else None
@@ -118,8 +148,11 @@ def main():
                 or type(record.get("rarityLevel")) is not int or record["rarityLevel"] not in (1, 2, 3, 4, 5)
                 or any(not isinstance(record.get(key), str) or not record[key].strip()
                        for key in ("phonetic", "definitionEn", "definitionZh"))):
-            raise ValueError("引导库含重复单词、缺失参数或无效记录。")
+            raise ValueError("2词库含重复单词、缺失参数或无效记录。")
         guide_words.add(word)
+    missing = set(game_source_data["zenTwoLetterWords"]) - guide_words
+    if missing:
+        raise ValueError(f"请先补齐 Zen 两字母词的参数：{', '.join(sorted(missing))}")
     manifest = {
         "schemaVersion": 1,
         "source": {
@@ -152,7 +185,7 @@ def main():
                           else posixpath.normpath(posixpath.join("xl", target)))
             records = read_records(archive, sheet_path, shared_strings, key)
             if guide_words.intersection(record["word"].strip().upper() for record in records):
-                raise ValueError("引导库与原词库重复，请先确认词库分类。")
+                raise ValueError("2词库与原词库重复，请先确认词库分类。")
             # Preserve order, duplicates, original text, numbers, zeros and blanks.
             payload = ("[\n" + ",\n".join(json.dumps(record, ensure_ascii=False, allow_nan=False,
                          separators=(",", ":")) for record in records) + "\n]\n").encode("utf-8")
@@ -171,7 +204,7 @@ def main():
                      separators=(",", ":")) for record in guide_records) + "\n]\n").encode("utf-8")
     outputs["guide-words.json"] = guide_payload
     manifest["groups"].append({
-        "key": "guide", "label": "引导库", "count": len(guide_records), "file": "guide-words.json",
+        "key": "guide", "label": "2词库", "count": len(guide_records), "file": "guide-words.json",
         "sha256": hashlib.sha256(guide_payload).hexdigest(),
     })
     manifest["totalCount"] += len(guide_records)
@@ -179,10 +212,18 @@ def main():
         "fileName": GUIDE_SOURCE.name, "sha256": hashlib.sha256(guide_bytes).hexdigest(),
         "group": "guide", "count": len(guide_records),
     }]
+    outputs["word-game-sources.json"] = game_source_bytes
+    manifest["gameSources"] = {
+        "file": "word-game-sources.json", "sha256": hashlib.sha256(game_source_bytes).hexdigest(),
+        "gameCount": len(game_source_data["games"]), "wordCount": len(game_source_data["entries"]),
+        "source": game_source_data["source"],
+    }
     outputs["word-bank.json"] = (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     DESTINATION.mkdir(parents=True, exist_ok=True)
     for filename, content in outputs.items():
         write_atomic(DESTINATION / filename, content)
+    if args.game_catalog:
+        write_atomic(GAME_SOURCES, game_source_bytes)
     for group in manifest["groups"]:
         print(f"{group['label']}：{group['count']:,} 条")
     print(f"共 {manifest['totalCount']:,} 条，已导入 {DESTINATION}")

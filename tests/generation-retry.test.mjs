@@ -29,8 +29,8 @@ test("generation continues past multiple exhausted batches without changing the 
 test("invalid configuration and unexpected failures stop immediately instead of retrying", async () => {
   const generator = createGenerator([{ word: "ABCDEF" }]);
   let progress = 0;
-  await assert.rejects(generateUntilComplete(generator, { rows: 2, columns: 3, maxWordLength: 0 },
-    { onProgress: () => { progress += 1; } }), /最长单词长度/);
+  await assert.rejects(generateUntilComplete(generator, { rows: 2, columns: 3, initialForwardProbability: 101 },
+    { onProgress: () => { progress += 1; } }), /初始正向概率/);
   let calls = 0;
   const failure = new Error("Unexpected failure");
   await assert.rejects(generateUntilComplete({ generate() { calls += 1; throw failure; } }, {}), error => error === failure);
@@ -52,14 +52,14 @@ test("generation yields between batches and stops when its request is no longer 
   assert.equal(calls, 1);
 });
 
-test("unlucky search batches are retryable but proven impossible configurations are not", () => {
-  const sparse = createGenerator([{ word: "ABCDEF" }, { word: "ZZZ" }]);
-  assert.throws(() => sparse.generate({ rows: 2, columns: 3, targetCount: 2, random: () => 0 }),
+test("unlucky safe-fill searches retry while impossible physical coverage fails immediately", () => {
+  const repeated = createGenerator([{ word: "AAA" }, { word: "AAAA" }]);
+  assert.throws(() => repeated.generate({ rows: 2, columns: 3, random: () => 0.5 }),
     error => error.code === "GENERATION_RETRY" && error.attempts === 80);
-  const tooLong = createGenerator([{ word: "ABCDEF" }, { word: "ABCDEFG" }]);
-  assert.throws(() => tooLong.generate({ rows: 2, columns: 3, targetCount: 2 }),
-    error => error.code !== "GENERATION_RETRY" && /只有 1 个可用目标词/.test(error.message));
-  const insufficientInitial = createGenerator([{ word: "AAA" }, { word: "AAAAAA" }]);
-  assert.throws(() => insufficientInitial.generate({ rows: 2, columns: 3, targetCount: 2, initialMaxWordLength: 3 }),
+  const tooLong = createGenerator([{ word: "ABCDEFG" }]);
+  assert.throws(() => tooLong.generate({ rows: 2, columns: 3 }),
+    error => error.code !== "GENERATION_RETRY" && /没有可用的初始词/.test(error.message));
+  const insufficientInitial = createGenerator([{ word: "AAA" }]);
+  assert.throws(() => insufficientInitial.generate({ rows: 2, columns: 3 }),
     error => error.code !== "GENERATION_RETRY" && /无法填满棋盘/.test(error.message));
 });

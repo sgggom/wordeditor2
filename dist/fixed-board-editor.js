@@ -1,7 +1,7 @@
 import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
 import { normalizeFixedWords, validateFixedWords, normalizeFixedLayout, fixedLayoutLetters } from "./fixed-words.js";
-import { countTargetLengthPlan } from "./level-generator.js";
 import { describePath } from "./level-statistics.js";
+import { bindWordTooltip } from "./word-tooltip.js";
 
 let vocabularyPromise;
 function loadVocabulary() {
@@ -104,7 +104,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
       const settings = draftSettings(original);
       const exempt = settings.fixedWordExemptions?.includes(word) ?? false;
       try {
-        validateFixedWords({ ...settings, fixedWords: [...new Set([...words, word])] }, countTargetLengthPlan(settings.targetCount, settings.targetLengthPlan));
+        validateFixedWords({ ...settings, fixedWords: [...new Set([...words, word])] });
       } catch (error) { return error.message; }
       if (Object.entries(settings.filters ?? {}).some(([key, values]) => !(exempt && (key === "scope" || key === "rarityLevel")) && !values.includes(entry[key]))) return "不符合词库筛选";
       if (!exempt && entry.rarityLevel !== 1) return "初始词生僻档位需为 1";
@@ -169,6 +169,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
       const row = element("div", `fixed-preset-row${word === selectedWord || word === activeWord ? " is-selected" : ""}`);
       row.dataset.fixedSelectedWord = word;
       const label = element("button", "fixed-preset-word", word); label.type = "button"; label.dataset.fixedPreview = word;
+      bindWordTooltip(label, vocabulary?.find(entry => entry.word === word) ?? { word });
       const state = element("span", "fixed-preset-state", word === activeWord ? "摆放中" : placed ? "固定位置" : pendingPins.has(word) ? "需重新摆放" : "自动摆放");
       const edit = element("button", "reset-button", placed ? "重摆" : "固定位置"); edit.type = "button"; edit.dataset.fixedWord = word;
       edit.disabled = !canPin;
@@ -198,9 +199,10 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
     for (const { entry, issue } of matches.slice(0, 60)) {
       const selected = words.includes(entry.word), pinned = placements.some(item => item.word === entry.word);
       const card = element("div", `fixed-search-result${selected ? " is-selected" : ""}${issue ? " is-disabled" : ""}`);
-      card.title = issue || entry.definitionZh || entry.definitionEn || entry.word;
       const heading = element("span", "fixed-result-heading");
-      heading.append(element("strong", "", entry.word), element("span", "", issue ? "不可用" : pinned ? "固定位置" : selected ? "已选择" : ""));
+      const wordLabel = element("strong", "", entry.word);
+      bindWordTooltip(wordLabel, entry);
+      heading.append(wordLabel, element("span", "", issue ? "不可用" : pinned ? "固定位置" : selected ? "已选择" : ""));
       const actions = element("div", "fixed-result-actions");
       const automatic = element("button", "reset-button", "自动摆放"); automatic.type = "button"; automatic.dataset.fixedAutomatic = entry.word;
       automatic.disabled = Boolean(issue) || (selected && !pinned && !pendingPins.has(entry.word) && activeWord !== entry.word);

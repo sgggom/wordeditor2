@@ -68,8 +68,6 @@ export function importGameLevels(data, records = []) {
       delete entry.paths;
     }
     const level = { rows, columns, disabledCells, name: source.name ?? "", targetCount: targets.length,
-      targetLengthPlan: null, targetLengthRatios: null, targetLengthCounts: null,
-      initialMaxWordLength: columns, maxWordLength: Math.max(...targets.map(word => word.length)),
       initialForwardProbability: 50, filters: {}, initialWords: [],
       candidateWords: entries.filter(entry => !entry.onlyExtra), targetWords: targetEntries,
       extraWords: entries.slice(targets.length),

@@ -1,17 +1,11 @@
 import { normalizeDisabledCells } from "./board-shape.js";
-import { countTargetLengthPlan } from "./level-generator.js";
 import { normalizeFixedWords, validateFixedWords, normalizeFixedLayout, normalizeFixedWordExemptions } from "./fixed-words.js";
 
 export const CONFIG_LIST_STORAGE_KEY = "fangge.level-config-list.v1";
 export const MAX_CONFIG_ROWS = 1500;
-export const MAX_TARGET_PLAN_SLOTS = 1000;
-export const TARGET_LENGTH_OPTIONS = { short: "短词 · 3 字母", medium: "中词 · 4 字母", long: "长词 · 5 字母及以上" };
 export const CONFIG_NUMBER_FIELDS = {
   rows: { label: "行数", min: 2, max: 5 },
   columns: { label: "列数", min: 2, max: 5 },
-  targetCount: { label: "目标数量", min: 1 },
-  initialMaxWordLength: { label: "初始词最长", min: 1 },
-  maxWordLength: { label: "最长单词长度", min: 1 },
   initialForwardProbability: { label: "初始正向概率", min: 0, max: 100 },
   targetDuplicateRange: { label: "目标词查重", min: 0 },
   extraDuplicateRange: { label: "额外词查重", min: 0 },
@@ -27,24 +21,12 @@ export function validateConfigNumber(field, value) {
   }
 }
 
-export function resizeTargetPlan(plan, targetCount) {
-  validateConfigNumber("targetCount", targetCount);
-  if (plan === null) return null;
-  if (targetCount > MAX_TARGET_PLAN_SLOTS) throw new Error(`逐个配置最多支持 ${MAX_TARGET_PLAN_SLOTS} 个目标词。`);
-  return Array.from({ length: targetCount }, (_, index) => plan[index] ?? Object.keys(TARGET_LENGTH_OPTIONS)[index % 3]);
-}
-
 export function validateLevelConfig(config) {
   if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("关卡配置无效。");
   for (const key of Object.keys(CONFIG_NUMBER_FIELDS)) validateConfigNumber(key, config[key]);
-  if (config.targetLengthPlan !== null && (!Array.isArray(config.targetLengthPlan) || config.targetLengthPlan.length > MAX_TARGET_PLAN_SLOTS)) {
-    throw new Error(`逐个词长配置需为不超过 ${MAX_TARGET_PLAN_SLOTS} 项的列表。`);
-  }
-  if (config.targetLimitsEnabled !== undefined && typeof config.targetLimitsEnabled !== "boolean") throw new Error("目标限制开关无效。");
   normalizeDisabledCells(config);
-  const lengthCounts = countTargetLengthPlan(config.targetCount, config.targetLengthPlan);
   if (config.fixedWords !== undefined && !Array.isArray(config.fixedWords)) throw new Error("固定单词需为单词列表。");
-  validateFixedWords(config, lengthCounts);
+  validateFixedWords(config);
   normalizeFixedWordExemptions(config);
   normalizeFixedLayout(config);
   if (!config.filters || typeof config.filters !== "object" || Array.isArray(config.filters)) throw new Error("词库筛选无效。");
@@ -56,7 +38,7 @@ export function validateLevelConfig(config) {
 }
 
 export function patchLevelConfigs(records, selectedIds, patch) {
-  const allowed = [...Object.keys(CONFIG_NUMBER_FIELDS), "targetLengthPlan", "filters", "fixedWords", "fixedLayout", "fixedWordExemptions", "disabledCells", "targetLimitsEnabled"];
+  const allowed = [...Object.keys(CONFIG_NUMBER_FIELDS), "filters", "fixedWords", "fixedLayout", "fixedWordExemptions", "disabledCells"];
   if (Object.keys(patch).some(key => !allowed.includes(key))) throw new Error("配置字段无效。");
   const ids = new Set(selectedIds);
   return records.map(record => {
@@ -69,9 +51,6 @@ export function patchLevelConfigs(records, selectedIds, patch) {
     if (Object.hasOwn(patch, "fixedWordExemptions")) config.fixedWordExemptions = normalizeFixedWordExemptions(config);
     if (Object.hasOwn(patch, "fixedWords") && !Object.hasOwn(patch, "fixedLayout") && config.fixedLayout) config.fixedLayout = null;
     if (Object.hasOwn(patch, "fixedLayout")) config.fixedLayout = normalizeFixedLayout(config);
-    if (Object.hasOwn(patch, "targetCount") && !Object.hasOwn(patch, "targetLengthPlan")) {
-      config.targetLengthPlan = resizeTargetPlan(config.targetLengthPlan, config.targetCount);
-    }
     validateLevelConfig(config);
     return { ...record, config };
   });

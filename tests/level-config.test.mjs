@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CONFIG_LIST_STORAGE_KEY, patchLevelConfigs, readConfigList, resizeTargetPlan, saveConfigList,
+import { CONFIG_LIST_STORAGE_KEY, patchLevelConfigs, readConfigList, saveConfigList,
   validateConfigList, validateLevelConfig, configJobsInRange } from "../dist/level-config.js";
 
 const config = () => ({ rows: 3, columns: 4, targetCount: 6,
@@ -14,8 +14,7 @@ test("configuration values enforce the editor bounds while preserving independen
     targetLengthPlan: null, initialForwardProbability: 0, targetDuplicateRange: 0, extraDuplicateRange: 0,
     filters: { scope: [] } };
   assert.equal(validateLevelConfig(valid), valid);
-  for (const [field, value] of [["rows", 6], ["columns", 1], ["targetCount", 0], ["targetCount", NaN],
-    ["initialMaxWordLength", 0], ["maxWordLength", 2.5], ["initialForwardProbability", 101],
+  for (const [field, value] of [["rows", 6], ["columns", 1], ["initialForwardProbability", 101],
     ["targetDuplicateRange", -1], ["extraDuplicateRange", "20"]]) {
     assert.throws(() => validateLevelConfig({ ...config(), [field]: value }));
   }
@@ -38,23 +37,22 @@ test("bulk changes affect only selected configurations and do not share nested v
   assert.deepEqual(original, before);
 });
 
-test("bulk target counts resize each row's own plan without changing quantity-only mode", () => {
-  const original = records();
-  original[1].config.targetLengthPlan = null;
-  const updated = patchLevelConfigs(original, ["a", "b"], { targetCount: 8 });
-  assert.deepEqual(updated[0].config.targetLengthPlan, [...original[0].config.targetLengthPlan, "short", "medium"]);
-  assert.equal(updated[1].config.targetLengthPlan, null);
-  assert.equal(updated[1].config.targetCount, 8);
-  assert.equal(updated[2].config.targetCount, 6);
-  assert.deepEqual(resizeTargetPlan(["long", "short", "medium"], 2), ["long", "short"]);
+test("legacy quantity and length settings no longer invalidate saved configurations", () => {
+  for (const value of [0, -1, NaN, null, "obsolete"]) {
+    const legacy = { ...config(), targetCount: value, targetLengthPlan: ["unknown"], targetLengthRatios: {},
+      targetLimitsEnabled: value, initialMaxWordLength: value, maxWordLength: value };
+    assert.equal(validateLevelConfig(legacy), legacy);
+  }
+  for (const field of ["targetCount", "targetLengthPlan", "targetLimitsEnabled", "initialMaxWordLength", "maxWordLength"]) {
+    assert.throws(() => patchLevelConfigs(records(), ["a"], { [field]: 1 }), /字段/);
+  }
 });
 
 test("invalid bulk changes reject the whole update and preserve all original configurations", () => {
   const original = records();
   const before = structuredClone(original);
-  assert.throws(() => patchLevelConfigs(original, ["a", "c"], { targetCount: 1001 }), /1000/);
+  assert.throws(() => patchLevelConfigs(original, ["a", "c"], { initialForwardProbability: 101 }), /初始正向概率/);
   assert.throws(() => patchLevelConfigs(original, ["a"], { columns: 6 }), /列数/);
-  assert.throws(() => patchLevelConfigs(original, ["a"], { targetCount: 4, targetLengthPlan: ["short"] }), /一致/);
   assert.throws(() => patchLevelConfigs(original, ["a"], { unsupported: true }), /字段/);
   assert.deepEqual(original, before);
 });

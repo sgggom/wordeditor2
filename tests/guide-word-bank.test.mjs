@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { createGenerator } from '../dist/level-generator.js';
+import { setTargetWord } from '../dist/level-rules.js';
 import { createGameExport } from '../dist/level-export.js';
 import { importGameLevels } from '../dist/level-import.js';
 import { CONFIG_FILTER_OPTIONS, validateLevelConfig, saveConfigList, readConfigList } from '../dist/level-config.js';
@@ -19,16 +20,20 @@ const options = () => ({ rows: 2, columns: 2, targetCount: 2, targetLengthPlan: 
   ] } });
 
 test('the guide bank is independent and every word has complete compatible parameters', async () => {
-  assert.equal(guide.length, 28);
+  assert.equal(guide.length, 30);
   const names = new Set(guide.map(entry => entry.word));
-  assert.equal(names.size, 28);
-  assert.ok(names.has('OF') && names.has('IF'));
+  assert.equal(names.size, 30);
+  assert.ok(['OF', 'IF', 'PO', 'TI', 'OH', 'OK'].every(word => names.has(word)));
+  const sources = JSON.parse(await readFile(new URL('../dist/data/word-game-sources.json', import.meta.url)));
+  assert.equal(sources.zenTwoLetterWords.length, 28);
+  assert.ok(sources.zenTwoLetterWords.every(word => names.has(word)));
+  assert.deepEqual([...names].filter(word => !sources.zenTwoLetterWords.includes(word)), ['OH', 'OK']);
   assert.equal(normal.some(entry => names.has(entry.word)), false);
   assert.equal(extras.some(entry => names.has(entry.word)), false);
   for (const entry of guide) {
     assert.match(entry.word, /^[A-Z]{2}$/);
     assert.equal(entry.id, `guide:${entry.word.toLowerCase()}`);
-    assert.equal(entry.scope, 0); assert.equal(entry.rarityLevel, 1); assert.equal(entry.emotion, 0);
+    assert.equal(entry.scope, 0); assert.equal(entry.rarityLevel, { PO: 4, TI: 3 }[entry.word] ?? 1); assert.equal(entry.emotion, 0);
     assert.equal(entry.abbreviation, entry.word === 'OK' ? 1 : 0);
     for (const key of ['phonetic', 'definitionEn', 'definitionZh']) assert.ok(typeof entry[key] === 'string' && entry[key].trim());
   }
@@ -36,6 +41,7 @@ test('the guide bank is independent and every word has complete compatible param
   assert.deepEqual(guide, source);
   const manifest = JSON.parse(await readFile(new URL('../dist/data/word-bank.json', import.meta.url)));
   assert.deepEqual(manifest.groups.map(group => group.key), ['required', 'extra', 'guide']);
+  assert.equal(manifest.groups.find(group => group.key === 'guide').label, '2词库');
   assert.equal(manifest.totalCount, normal.length + extras.length + guide.length);
   for (const group of manifest.groups) {
     const bytes = await readFile(new URL(`../dist/data/${group.file}`, import.meta.url));
@@ -59,9 +65,7 @@ test('guide-only filtering supports fixed words, generation, export and metadata
 
 test('ordinary scopes exclude guide targets while a mixed selection permits both banks', () => {
   assert.throws(() => generator.generate({ ...options(), filters: { scope: [1] } }), /词库筛选/);
-  assert.throws(() => generator.generate({ ...options(), fixedWords: [], fixedLayout: null, filters: { scope: [1] } }), /没有可用的初始词/);
-  const mixed = generator.generate({ ...options(), targetLimitsEnabled: true, targetCount: 3, maxWordLength: 3,
-    filters: { scope: [0, 1] } });
+  const mixed = setTargetWord(generator.generate({ ...options(), filters: { scope: [0, 1] } }), 'OFF', true);
   assert.ok(mixed.targetWords.some(entry => entry.scope === 0));
   assert.ok(mixed.targetWords.some(entry => entry.word === 'OFF' && entry.scope === 1));
 });
@@ -74,6 +78,21 @@ test('guide parameters participate in abbreviation, rarity and emotion filters',
   for (const filters of [{ scope: [0], abbreviation: [0] }, { scope: [0], rarityLevel: [2] }, { scope: [0], emotion: [1] }]) {
     assert.throws(() => generator.generate({ ...config, filters }), /词库筛选/);
   }
+});
+
+test('new Zen words retain their parameters through candidate selection and export/import', () => {
+  const config = { rows: 2, columns: 2, filters: { scope: [0] }, fixedWords: ['PO', 'IT'],
+    fixedLayout: { rows: 2, columns: 2, placements: [{ word: 'PO', path: [0, 1] }, { word: 'IT', path: [2, 3] }] } };
+  const level = setTargetWord(generator.generate(config), 'TI', true);
+  const pack = createGameExport([{ level }]);
+  const [restored] = importGameLevels(pack, [...normal, ...extras, ...guide]);
+  for (const word of ['PO', 'TI']) {
+    const source = guide.find(entry => entry.word === word);
+    const entry = restored.targetWords.find(entry => entry.word === word);
+    for (const key of ['scope', 'phonetic', 'emotion', 'abbreviation', 'rarityLevel', 'definitionEn', 'definitionZh']) assert.equal(entry[key], source[key]);
+    assert.ok(source.definitionSources.length > 0);
+  }
+  assert.throws(() => generator.generate({ ...config, initialRarityLevel: 1 }), /生僻档位/);
 });
 
 test('guide scope selection survives configuration validation and local storage', () => {

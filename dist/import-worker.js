@@ -1,4 +1,5 @@
 import { importGameLevels, importSingleGameLevel } from "./level-import.js";
+import { parseLevelFile } from "./level-file.js";
 
 self.onmessage = async ({ data }) => {
   try {
@@ -7,7 +8,9 @@ self.onmessage = async ({ data }) => {
       if (!response.ok) throw new Error("词库读取失败，请重试。");
       return (await response.json()).map(record => ({ ...record, onlyExtra: index === 1 }));
     }));
-    if (data?.type === "single") {
+    if (data?.type === "level-file") {
+      self.postMessage({ document: parseLevelFile(data.text, records.flat()) });
+    } else if (data?.type === "single") {
       self.postMessage({ levels: [importSingleGameLevel(data.text, records.flat())] });
     } else {
       self.postMessage({ levels: importGameLevels(JSON.parse(data.replace(/^\uFEFF/, "")), records.flat()) });

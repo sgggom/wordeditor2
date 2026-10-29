@@ -13,13 +13,14 @@ export function createPathSafetyChecker(level, { allowEmpty = false } = {}) {
     ...(cell % columns > 0 ? [cell - 1] : []),
     ...(cell % columns < columns - 1 ? [cell + 1] : []),
   ]);
+  const usableLetterCount = letters.filter((letter, cell) => /^[A-Z]$/.test(letter) && !level.disabledCells?.includes(cell) && !level.cells?.[cell]?.disabled).length;
   const results = new Map();
   return word => {
     if (results.has(word)) return results.get(word);
     if (!validBoard || typeof word !== "string" || !/^[A-Z]+$/.test(word) || word.length > letters.length) return false;
     let firstMask = null;
     let safe = true;
-    const complete = () => !safe || (firstMask !== null && word.length === letters.length);
+    const complete = () => !safe || (firstMask !== null && word.length === usableLetterCount);
     function visit(cell, step, mask) {
       if (complete() || level.disabledCells?.includes(cell) || level.cells?.[cell]?.disabled || letters[cell] !== word[step]) return;
       mask |= 1 << cell;

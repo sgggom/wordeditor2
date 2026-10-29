@@ -13,8 +13,8 @@ const records = [
 const generator = createGenerator(records, [{ word: "FED", emotion: -2, rarityLevel: 4 }]);
 const board = { rows: 2, columns: 3, letters: [..."ABCFED"],
   initialWords: [{ ...records[0], onlyExtra: false, path: [0, 1, 2, 5, 4, 3] }] };
-const makeLevel = () => generator.selectTargets({ ...board, targetCount: 2, filters: { scope: [1] },
-  foundWords: generator.findWords(board), random: () => 0 });
+const makeLevel = () => setTargetWord(generator.selectTargets({ ...board, targetCount: 2, filters: { scope: [1] },
+  foundWords: generator.findWords(board), random: () => 0 }), "ABC", true);
 const historyEntry = (id, targets, extras = []) => ({ id, level: {
   targetWords: targets.map(word => ({ word })), extraWords: extras.map(word => ({ word })),
 } });
@@ -128,12 +128,13 @@ test("manual promotion and removal update counts, membership, emotion and all ta
   assert.deepEqual(removed.initialWords, original.initialWords);
   assert.deepEqual(removed.candidateWords, original.candidateWords);
   assert.deepEqual(original, untouched, "Editing must not mutate the original saved snapshot");
-  assert.equal(promoted.targetCount, original.targetCount, "Generation settings remain unchanged by manual selection");
+  assert.equal(promoted.targetCount, 3);
+  assert.equal(removed.targetCount, 2);
 });
 
-test("initial words are locked and excluded or unknown words cannot be promoted", () => {
+test("uncovered cells prevent removing initial words and excluded or unknown words cannot be promoted", () => {
   const level = makeLevel();
-  assert.throws(() => setTargetWord(level, "ABCDEF", false), /初始词/);
+  assert.throws(() => setTargetWord(level, "ABCDEF", false), /没有目标词覆盖/);
   for (const word of ["FED", "CBE", "MISSING"]) assert.throws(() => setTargetWord(level, word, true), /候选词/);
   const onlyInitial = setTargetWord(level, "ABC", false);
   assert.ok(onlyInitial.cells.every(cell => cell.count === 1));

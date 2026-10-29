@@ -1,15 +1,13 @@
 import { resizeDisabledCells } from "./board-shape.js";
 import { CONFIG_NUMBER_FIELDS, CONFIG_FILTER_OPTIONS, MAX_CONFIG_ROWS, readConfigLists, migrateConfigLists, changeConfigLists, saveConfigList,
-  patchLevelConfigs, resizeTargetPlan, validateConfigNumber, validateLevelConfig, installConfigPreset, configJobsInRange } from "./level-config.js";
-import { countTargetLengthPlan } from "./level-generator.js";
-import { renderTargetPlanChoices } from "./target-plan-controls.js";
+  patchLevelConfigs, validateConfigNumber, validateLevelConfig, installConfigPreset, configJobsInRange } from "./level-config.js";
 import { REFERENCE_CONFIG_ID } from "./reference-config.js";
 import { formatBatchState } from "./batch-runner.js";
 import { defaultGenerationWorkers, detectedProcessorCount } from "./generation-client.js";
 import { mountFixedBoardEditor, createConfigBoardPreview } from "./fixed-board-editor.js";
 import { configureOpeningWords, OPENING_WORDS_PRESET_ID } from "./opening-words-preset.js";
 
-export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, getTargetLimitsEnabled, setTargetLimitsEnabled }) {
+export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) {
   const openButton = document.querySelector("#open-config-list");
   const dialog = document.querySelector("#level-config-dialog");
   const body = document.querySelector("#config-list-body");
@@ -41,7 +39,6 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
   const runMeter = document.querySelector("#config-run-meter");
   const workerInfo = document.querySelector("#config-worker-info");
   const listSelect = document.querySelector("#config-list-select");
-  const globalTargetLimitsInput = document.querySelector("#config-global-target-limits-enabled");
   const newListButton = document.querySelector("#new-config-list");
   const manageListsButton = document.querySelector("#manage-config-lists");
   const listManager = document.querySelector("#config-list-manager");
@@ -57,7 +54,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
   let activeListId = null;
   let nameAction = null;
   let pendingDeleteId = null;
-  const columns = ["rows", "columns", "targetCount", "targets", "fixedWords", "initialMaxWordLength", "maxWordLength",
+  const columns = ["fixedWords",
     "initialForwardProbability", "targetDuplicateRange", "extraDuplicateRange", "filters"];
   let records = [];
   let selected = new Set();
@@ -177,16 +174,6 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
     renderLibrarySelection();
   }
 
-  function planSummary(config) {
-    if (!getTargetLimitsEnabled()) return "后选目标";
-    try {
-      const counts = countTargetLengthPlan(config.targetCount, config.targetLengthPlan);
-      return counts ? `短${counts.short} 中${counts.medium} 长${counts.long}` : "不限词长";
-    } catch {
-      return "需调整";
-    }
-  }
-
   function renderSelection() {
     count.textContent = String(records.length);
     selectedCount.textContent = String(selected.size);
@@ -203,19 +190,13 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
 
   function renderRowValidity(row, config) {
     let valid = true;
-    try { validateLevelConfig({ ...config, targetLimitsEnabled: getTargetLimitsEnabled() }); } catch { valid = false; }
+    try { validateLevelConfig(config); } catch { valid = false; }
     row.classList.toggle("is-invalid", !valid);
     for (const input of row.querySelectorAll("input[data-config-field]")) {
       let fieldValid = true;
       try { validateConfigNumber(input.dataset.configField, config[input.dataset.configField]); } catch { fieldValid = false; }
       input.setAttribute("aria-invalid", String(!fieldValid));
-      if (input.dataset.configField === "targetCount") {
-        input.disabled = !getTargetLimitsEnabled();
-        input.placeholder = input.disabled ? "不限" : "";
-        if (input.disabled) input.value = "";
-      }
     }
-    row.querySelector("[data-config-action='targets']").textContent = planSummary(config);
     const preview = row.querySelector("[data-config-action='fixedWords']");
     preview.replaceChildren(createConfigBoardPreview(config));
     preview.title = `${config.rows} 行 × ${config.columns} 列 · ${config.rows * config.columns - (config.disabledCells?.length ?? 0)} 格` +
@@ -263,10 +244,9 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
             button.classList.add("config-board-button");
 
           } else {
-            button.textContent = field === "targets" ? planSummary(record.config)
-              : Object.keys(record.config.filters).length ? `${Object.keys(record.config.filters).length} 项筛选` : "全部";
+            button.textContent = Object.keys(record.config.filters).length ? `${Object.keys(record.config.filters).length} 项筛选` : "全部";
           }
-          button.setAttribute("aria-label", `第 ${index + 1} 关${field === "targets" ? "目标词长配置" : field === "fixedWords" ? "棋盘编辑" : "词库筛选"}`);
+          button.setAttribute("aria-label", `第 ${index + 1} 关${field === "fixedWords" ? "棋盘编辑" : "词库筛选"}`);
           cell.append(button);
         }
         row.append(cell);
@@ -331,28 +311,15 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
   }
 
   function applyPatch(ids, patch) {
-    records = patchLevelConfigs(records, ids, { ...patch, targetLimitsEnabled: getTargetLimitsEnabled() });
+    records = patchLevelConfigs(records, ids, patch);
     changed();
     renderRows();
-  }
-
-  function renderDetailTargets() {
-    const { targetCount, targetLengthPlan } = detailState.config;
-    const enabled = getTargetLimitsEnabled();
-    detailContent.querySelector("#config-detail-target-count").disabled = !enabled;
-    detailContent.querySelector("#config-detail-plan-enabled").disabled = !enabled;
-    detailContent.querySelector(".target-limits-hint").hidden = enabled;
-    const container = detailContent.querySelector(".target-plan-slots");
-    container.hidden = !enabled || targetLengthPlan === null;
-    if (enabled && targetLengthPlan !== null) renderTargetPlanChoices(container, targetLengthPlan, "config-detail-plan");
-    else container.replaceChildren();
-    detailContent.querySelector(".target-plan-summary").textContent = planSummary(detailState.config);
   }
 
   function openDetails(kind, ids) {
     const source = records.find(record => ids.includes(record.id));
     if (!source) return;
-    const settings = records.filter(record => ids.includes(record.id)).map(record => ({ ...record.config, targetLimitsEnabled: getTargetLimitsEnabled() }));
+    const settings = records.filter(record => ids.includes(record.id)).map(record => record.config);
     if (kind === "fixedWords") {
       try {
         for (const config of settings) { validateConfigNumber("rows", config.rows); validateConfigNumber("columns", config.columns); }
@@ -360,15 +327,10 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
     }
     fixedBoardEditor?.destroy(); fixedBoardEditor = null;
     detail.classList.toggle("fixed-board-dialog", kind === "fixedWords");
-    detailState = { kind, ids: [...ids], config: { ...structuredClone(source.config), targetLimitsEnabled: getTargetLimitsEnabled() } };
-    detailTitle.textContent = `${ids.length > 1 ? `所选 ${ids.length} 关 · ` : `第 ${records.indexOf(source) + 1} 关 · `}${kind === "targets" ? "关卡目标词" : kind === "fixedWords" ? "棋盘编辑" : "词库筛选"}`;
+    detailState = { kind, ids: [...ids], config: structuredClone(source.config) };
+    detailTitle.textContent = `${ids.length > 1 ? `所选 ${ids.length} 关 · ` : `第 ${records.indexOf(source) + 1} 关 · `}${kind === "fixedWords" ? "棋盘编辑" : "词库筛选"}`;
     detailError.hidden = true;
-    if (kind === "targets") {
-      detailContent.innerHTML = '<p class="target-limits-hint" hidden>全局目标限制已关闭；可在配置列表顶部统一开启。各关原有数量和词长设置会保留。</p><div class="target-config-count"><label for="config-detail-target-count">目标数量</label><input id="config-detail-target-count" type="number" min="1" step="1" /></div><label class="target-plan-switch"><input id="config-detail-plan-enabled" type="checkbox" />逐个配置词长</label><div class="target-plan-slots"></div><output class="target-plan-summary"></output>';
-      detailContent.querySelector("#config-detail-target-count").value = String(source.config.targetCount);
-      detailContent.querySelector("#config-detail-plan-enabled").checked = source.config.targetLengthPlan !== null;
-      renderDetailTargets();
-    } else if (kind === "fixedWords") {
+    if (kind === "fixedWords") {
       fixedBoardEditor = mountFixedBoardEditor(detailContent, detailState.config, { configs: settings, onError: message => {
         detailError.hidden = !message;
         detailError.textContent = message;
@@ -384,8 +346,6 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
   }
 
   function renderLibrarySelection() {
-    globalTargetLimitsInput.checked = getTargetLimitsEnabled();
-    globalTargetLimitsInput.disabled = running;
     listSelect.replaceChildren(...(library?.lists ?? []).map(list => new Option(
       `${list.name}（${list.id === activeListId ? records.length : list.records.length} 关）`, list.id)));
     listSelect.value = activeListId ?? "";
@@ -465,12 +425,6 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
     nameDialog.showModal(); nameInput.focus(); nameInput.select();
   }
 
-  globalTargetLimitsInput.addEventListener("change", () => {
-    if (running) return;
-    setTargetLimitsEnabled(globalTargetLimitsInput.checked);
-    globalTargetLimitsInput.checked = getTargetLimitsEnabled();
-    renderRows(); renderBatchField();
-  });
   newListButton.addEventListener("click", () => openListName("create"));
   document.querySelector("#manager-new-config-list").addEventListener("click", () => openListName("create"));
   listSelect.addEventListener("change", () => {
@@ -513,7 +467,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
   });
 
   for (const [value, label] of [...Object.entries(CONFIG_NUMBER_FIELDS).map(([key, rule]) => [key, rule.label]),
-    ["targets", "关卡目标词"], ["fixedWords", "棋盘编辑"], ["filters", "词库筛选"]]) batchField.add(new Option(label, value));
+    ["fixedWords", "棋盘编辑"], ["filters", "词库筛选"]]) batchField.add(new Option(label, value));
 
   openButton.addEventListener("click", () => {
     workerInfo.textContent = `自动并行 ${defaultGenerationWorkers()} 路`;
@@ -631,9 +585,6 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
       .every(value => Number.isInteger(value) && value >= 2 && value <= 5)) {
       record.config.disabledCells = resizeDisabledCells(previousSize, record.config);
     }
-    if (field === "targetCount") {
-      try { record.config.targetLengthPlan = resizeTargetPlan(record.config.targetLengthPlan, record.config.targetCount); } catch { /* Preserve the plan while an incomplete count is being edited. */ }
-    }
     changed();
     renderRowValidity(row, record.config);
   });
@@ -648,36 +599,12 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
       dialog.close();
     } else openDetails(button.dataset.configAction, [id]);
   });
-  detailContent.addEventListener("input", event => {
-    detailError.hidden = true;
-    if (detailState?.kind !== "targets") return;
-    const config = detailState.config;
-    config.targetLimitsEnabled = getTargetLimitsEnabled();
-    if (!config.targetLimitsEnabled) { renderDetailTargets(); return; }
-    if (event.target.matches("input[data-target-index]")) {
-      config.targetLengthPlan[Number(event.target.dataset.targetIndex)] = event.target.value;
-      detailContent.querySelector(".target-plan-summary").textContent = planSummary(config);
-      return;
-    }
-    config.targetCount = detailContent.querySelector("#config-detail-target-count").valueAsNumber;
-    const enabled = detailContent.querySelector("#config-detail-plan-enabled").checked;
-    try {
-      config.targetLengthPlan = enabled ? resizeTargetPlan(config.targetLengthPlan ?? [], config.targetCount) : null;
-      renderDetailTargets();
-    } catch (failure) { showError(failure.message, detailError); }
-  });
+  detailContent.addEventListener("input", () => { detailError.hidden = true; });
   document.querySelector("#apply-config-detail").addEventListener("click", () => {
     if (!detailState) return;
     const { kind, ids, config } = detailState;
     let patch;
-    if (kind === "targets") {
-      // Validate the currently visible draft, including the count when length selection is off.
-      const enabled = getTargetLimitsEnabled();
-      patch = enabled ? { targetLimitsEnabled: true,
-        targetCount: detailContent.querySelector("#config-detail-target-count").valueAsNumber,
-        targetLengthPlan: detailContent.querySelector("#config-detail-plan-enabled").checked ? config.targetLengthPlan ?? [] : null }
-        : { targetLimitsEnabled: false };
-    } else if (kind === "fixedWords") {
+    if (kind === "fixedWords") {
       try { patch = fixedBoardEditor.getValue(); }
       catch (failure) { showError(failure.message, detailError); return; }
     } else {

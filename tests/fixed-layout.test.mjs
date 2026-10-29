@@ -95,15 +95,14 @@ test("bulk saved layouts remain independent and cannot silently shift after a bo
   assert.deepEqual(cleared[1].config.fixedLayout, base.fixedLayout);
 });
 
-test("a fully pinned board reports impossible target settings instead of retrying an unchanged board", () => {
+test("fully pinned boards ignore old target settings while impossible emotion scores still fail immediately", () => {
   const config = { ...settings(), rows: 2, fixedLayout: { ...settings().fixedLayout, rows: 2 } };
-  assert.throws(() => createGenerator(records(["CAT", "DOG", "XYZ"])).generate(config),
-    error => error.code !== "GENERATION_RETRY" && /固定棋盘只有 2 个/.test(error.message));
-  assert.throws(() => createGenerator(records(["CAT", "DOG", "CDO", "ZZZZZ"])).generate({ ...config,
-    targetLengthPlan: ["short", "short", "long"] }),
-    error => error.code !== "GENERATION_RETRY" && /固定棋盘无法满足目标词长/.test(error.message));
-  assert.throws(() => createGenerator([...records(["CAT", "DOG"]), { word: "CDO", rarityLevel: 1, emotion: -2 }]).generate({ ...config,
-    targetCount: 2, targetLengthPlan: ["short", "short"] }),
+  for (const targetLengthPlan of [["short", "short", "long"], []]) {
+    const level = createGenerator(records(["CAT", "DOG", "XYZ"])).generate({ ...config, targetCount: 99, targetLengthPlan });
+    assert.deepEqual(level.targetWords.map(entry => entry.word), ["CAT", "DOG"]);
+    assert.equal(level.targetCount, 2);
+  }
+  assert.throws(() => createGenerator([...records(["CAT", "DOG"]), { word: "CDO", rarityLevel: 1, emotion: -2 }]).generate(config),
     error => error.code !== "GENERATION_RETRY" && /情绪总分/.test(error.message));
 });
 
