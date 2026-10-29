@@ -1,4 +1,3 @@
-import { createPathSafetyChecker } from "./path-safety.js";
 import { normalizeDisabledCells } from "./board-shape.js";
 import { calculateLevelStatistics, compareRepresentativePaths, describePath } from "./level-statistics.js";
 import { createDuplicateCheck, findDuplicateWords } from "./level-rules.js";
@@ -211,12 +210,6 @@ export function createGenerator(records, onlyExtraRecords = []) {
     const nextCells = neighbors.map(items => shuffled(items, random));
     const maximumAdded = Math.min(emptyCount, Math.max(...options.map(entry => entry.word.length)));
     const minimumAdded = fixedWord ? 0 : 1;
-    function acceptsPlacement(word, path) {
-      const nextLetters = [...letters];
-      path.forEach((cell, index) => { nextLetters[cell] = word[index]; });
-      const isSafe = createPathSafetyChecker({ rows, columns, disabledCells, letters: nextLetters }, { allowEmpty: true });
-      return isSafe(word) && usedWords.every(existing => isSafe(existing));
-    }
     for (let added = maximumAdded; added >= minimumAdded; added--) {
       for (const direction of directions) {
         for (const entry of candidates) {
@@ -231,7 +224,7 @@ export function createGenerator(records, onlyExtraRecords = []) {
             path.push(cell); mask |= 1 << cell;
             let result = null;
             if (!remaining) {
-              if (acceptsPlacement(word, path)) result = { ...entry, path: [...path] };
+              result = { ...entry, path: [...path] };
             } else {
               for (const next of nextCells[cell]) {
                 if (mask & (1 << next)) continue;
@@ -322,7 +315,7 @@ export function createGenerator(records, onlyExtraRecords = []) {
     return [...found.values()].sort((a, b) => a.word.localeCompare(b.word));
   }
 
-  // Keep the covering initial words selected; expose all safe, eligible
+  // Keep the covering initial words selected; expose all eligible
   // candidates for manual selection without quantity or length quotas.
   function selectTargets({ rows, columns, disabledCells = [], letters, initialWords, foundWords,
     filters = {}, fixedWords = [], fixedWordExemptions = [] }) {
@@ -331,13 +324,10 @@ export function createGenerator(records, onlyExtraRecords = []) {
     const exemptions = new Set(normalizeFixedWordExemptions({ fixedWords, fixedWordExemptions }));
     if ([...exemptions].some(word => !initialNames.has(word))) throw new Error("豁免词必须是已摆入的初始固定词。");
     const foundByWord = new Map(foundWords.map(entry => [entry.word, entry]));
-    const safePath = createPathSafetyChecker({ rows, columns, letters, disabledCells });
     const canTarget = entry => {
       const record = dictionary.get(entry.word);
-      return record?.onlyExtra === false && safePath(entry.word) && matchesFilters(record, normalized, exemptions.has(record.word));
+      return record?.onlyExtra === false && matchesFilters(record, normalized, exemptions.has(record.word));
     };
-    const unsafeInitial = initialWords.filter(entry => !safePath(entry.word));
-    if (unsafeInitial.length) throw new Error(`初始词 ${unsafeInitial.map(entry => entry.word).join("、")} 存在用格歧义，可能导致关卡无法完成，请重新生成棋盘。`);
     if (initialNames.size !== initialWords.length || initialWords.some(entry => !canTarget(entry))) {
       throw new Error("初始词不能重复、包含仅额外词或不符合词库筛选。");
     }
@@ -367,7 +357,6 @@ export function createGenerator(records, onlyExtraRecords = []) {
     fixedLayout = normalizeFixedLayout({ rows, columns, disabledCells, fixedWords, fixedLayout });
     const pinned = new Set(fixedLayout?.placements.map(entry => entry.word) ?? []);
     const pinnedLetters = fixedLayoutLetters(rows, columns, fixedLayout?.placements ?? []);
-    const fullyPinned = pinnedLetters.every((letter, index) => letter || disabledCells.includes(index));
     const pool = getPool(filters, exemptions);
     const initialPool = getPool(initialWordFilters(filters, initialRarityLevel), exemptions);
     const duplicateTargets = new Set(duplicateCheck.target.range > 0 ? duplicateCheck.target.words.map(word => word.toUpperCase()) : []);
@@ -379,11 +368,6 @@ export function createGenerator(records, onlyExtraRecords = []) {
       if (!exemptions.has(word) && initialRarityLevel !== null && entry.rarityLevel !== initialRarityLevel) throw new Error(`固定单词 ${word} 不符合初始词生僻档位 ${initialRarityLevel}。`);
       if (!exemptions.has(word) && duplicateTargets.has(word)) throw new Error(`固定单词 ${word} 与最近 ${duplicateCheck.target.range} 关的目标词重复，请调整固定词或查重范围。`);
     }
-    if (pinned.size) {
-      const isSafe = createPathSafetyChecker({ rows, columns, disabledCells, letters: pinnedLetters }, { allowEmpty: true });
-      const unsafePinned = [...pinned].filter(word => !isSafe(word));
-      if (unsafePinned.length) throw new Error(`固定布局的 ${unsafePinned.join("、")} 已存在用格歧义，继续填词也无法消除，请调整固定位置。`);
-    }
     if (!pool.entries.length) throw new Error("筛选后没有可用的初始词，请调整词库筛选。");
     if (!initialPool.entries.length) throw new Error("当前词库筛选与初始词生僻档位下没有可用的初始词。");
     const usable = initialPool.entries.filter(entry => entry.word.length <= capacity);
@@ -394,17 +378,13 @@ export function createGenerator(records, onlyExtraRecords = []) {
     const maximumCoverage = pinnedLetters.filter(Boolean).length + usable.filter(entry => !pinned.has(entry.word))
       .reduce((sum, entry) => sum + entry.word.length, 0);
     if (maximumCoverage < capacity) throw new Error("当前可用的初始词无法填满棋盘，请调整造型或词库筛选。");
-    let duplicateFailure = false, emotionFailure = false;
+    let duplicateFailure = false;
     for (let attempt = 0; attempt < GENERATION_BATCH_SIZE; attempt++) {
       const filled = fillBoard({ rows, columns, disabledCells, initialForwardProbability, initialRarityLevel,
         filters: pool.filters, fixedWords, fixedLayout, fixedWordExemptions, random });
       if (!filled) continue;
       const foundWords = findWords({ rows, columns, disabledCells, ...filled });
       const result = selectTargets({ rows, columns, disabledCells, ...filled, foundWords, filters: pool.filters, fixedWords, fixedWordExemptions });
-      if (minimumEmotionScore !== null && (!Number.isFinite(result.statistics.emotion.total) || result.statistics.emotion.total < minimumEmotionScore)) {
-        if (fullyPinned) throw new Error(`固定棋盘的初始词已确定，情绪总分未达到 ${minimumEmotionScore}，请调整布局。`);
-        emotionFailure = true; continue;
-      }
       const duplicates = findDuplicateWords(result, duplicateCheck);
       if (duplicates.target.length || duplicates.extra.length) { duplicateFailure = true; continue; }
       return { ...result, initialForwardProbability, initialRarityLevel, minimumEmotionScore, fixedLayout: structuredClone(fixedLayout),
@@ -413,7 +393,7 @@ export function createGenerator(records, onlyExtraRecords = []) {
         }])) };
     }
     const reason = duplicateFailure ? "本轮生成的关卡与查重范围内的关卡存在重复单词。"
-      : emotionFailure ? `本轮生成的关卡情绪总分未达到 ${minimumEmotionScore}。` : "本轮未能用初始词填满棋盘。";
+      : "本轮未能用初始词填满棋盘。";
     const error = new Error(reason);
     error.code = "GENERATION_RETRY"; error.attempts = GENERATION_BATCH_SIZE;
     throw error;

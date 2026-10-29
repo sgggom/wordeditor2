@@ -1,4 +1,3 @@
-import { assertSafeTargetPaths } from "./path-safety.js";
 const DATABASE_NAME = "fangge.level-library.v1";
 const STORE_NAME = "levels";
 let databasePromise;
@@ -63,7 +62,6 @@ export function getSavedLevels() {
 }
 
 export async function saveLevel(level, existingRecord = null) {
-  assertSafeTargetPaths(level);
   const snapshot = structuredClone(level);
   return transact("readwrite", (store, request, done) => {
     if (existingRecord) {
@@ -92,9 +90,6 @@ export function deleteSavedLevel(id) {
 
 export function importSavedLevels(levels) {
   if (!Array.isArray(levels) || !levels.length) throw new Error("没有可导入的关卡。");
-  for (const [index, level] of levels.entries()) {
-    try { assertSafeTargetPaths(level); } catch (error) { throw new Error(`第 ${index + 1} 关：${error.message}`); }
-  }
   const snapshots = structuredClone(levels);
   return transact("readwrite", (store, request, done) => {
     request(store.getAll(), records => {

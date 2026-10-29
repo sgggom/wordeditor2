@@ -67,15 +67,15 @@ test('post-generation selection can replace an initial word only while every ena
   assert.deepEqual(level.targetWords.map(entry => entry.word), ['ABCFED']);
 });
 
-test('post-selection keeps explicit fixed words and rejects ambiguous candidate paths', () => {
+test('post-selection keeps explicit fixed words and permits ambiguous candidate paths', () => {
   const fixed = createGenerator(dictionary).generate(shape());
   assert.throws(() => setTargetWord(fixed, 'CAT', false), /固定单词/);
   const generator = createGenerator(['CATOTO', 'CAT', 'COT', 'TOT'].map(word => ({ word })));
   const board = { rows: 2, columns: 3, letters: [...'CATOTO'], initialWords: [{ word: 'CATOTO', path: [0, 1, 2, 5, 4, 3] }] };
   const level = generator.selectTargets({ ...board, foundWords: generator.findWords(board), targetCount: 100, targetLimitsEnabled: false });
-  assert.equal(level.candidateWords.some(entry => entry.word === 'CAT'), false);
-  level.candidateWords.push(level.extraWords.find(entry => entry.word === 'CAT'));
-  assert.throws(() => setTargetWord(level, 'CAT', true), /不同格子/);
+  assert.equal(level.candidateWords.some(entry => entry.word === 'CAT'), true);
+  const edited = setTargetWord(level, 'CAT', true);
+  assert.equal(edited.targetWords.find(entry => entry.word === 'CAT').pathAnalysis.safe, false);
 });
 
 test('removing limits retains filters, duplicate checks and fixed-board safety', () => {

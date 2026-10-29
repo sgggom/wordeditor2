@@ -19,9 +19,8 @@ function snapshotLevel(record) {
 }
 
 function editorLevel(raw, dictionary) {
-  // Opening an old unsafe level is allowed for inspection and repair. Every
-  // write below uses the normal, strict game export validation.
-  const game = createGameExport([{ level: raw }], { checkSafety: false });
+  // Ambiguity is advisory; validate the assigned paths and game format.
+  const game = createGameExport([{ level: raw }]);
   const parsed = importGameLevels(game, dictionary)[0];
   const found = new Map([...parsed.targetWords, ...parsed.extraWords].map(entry => [entry.word, entry]));
   function restore(entries, fallback) {
@@ -84,7 +83,7 @@ export function parseLevelFile(text, dictionary = []) {
 
 export function updateFileLevel(document, id, level) {
   // Validate a complete replacement before changing the in-memory file.
-  createGameExport([{ level }], { checkSafety: false });
+  createGameExport([{ level }]);
   const current = document.records.find(record => record.id === id);
   if (current) {
     current.level = copy(level);

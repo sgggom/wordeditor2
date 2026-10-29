@@ -3,7 +3,6 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { createGenerator } from "../dist/level-generator.js";
 import { setTargetWord } from "../dist/level-rules.js";
-import { createPathSafetyChecker } from "../dist/path-safety.js";
 import { describePath } from "../dist/level-statistics.js";
 
 const normal = JSON.parse(await readFile(new URL("../dist/data/required-words.json", import.meta.url), "utf8"));
@@ -39,7 +38,6 @@ function verifyLevel(level) {
   assert.equal(level.targetCount, targetCount);
   assert.ok(targetCount > 0);
   assert.deepEqual(level.targetWords, level.initialWords);
-  assert.ok(level.targetWords.every(entry => createPathSafetyChecker(level)(entry.word)));
   const targets = new Set(level.targetWords.map(entry => entry.word));
   const candidates = new Set(level.candidateWords.map(entry => entry.word));
   const extras = new Set(level.extraWords.map(entry => entry.word));
@@ -180,7 +178,7 @@ test("candidate enumeration is exhaustive across both banks and does not calcula
   const expected = new Set([...normal, ...onlyExtra].filter(entry => canSpell(entry.word, letters, 3, 4)).map(entry => entry.word));
   assert.deepEqual(new Set(found.map(entry => entry.word)), expected);
   assert.deepEqual(new Set([...level.targetWords, ...level.extraWords].map(entry => entry.word)), expected);
-  assert.deepEqual(new Set(level.candidateWords.map(entry => entry.word)), new Set(found.filter(entry => !entry.onlyExtra && entry.pathAnalysis.safe).map(entry => entry.word)));
+  assert.deepEqual(new Set(level.candidateWords.map(entry => entry.word)), new Set(found.filter(entry => !entry.onlyExtra).map(entry => entry.word)));
   assert.ok(found.every(entry => !("count" in entry)));
 });
 
@@ -225,7 +223,7 @@ test("repeated-letter paths are deduplicated by word and extras never inflate us
   const level = repeated.generate({ rows: 2, columns: 3, targetCount: 1, random: seededRandom(12) });
   assert.equal(level.initialWords.length, 1);
   assert.deepEqual(level.targetWords.map(entry => entry.word), ["AAAAAA"]);
-  assert.equal(level.candidateWords.length, 1);
+  assert.equal(level.candidateWords.length, 4);
   assert.ok(level.targetWords[0].pathAnalysis.legalPathCount > 1);
   assert.ok(level.extraWords.every(entry => entry.pathAnalysis.safe === false));
   assert.equal(level.extraWords.length, 3);

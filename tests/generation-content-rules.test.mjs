@@ -31,23 +31,21 @@ test("initial rarity participates in placement and coverage checks without broad
   }
 });
 
-test("negative weighted emotion retries while zero and positive totals are accepted", async () => {
-  const options = { rows: 2, columns: 3, targetCount: 1, minimumEmotionScore: 0, initialRarityLevel: 1, random: () => 0 };
+test("negative and missing weighted emotion do not trigger generation retries", async () => {
+  const options = { rows: 2, columns: 3, minimumEmotionScore: 0, random: () => 0 };
   const generator = emotion => createGenerator([{ word: "ABCDEF", rarityLevel: 1, emotion }], [{ word: "ABC", emotion: -2 }]);
-  const negative = generator(0);
-  assert.equal(negative.generate({ ...options, minimumEmotionScore: null }).statistics.emotion.total, -0.6);
-  assert.throws(() => negative.generate(options), error => error.code === "GENERATION_RETRY" && /情绪总分/.test(error.message));
-  let active = true;
-  const progress = [];
-  const stopped = await generateUntilComplete(negative, options, {
-    isCurrent: () => active,
-    onProgress: value => { progress.push(value.attempts); active = false; },
+  let retries = 0;
+  const negative = await generateUntilComplete(generator(0), options, {
+    onProgress: () => { retries++; },
   });
-  assert.equal(stopped, null);
-  assert.deepEqual(progress, [80]);
+  assert.equal(negative.statistics.emotion.total, -0.6);
+  assert.equal(negative.minimumEmotionScore, 0);
+  assert.equal(retries, 0);
   assert.equal(generator(1).generate(options).statistics.emotion.total, 0.4);
   const zero = createGenerator([{ word: "ABCDEF", rarityLevel: 1, emotion: 0 }]);
   assert.equal(zero.generate(options).statistics.emotion.total, 0);
+  const missing = createGenerator([{ word: "ABCDEF" }]);
+  assert.equal(missing.generate(options).statistics.emotion.total, null);
   assert.throws(() => zero.generate({ ...options, minimumEmotionScore: NaN }), /情绪总分下限/);
 });
 

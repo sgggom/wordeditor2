@@ -1,8 +1,7 @@
-import { assertSafeTargetPaths } from "./path-safety.js";
 import { normalizeDisabledCells } from "./board-shape.js";
 
 // Compatible with word关卡/index.html: assemblePack / freshLevel.
-export function createGameExport(records, { checkSafety = true } = {}) {
+export function createGameExport(records) {
   if (!Array.isArray(records) || !records.length) throw new Error("关卡列表为空。");
   const levels = records.map(({ level }, index) => {
     const number = index + 1;
@@ -30,9 +29,6 @@ export function createGameExport(records, { checkSafety = true } = {}) {
         })) fail(`${word} 的连接路径无效。`);
         if (isTarget) for (const cell of path) counts[cell] += 1;
       }
-    }
-    if (checkSafety) {
-      try { assertSafeTargetPaths({ ...level, disabledCells: [...disabled] }); } catch (error) { fail(error.message); }
     }
     if (counts.some((count, index) => disabled.has(index) ? count !== 0 : count < 1 || count > 35)) fail("格子使用次数须为 1～35，才能写入游戏格式。");
     return {

@@ -1,4 +1,3 @@
-import { createPathSafetyChecker } from "./path-safety.js";
 import { calculateLevelStatistics } from "./level-statistics.js";
 
 export function createDuplicateCheck(records, ranges, beforePosition = null) {
@@ -51,7 +50,6 @@ export function setTargetWord(level, word, selected) {
   if ((!candidate || candidate.onlyExtra) && (selected || !wasSelected)) throw new Error("只能从候选词中选择目标词。");
   if (!selected && level.fixedWords?.includes(word)) throw new Error("固定单词不能移出关卡目标。");
   if (wasSelected === selected) return level;
-  if (selected && !createPathSafetyChecker(level)(word)) throw new Error(`${word} 存在使用不同格子的路径，可能导致关卡无法完成，不能加入目标词。`);
   const allWords = [...level.targetWords, ...level.extraWords];
   const targetNames = new Set(level.targetWords.map(entry => entry.word));
   if (selected) targetNames.add(word);

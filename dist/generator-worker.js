@@ -30,7 +30,7 @@ self.onmessage = async ({ data }) => {
   try {
     const generator = await loadGenerator();
     const options = { rows, columns, disabledCells, initialForwardProbability,
-      initialRarityLevel: 1, minimumEmotionScore: 0, filters, fixedWords, fixedLayout, fixedWordExemptions, duplicateCheck };
+      minimumEmotionScore: 0, filters, fixedWords, fixedLayout, fixedWordExemptions, duplicateCheck };
     const level = await generateUntilComplete(generator, options, {
       isCurrent: () => activeRun === run,
       onProgress: progress => self.postMessage({ requestId, progress }),

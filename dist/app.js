@@ -1,4 +1,4 @@
-import { createPathSafetyChecker, assertSafeTargetPaths } from "./path-safety.js";
+import { createPathSafetyChecker } from "./path-safety.js";
 import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
 import { createDuplicateCheck, findDuplicateWords, setTargetWord } from "./level-rules.js";
 import { setupConfigList } from "./config-list.js";
@@ -62,6 +62,8 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   const resetButton = document.querySelector("#reset-size");
   const generateButton = document.querySelector("#generate-level");
   const errorMessage = document.querySelector("#generation-error");
+  const ambiguityWarning = document.querySelector("#ambiguity-warning");
+  const emotionWarning = document.querySelector("#emotion-warning");
   const wordList = document.querySelector("#word-list");
   const wordCount = document.querySelector("#word-count");
   const pathShareBar = document.querySelector("#path-share-bar");
@@ -294,12 +296,6 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     for (const [kind, input] of Object.entries(duplicateRangeInputs)) input.value = String(configuredDuplicateRanges[kind]);
     restoreFilterInputs();
     clearError();
-    const safePath = createPathSafetyChecker(level);
-    const unsafe = level.targetWords.filter(entry => !safePath(entry.word)).map(entry => entry.word);
-    if (unsafe.length) {
-      errorMessage.textContent = `当前关卡的 ${unsafe.join("、")} 存在用格歧义，可能导致无法完成，请重新生成。`;
-      errorMessage.hidden = false;
-    }
     wordList.parentElement.scrollTop = 0;
     render();
     savedLevelList.querySelector(`[data-saved-level-id="${record.id}"]`)?.focus({ preventScroll: true });
@@ -557,10 +553,10 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
         checkbox.dataset.targetWord = entry.word;
         checkbox.checked = membership.target.has(entry.word);
         const locked = level.fixedWords?.includes(entry.word);
-        checkbox.disabled = Boolean(presetView) || locked || generating || savingLevel || updatingLevelList || batchRunning || (!checkbox.checked && !safePath(entry.word));
+        checkbox.disabled = Boolean(presetView) || locked || generating || savingLevel || updatingLevelList || batchRunning;
         checkbox.setAttribute("aria-label", `${entry.word} 设为目标词`);
         selection.title = locked ? "固定单词不能移除" : checkbox.checked ? "移出目标词" : "加入目标词";
-        if (!checkbox.checked && !safePath(entry.word)) selection.title = "该词存在用格歧义，可能导致关卡无法完成，不能设为目标词";
+        if (!safePath(entry.word)) selection.title += "；该词存在用格歧义，仅作提示";
         selection.append(checkbox);
       } else {
         selection.textContent = "—";
@@ -713,6 +709,16 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   }
 
   function render() {
+    const safePath = level ? createPathSafetyChecker(level) : () => true;
+    const ambiguous = (level?.targetWords ?? []).filter(entry => !safePath(entry.word)).map(entry => entry.word);
+    ambiguityWarning.hidden = !ambiguous.length;
+    ambiguityWarning.textContent = ambiguous.length
+      ? `歧义提示：${ambiguous.join("、")} 存在使用不同格子的路径，可能影响作答；仅作提示，不影响生成、保存或导出。` : "";
+    const warningEmotionTotal = level?.statistics?.emotion?.total;
+    emotionWarning.hidden = !level || (Number.isFinite(warningEmotionTotal) && warningEmotionTotal >= 0);
+    emotionWarning.textContent = !level ? "" : Number.isFinite(warningEmotionTotal)
+      ? `情绪提示：当前情绪总分为 ${warningEmotionTotal}，低于 0；仅作警告，不影响生成、保存或导出。`
+      : "情绪提示：部分单词缺少情绪数据，暂无法计算总分；仅作警告，不影响生成、保存或导出。";
     const { rows, columns } = size;
     layout.style.setProperty("--rows", rows);
     layout.style.setProperty("--columns", columns);
@@ -1043,7 +1049,6 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
         worker.onerror = () => reject(new Error("关卡读取失败，请刷新重试。"));
         worker.postMessage({ type: "single", text });
       });
-      assertSafeTargetPaths(imported);
       updatingLevelList = false;
       if (!fileView) returnToEditedLevels();
       clearLevel();
@@ -1488,7 +1493,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       ...size,
       initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
       fixedWordExemptions: configuredFixedWordExemptions,
-      initialRarityLevel: 1, minimumEmotionScore: 0,
+      minimumEmotionScore: 0,
       targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra,
     }),
     loadConfig: config => {

@@ -67,7 +67,7 @@ test("pinned overlap counts as covered cells rather than summed word lengths in 
   assert.throws(() => generator.generate(config), error => error.code !== "GENERATION_RETRY" && /无法填满/.test(error.message));
 });
 
-test("legacy automatic words keep pinned paths while ambiguous completions retry", () => {
+test("legacy automatic words keep pinned paths while ambiguous completions succeed", () => {
   const generator = createGenerator(records(["CAT", "DOG", "HEN"]));
   const config = settings();
   config.fixedLayout.placements.pop();
@@ -76,8 +76,9 @@ test("legacy automatic words keep pinned paths while ambiguous completions retry
   assert.ok(level.targetWords.some(entry => entry.word === "DOG"));
   const unsafe = { ...settings(), rows: 2, targetLengthPlan: null, fixedWords: ["CAT", "CO"], fixedLayout: { rows: 2, columns: 3,
     placements: [{ word: "CAT", path: [0, 1, 2] }, { word: "CO", path: [0, 3] }] } };
-  assert.throws(() => createGenerator(records(["CAT", "CO", "COT", "TOT"])).generate({ ...unsafe, random: randomFrom(3) }),
-    error => error.code === "GENERATION_RETRY" && /填满棋盘/.test(error.message));
+  const completed = createGenerator(records(["CAT", "CO", "COT", "TOT"])).generate({ ...unsafe, random: randomFrom(3) });
+  assert.ok(completed.cells.every(cell => cell.count > 0));
+  assert.deepEqual(completed.fixedLayout, unsafe.fixedLayout);
   assert.deepEqual(unsafe.fixedLayout.placements[0].path, [0, 1, 2]);
 });
 
@@ -95,15 +96,16 @@ test("bulk saved layouts remain independent and cannot silently shift after a bo
   assert.deepEqual(cleared[1].config.fixedLayout, base.fixedLayout);
 });
 
-test("fully pinned boards ignore old target settings while impossible emotion scores still fail immediately", () => {
+test("fully pinned boards ignore old target settings and allow negative emotion totals", () => {
   const config = { ...settings(), rows: 2, fixedLayout: { ...settings().fixedLayout, rows: 2 } };
   for (const targetLengthPlan of [["short", "short", "long"], []]) {
     const level = createGenerator(records(["CAT", "DOG", "XYZ"])).generate({ ...config, targetCount: 99, targetLengthPlan });
     assert.deepEqual(level.targetWords.map(entry => entry.word), ["CAT", "DOG"]);
     assert.equal(level.targetCount, 2);
   }
-  assert.throws(() => createGenerator([...records(["CAT", "DOG"]), { word: "CDO", rarityLevel: 1, emotion: -2 }]).generate(config),
-    error => error.code !== "GENERATION_RETRY" && /情绪总分/.test(error.message));
+  const negative = createGenerator([...records(["CAT", "DOG"]), { word: "CDO", rarityLevel: 1, emotion: -2 }]).generate(config);
+  assert.equal(negative.statistics.emotion.total, -0.6);
+  assert.deepEqual(negative.fixedLayout, config.fixedLayout);
 });
 
 test("automatic-only preset words follow the initial direction preference without pinning their paths", () => {

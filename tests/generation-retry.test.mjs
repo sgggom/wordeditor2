@@ -52,10 +52,9 @@ test("generation yields between batches and stops when its request is no longer 
   assert.equal(calls, 1);
 });
 
-test("unlucky safe-fill searches retry while impossible physical coverage fails immediately", () => {
+test("ambiguity does not retry while impossible physical coverage fails immediately", () => {
   const repeated = createGenerator([{ word: "AAA" }, { word: "AAAA" }]);
-  assert.throws(() => repeated.generate({ rows: 2, columns: 3, random: () => 0.5 }),
-    error => error.code === "GENERATION_RETRY" && error.attempts === 80);
+  assert.ok(repeated.generate({ rows: 2, columns: 3, random: () => 0.5 }).targetWords.some(entry => !entry.pathAnalysis.safe));
   const tooLong = createGenerator([{ word: "ABCDEFG" }]);
   assert.throws(() => tooLong.generate({ rows: 2, columns: 3 }),
     error => error.code !== "GENERATION_RETRY" && /没有可用的初始词/.test(error.message));

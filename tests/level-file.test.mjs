@@ -152,13 +152,13 @@ test("externally changed files are not overwritten, while Save As writes a separ
   assert.equal(document.dirty, false);
 });
 
-test("unsafe legacy files can be opened for repair but cannot be saved", async () => {
+test("ambiguous legacy files can be opened and saved", async () => {
   const data = JSON.parse(await readFile(new URL("./fixtures/shaped-level-41.json", import.meta.url)));
   const document = parseLevelFile(JSON.stringify(data));
   const file = memoryHandle(document.savedText); document.handle = file.handle;
-  assert.throws(() => serializeLevelFile(document), /不同格子/);
-  await assert.rejects(writeLevelFile(document), /不同格子/);
-  assert.equal(file.creates(), 0);
+  assert.ok(serializeLevelFile(document));
+  await writeLevelFile(document);
+  assert.equal(file.creates(), 1);
 });
 
 test("configuration lists and malformed level files fail before replacing an open document", () => {

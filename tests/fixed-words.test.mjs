@@ -90,10 +90,12 @@ test("presets cannot bypass dictionary roles, filters, initial rarity or target 
   verify(generator.generate({ ...config(), fixedWords: ["CAT"], duplicateCheck: crossCategory, random: randomFrom(7) }), ["CAT"]);
 });
 
-test("preset words do not bypass the minimum emotion rule", () => {
+test("preset words can generate with negative emotion totals", () => {
   const generator = createGenerator([{ word: "ABCDEF", rarityLevel: 1, emotion: -1 }]);
-  assert.throws(() => generator.generate({ rows: 2, columns: 3, targetCount: 1, initialRarityLevel: 1,
-    minimumEmotionScore: 0, fixedWords: ["ABCDEF"] }), error => error.code === "GENERATION_RETRY" && /情绪总分/.test(error.message));
+  const level = generator.generate({ rows: 2, columns: 3, targetCount: 1, initialRarityLevel: 1,
+    minimumEmotionScore: 0, fixedWords: ["ABCDEF"] });
+  assert.equal(level.statistics.emotion.total, -1);
+  assert.equal(level.targetWords[0].word, "ABCDEF");
 });
 
 test("preset bulk editing and storage are atomic, independent, clearable and compatible with old rows", () => {

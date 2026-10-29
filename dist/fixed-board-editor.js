@@ -3,6 +3,7 @@ import { normalizeFixedWords, validateFixedWords, normalizeFixedLayout, fixedLay
 import { describePath } from "./level-statistics.js";
 import { bindWordTooltip } from "./word-tooltip.js";
 import { createGenerator } from "./level-generator.js";
+import { CONFIG_FILTER_OPTIONS } from "./level-config.js";
 
 let vocabularyPromise;
 function loadVocabulary() {
@@ -53,12 +54,49 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   let activeWord = null, activePath = [], selectedWord = null;
   let vocabulary = null, byWord = new Map(), disposed = false;
   let detector = null, detectionKey = null;
+  const selectedLengths = new Set();
+  const searchFilters = Object.fromEntries(Object.entries(CONFIG_FILTER_OPTIONS).map(([key, values]) => [key, new Set(values)]));
   container.innerHTML = '<div class="fixed-board-editor"><section class="fixed-board-side"><div class="fixed-board-heading"><strong id="fixed-board-size"></strong><button type="button" class="reset-button" data-fixed-action="clear">清空单词</button></div><div class="board-edit-controls"><label>行 <select data-board-dimension="rows" aria-label="棋盘行数"></select></label><label>列 <select data-board-dimension="columns" aria-label="棋盘列数"></select></label><button type="button" class="reset-button" data-board-mode="shape">调整棋盘</button><button type="button" class="reset-button" data-board-mode="words">固定单词</button></div><div class="fixed-board-stage"><div class="fixed-board-grid" role="group" aria-label="固定单词棋盘"></div></div><div class="fixed-placement-status" aria-live="polite"></div><div class="fixed-placement-actions"><button type="button" class="reset-button" data-fixed-action="undo">撤销一格</button><button type="button" class="reset-button" data-fixed-action="cancel">取消摆放</button></div><div class="fixed-preset-list" aria-label="已添加的固定单词"></div></section><section class="fixed-search-side"><label for="fixed-word-search">搜索单词</label><input id="fixed-word-search" type="search" placeholder="输入单词或释义" autocomplete="off" spellcheck="false" /><div class="fixed-search-count" aria-live="polite"></div><div class="fixed-search-results"></div><button type="button" class="reset-button" data-fixed-action="retry" hidden>重新加载词库</button></section></div>';
   const grid = container.querySelector(".fixed-board-grid");
   const status = container.querySelector(".fixed-placement-status");
   const list = container.querySelector(".fixed-preset-list");
   const search = container.querySelector("#fixed-word-search");
+  const lengthFilter = element("fieldset", "fixed-length-filter");
+  lengthFilter.append(element("legend", "", "单词长度（可多选）"));
+  const lengthOptions = element("div", "fixed-length-options");
+  lengthFilter.append(lengthOptions);
+  search.previousElementSibling.before(lengthFilter);
+  const vocabularyFilter = element("details", "fixed-vocabulary-filter");
+  const vocabularySummary = element("summary", "", "词库筛选 · 全部");
+  const vocabularyFields = element("div", "fixed-vocabulary-fields");
+  const filterLabels = { scope: "范围库", emotion: "情绪类型", abbreviation: "是否缩写", rarityLevel: "生僻档位" };
+  for (const [key, values] of Object.entries(CONFIG_FILTER_OPTIONS)) {
+    const field = element("fieldset", "");
+    field.append(element("legend", "", filterLabels[key]));
+    const options = element("div", "fixed-vocabulary-options");
+    for (const value of values) {
+      const label = element("label", "");
+      const input = document.createElement("input");
+      input.type = "checkbox"; input.checked = true;
+      input.dataset.fixedFilter = key; input.value = value;
+      const text = key === "scope" && value === 0 ? "2词库"
+        : key === "abbreviation" ? (value === 0 ? "非缩写" : "缩写") : String(value);
+      label.append(input, document.createTextNode(text)); options.append(label);
+    }
+    field.append(options); vocabularyFields.append(field);
+  }
+  const resetFilters = element("button", "reset-button", "重置词库筛选");
+  resetFilters.type = "button"; resetFilters.dataset.fixedFilterReset = "true";
+  vocabularyFields.append(resetFilters);
+  vocabularyFilter.append(vocabularySummary, vocabularyFields);
+  lengthFilter.after(vocabularyFilter);
   const results = container.querySelector(".fixed-search-results");
+  const searchBrowser = element("div", "fixed-search-browser");
+  const letterIndex = element("nav", "fixed-letter-index");
+  letterIndex.setAttribute("aria-label", "按首字母跳转");
+  const firstByLetter = new Map();
+  results.before(searchBrowser);
+  searchBrowser.append(results, letterIndex);
   const resultCount = container.querySelector(".fixed-search-count");
   const undo = container.querySelector('[data-fixed-action="undo"]');
   const cancel = container.querySelector('[data-fixed-action="cancel"]');
@@ -69,7 +107,10 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   extraCount.setAttribute("aria-live", "polite");
   const extraNote = element("p", "fixed-extra-note", "根据当前已摆放的字母实时检测，不含已添加的固定单词；空白格不参与。");
   const extraResults = element("div", "fixed-extra-results");
-  extraSection.append(extraCount, extraNote, extraResults);
+  const ambiguityNote = element("p", "fixed-extra-note ambiguity-warning");
+  ambiguityNote.setAttribute("role", "status");
+  ambiguityNote.hidden = true;
+  extraSection.append(extraCount, extraNote, extraResults, ambiguityNote);
   list.after(extraSection);
   container.querySelector("#fixed-board-size").textContent = `${rows} 行 × ${columns} 列`;
   grid.style.setProperty("--fixed-columns", columns);
@@ -115,14 +156,18 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
     if (!entry) return vocabulary ? "不在可用初始词库中" : "词库加载中";
     for (const original of configs) {
       const settings = draftSettings(original);
-      const exempt = settings.fixedWordExemptions?.includes(word) ?? false;
       try {
         validateFixedWords({ ...settings, fixedWords: [...new Set([...words, word])] });
       } catch (error) { return error.message; }
-      if (Object.entries(settings.filters ?? {}).some(([key, values]) => !(exempt && (key === "scope" || key === "rarityLevel")) && !values.includes(entry[key]))) return "不符合词库筛选";
-      if (!exempt && entry.rarityLevel !== 1) return "初始词生僻档位需为 1";
     }
+    if (Object.entries(searchFilters).some(([key, selected]) => selected.size !== CONFIG_FILTER_OPTIONS[key].length && !selected.has(entry[key]))) return "不符合当前手动筛选";
     return "";
+  }
+
+  function manualFilters() {
+    return Object.fromEntries(Object.entries(searchFilters)
+      .filter(([key, selected]) => selected.size !== CONFIG_FILTER_OPTIONS[key].length)
+      .map(([key, selected]) => [key, [...selected].sort((a, b) => a - b)]));
   }
 
   function drawPath(path) {
@@ -159,8 +204,12 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
     // can also inspect the editor's partially filled board.
     const blocked = [...new Set([...disabledCells, ...letters.flatMap((letter, cell) => letter ? [] : [cell])])];
     const fixed = new Set(words);
-    const extras = detector.findWords({ rows, columns, letters, disabledCells: blocked })
-      .filter(entry => !fixed.has(entry.word));
+    const found = detector.findWords({ rows, columns, letters, disabledCells: blocked });
+    const extras = found.filter(entry => !fixed.has(entry.word));
+    const ambiguous = found.filter(entry => fixed.has(entry.word) && !entry.pathAnalysis.safe).map(entry => entry.word);
+    ambiguityNote.hidden = !ambiguous.length;
+    ambiguityNote.textContent = ambiguous.length
+      ? `歧义提示：${ambiguous.join("、")} 存在使用不同格子的路径；仅作提示，不影响生成。` : "";
     extraCount.textContent = `额外词检测 · ${extras.length} 个`;
     const fragment = document.createDocumentFragment();
     for (const entry of extras) {
@@ -225,19 +274,37 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
     if (!words.length) list.append(element("span", "fixed-list-empty", "暂无固定单词"));
   }
 
+  function renderLengthFilter() {
+    const lengths = [...new Set((vocabulary ?? []).map(entry => entry.word.length))].sort((a, b) => a - b);
+    const fragment = document.createDocumentFragment();
+    for (const length of [null, ...lengths]) {
+      const button = element("button", "reset-button", length === null ? "全部" : String(length));
+      button.type = "button";
+      button.dataset.fixedLength = length === null ? "all" : String(length);
+      button.setAttribute("aria-label", length === null ? "全部长度" : `${length} 个字母`);
+      button.setAttribute("aria-pressed", String(length === null ? !selectedLengths.size : selectedLengths.has(length)));
+      fragment.append(button);
+    }
+    lengthOptions.replaceChildren(fragment);
+  }
+
   function renderSearch() {
     if (!vocabulary) { resultCount.textContent = "加载词库…"; return; }
     const query = search.value.trim(), upper = query.toUpperCase();
-    const matches = vocabulary.filter(entry => !query || entry.word.includes(upper) || String(entry.definitionZh ?? "").includes(query))
-      .map(entry => ({ entry, issue: wordIssue(entry.word) })).filter(item => query || !item.issue)
-      .sort((a, b) => Number(b.entry.word === upper) - Number(a.entry.word === upper) ||
+    const matches = vocabulary.filter(entry => (!selectedLengths.size || selectedLengths.has(entry.word.length)) &&
+      Object.entries(searchFilters).every(([key, selected]) => selected.size === CONFIG_FILTER_OPTIONS[key].length || selected.has(entry[key])) &&
+      (!query || entry.word.includes(upper) || String(entry.definitionZh ?? "").includes(query)))
+      .map(entry => ({ entry, issue: wordIssue(entry.word) }))
+      .sort((a, b) => !query ? a.entry.word.localeCompare(b.entry.word) : Number(b.entry.word === upper) - Number(a.entry.word === upper) ||
         Number(Boolean(a.issue)) - Number(Boolean(b.issue)) ||
         Number(b.entry.word.startsWith(upper)) - Number(a.entry.word.startsWith(upper)) || a.entry.word.localeCompare(b.entry.word));
-    resultCount.textContent = matches.length ? `${matches.length} 个结果${matches.length > 60 ? " · 显示前 60 个" : ""}` : "没有匹配的单词";
+    resultCount.textContent = matches.length ? `${matches.length} 个结果${query && matches.length > 60 ? " · 显示前 60 个" : ""}` : "没有匹配的单词";
+    firstByLetter.clear();
     const fragment = document.createDocumentFragment();
-    for (const { entry, issue } of matches.slice(0, 60)) {
+    for (const { entry, issue } of query ? matches.slice(0, 60) : matches) {
       const selected = words.includes(entry.word), pinned = placements.some(item => item.word === entry.word);
       const card = element("div", `fixed-search-result${selected ? " is-selected" : ""}${issue ? " is-disabled" : ""}`);
+      if (!firstByLetter.has(entry.word[0])) firstByLetter.set(entry.word[0], card);
       const heading = element("span", "fixed-result-heading");
       const wordLabel = element("strong", "", entry.word);
       bindWordTooltip(wordLabel, entry);
@@ -253,6 +320,16 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
       fragment.append(card);
     }
     results.replaceChildren(fragment); results.scrollTop = 0;
+    const letters = document.createDocumentFragment();
+    for (const letter of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+      const button = element("button", "", letter);
+      button.type = "button"; button.dataset.fixedLetter = letter;
+      button.setAttribute("aria-label", `跳到 ${letter} 开头的单词`);
+      button.disabled = !firstByLetter.has(letter);
+      letters.append(button);
+    }
+    letterIndex.replaceChildren(letters);
+    letterIndex.hidden = Boolean(query);
   }
 
   function startWord(word) {
@@ -320,6 +397,26 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   const click = event => {
     const button = event.target.closest("button");
     if (!button || button.disabled) return;
+    if (button.dataset.fixedFilterReset) {
+      for (const [key, values] of Object.entries(CONFIG_FILTER_OPTIONS)) searchFilters[key] = new Set(values);
+      vocabularyFields.querySelectorAll("input").forEach(input => { input.checked = true; });
+      vocabularySummary.textContent = "词库筛选 · 全部";
+      renderSearch(); return;
+    }
+    if (button.dataset.fixedLetter) {
+      const card = firstByLetter.get(button.dataset.fixedLetter);
+      if (card) results.scrollTop += card.getBoundingClientRect().top - results.getBoundingClientRect().top;
+      return;
+    }
+    if (button.dataset.fixedLength !== undefined) {
+      const length = Number(button.dataset.fixedLength);
+      if (button.dataset.fixedLength === "all") selectedLengths.clear();
+      else if (selectedLengths.has(length)) selectedLengths.delete(length);
+      else selectedLengths.add(length);
+      renderLengthFilter(); renderSearch();
+      lengthOptions.querySelector(`[data-fixed-length="${button.dataset.fixedLength}"]`)?.focus({ preventScroll: true });
+      return;
+    }
     if (button.dataset.boardMode) {
       editMode = button.dataset.boardMode;
       activeWord = null; activePath = []; selectedWord = null;
@@ -349,17 +446,28 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
       const { entries, detector: loadedDetector } = await loadVocabulary();
       if (disposed) return;
       vocabulary = entries; detector = loadedDetector;
-      byWord = new Map(entries.map(entry => [entry.word, entry])); renderBoard(); renderSearch();
+      byWord = new Map(entries.map(entry => [entry.word, entry])); renderLengthFilter(); renderBoard(); renderSearch();
     } catch (error) {
       if (disposed) return;
       resultCount.textContent = "词库加载失败"; retry.hidden = false; onError(error.message);
       renderBoard();
     }
   }
+  const changeSearchFilter = event => {
+    const key = event.target.dataset.fixedFilter;
+    if (!Object.hasOwn(searchFilters, key)) return;
+    const value = Number(event.target.value);
+    if (event.target.checked) searchFilters[key].add(value);
+    else searchFilters[key].delete(value);
+    const filtered = Object.entries(searchFilters).some(([key, selected]) => selected.size !== CONFIG_FILTER_OPTIONS[key].length);
+    vocabularySummary.textContent = `词库筛选 · ${filtered ? "已筛选" : "全部"}`;
+    renderSearch();
+  };
   container.addEventListener("click", click);
   container.addEventListener("change", changeDimension);
+  vocabularyFilter.addEventListener("change", changeSearchFilter);
   search.addEventListener("input", renderSearch);
-  renderBoard(); load();
+  renderLengthFilter(); renderBoard(); load();
   return {
     getValue() {
       if (activeWord) throw new Error(`请先摆完 ${activeWord}，或将它改为自动摆放。`);
@@ -367,9 +475,9 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
       if (placements.length && !canPin) throw new Error("所选棋盘不同，请先调整棋盘以统一布局，或将固定词改为自动摆放后应用。");
       for (const word of words) { const issue = wordIssue(word); if (issue) throw new Error(`${word}：${issue}`); }
       const fixedLayout = placements.length ? { rows, columns, placements: structuredClone(placements) } : null;
-      return { ...(boardChanged || configs.length === 1 ? { rows, columns, disabledCells: [...disabledCells] } : {}), fixedWords: [...words], fixedLayout: normalizeFixedLayout({ ...config, rows, columns, fixedWords: words, fixedLayout }) };
+      return { ...(boardChanged || configs.length === 1 ? { rows, columns, disabledCells: [...disabledCells] } : {}), filters: manualFilters(), fixedWords: [...words], fixedLayout: normalizeFixedLayout({ ...config, rows, columns, fixedWords: words, fixedLayout }) };
     },
-    destroy() { disposed = true; container.removeEventListener("click", click); container.removeEventListener("change", changeDimension); search.removeEventListener("input", renderSearch); },
+    destroy() { disposed = true; container.removeEventListener("click", click); container.removeEventListener("change", changeDimension); vocabularyFilter.removeEventListener("change", changeSearchFilter); search.removeEventListener("input", renderSearch); },
   };
 }
 
