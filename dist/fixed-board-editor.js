@@ -2,6 +2,7 @@ import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
 import { normalizeFixedWords, validateFixedWords, normalizeFixedLayout, fixedLayoutLetters } from "./fixed-words.js";
 import { describePath } from "./level-statistics.js";
 import { bindWordTooltip } from "./word-tooltip.js";
+import { createGenerator } from "./level-generator.js";
 
 let vocabularyPromise;
 function loadVocabulary() {
@@ -13,7 +14,10 @@ function loadVocabulary() {
     const excluded = new Set(extras.map(entry => entry.word));
     const words = new Map();
     for (const entry of [...normal, ...guide]) if (/^[A-Z]+$/.test(entry.word) && !entry.onlyExtra && !excluded.has(entry.word)) words.set(entry.word, entry);
-    return [...words.values()].sort((a, b) => a.word.localeCompare(b.word));
+    return {
+      entries: [...words.values()].sort((a, b) => a.word.localeCompare(b.word)),
+      detector: createGenerator([...normal, ...guide], extras),
+    };
   }).catch(error => { vocabularyPromise = null; throw error; });
   return vocabularyPromise;
 }
@@ -48,6 +52,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   });
   let activeWord = null, activePath = [], selectedWord = null;
   let vocabulary = null, byWord = new Map(), disposed = false;
+  let detector = null, detectionKey = null;
   container.innerHTML = '<div class="fixed-board-editor"><section class="fixed-board-side"><div class="fixed-board-heading"><strong id="fixed-board-size"></strong><button type="button" class="reset-button" data-fixed-action="clear">清空单词</button></div><div class="board-edit-controls"><label>行 <select data-board-dimension="rows" aria-label="棋盘行数"></select></label><label>列 <select data-board-dimension="columns" aria-label="棋盘列数"></select></label><button type="button" class="reset-button" data-board-mode="shape">调整棋盘</button><button type="button" class="reset-button" data-board-mode="words">固定单词</button></div><div class="fixed-board-stage"><div class="fixed-board-grid" role="group" aria-label="固定单词棋盘"></div></div><div class="fixed-placement-status" aria-live="polite"></div><div class="fixed-placement-actions"><button type="button" class="reset-button" data-fixed-action="undo">撤销一格</button><button type="button" class="reset-button" data-fixed-action="cancel">取消摆放</button></div><div class="fixed-preset-list" aria-label="已添加的固定单词"></div></section><section class="fixed-search-side"><label for="fixed-word-search">搜索单词</label><input id="fixed-word-search" type="search" placeholder="输入单词或释义" autocomplete="off" spellcheck="false" /><div class="fixed-search-count" aria-live="polite"></div><div class="fixed-search-results"></div><button type="button" class="reset-button" data-fixed-action="retry" hidden>重新加载词库</button></section></div>';
   const grid = container.querySelector(".fixed-board-grid");
   const status = container.querySelector(".fixed-placement-status");
@@ -58,6 +63,14 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   const undo = container.querySelector('[data-fixed-action="undo"]');
   const cancel = container.querySelector('[data-fixed-action="cancel"]');
   const retry = container.querySelector('[data-fixed-action="retry"]');
+  const extraSection = element("section", "fixed-extra-section");
+  extraSection.setAttribute("aria-label", "额外词检测");
+  const extraCount = element("strong", "fixed-extra-heading", "额外词检测");
+  extraCount.setAttribute("aria-live", "polite");
+  const extraNote = element("p", "fixed-extra-note", "根据当前已摆放的字母实时检测，不含已添加的固定单词；空白格不参与。");
+  const extraResults = element("div", "fixed-extra-results");
+  extraSection.append(extraCount, extraNote, extraResults);
+  list.after(extraSection);
   container.querySelector("#fixed-board-size").textContent = `${rows} 行 × ${columns} 列`;
   grid.style.setProperty("--fixed-columns", columns);
   for (const select of container.querySelectorAll("[data-board-dimension]")) {
@@ -134,6 +147,31 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
     svg.append(line, arrow); grid.append(svg);
   }
 
+  function renderExtraWords(letters) {
+    if (!detector) {
+      extraResults.textContent = retry.hidden ? "加载词库…" : "词库加载失败，请重新加载词库。";
+      return;
+    }
+    const key = JSON.stringify([rows, columns, disabledCells, letters, words]);
+    if (key === detectionKey) return;
+    detectionKey = key;
+    // Treat unfinished cells as blocked so the same search used in generation
+    // can also inspect the editor's partially filled board.
+    const blocked = [...new Set([...disabledCells, ...letters.flatMap((letter, cell) => letter ? [] : [cell])])];
+    const fixed = new Set(words);
+    const extras = detector.findWords({ rows, columns, letters, disabledCells: blocked })
+      .filter(entry => !fixed.has(entry.word));
+    extraCount.textContent = `额外词检测 · ${extras.length} 个`;
+    const fragment = document.createDocumentFragment();
+    for (const entry of extras) {
+      const label = element("span", "fixed-extra-word", entry.word);
+      bindWordTooltip(label, entry);
+      fragment.append(label);
+    }
+    if (!extras.length) fragment.append(element("span", "fixed-list-empty", "当前未检测到额外词"));
+    extraResults.replaceChildren(fragment);
+  }
+
   function renderBoard() {
     container.querySelector("#fixed-board-size").textContent = `${rows} 行 × ${columns} 列 · ${rows * columns - disabledCells.length} 格`;
     grid.style.setProperty("--fixed-columns", columns);
@@ -141,6 +179,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
     const base = placements.filter(entry => entry.word !== activeWord);
     const letters = fixedLayoutLetters(rows, columns, base);
     activePath.forEach((cell, index) => { letters[cell] = activeWord[index]; });
+    renderExtraWords(letters);
     const path = activeWord ? activePath : placements.find(entry => entry.word === selectedWord)?.path ?? [];
     const fragment = document.createDocumentFragment();
     for (let cell = 0; cell < letters.length; cell++) {
@@ -305,13 +344,16 @@ export function mountFixedBoardEditor(container, config, { configs = [config], o
   };
   async function load() {
     retry.hidden = true; resultCount.textContent = "加载词库…";
+    renderBoard();
     try {
-      const entries = await loadVocabulary();
+      const { entries, detector: loadedDetector } = await loadVocabulary();
       if (disposed) return;
-      vocabulary = entries; byWord = new Map(entries.map(entry => [entry.word, entry])); renderSearch();
+      vocabulary = entries; detector = loadedDetector;
+      byWord = new Map(entries.map(entry => [entry.word, entry])); renderBoard(); renderSearch();
     } catch (error) {
       if (disposed) return;
       resultCount.textContent = "词库加载失败"; retry.hidden = false; onError(error.message);
+      renderBoard();
     }
   }
   container.addEventListener("click", click);

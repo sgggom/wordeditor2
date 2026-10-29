@@ -204,6 +204,11 @@ legend { padding: 0; margin-bottom: 5px; color: #66705f; font-size: 11px; }
 .fixed-preset-word { min-width: 0; flex: 1; padding: 3px 0; overflow: hidden; border: 0; background: none; color: #345038; font-size: 13px; font-weight: 600; text-align: left; text-overflow: ellipsis; }
 .fixed-preset-row.is-selected .fixed-preset-word { color: #245e2d; }
 .fixed-preset-state, .fixed-list-empty { color: #819173; font-size: 11px; }
+.fixed-extra-section { flex-shrink: 0; padding-top: 10px; border-top: 1px solid #dfe5d7; }
+.fixed-extra-heading { color: #52664a; font-size: 12px; }
+.fixed-extra-note { margin: 5px 0 8px; color: #819173; font-size: 11px; }
+.fixed-extra-results { display: flex; flex-wrap: wrap; gap: 6px; max-height: 130px; overflow-y: auto; scrollbar-width: thin; color: #819173; font-size: 11px; }
+.fixed-extra-word { padding: 3px 8px; border: 1px solid #dfe5d7; border-radius: 5px; background: #fff; color: #345038; font-size: 12px; }
 .fixed-remove { color: #a33d30; }
 .fixed-search-side { padding: 2px 0; }
 .fixed-search-side > label { color: #52664a; font-size: 12px; font-weight: 600; }
