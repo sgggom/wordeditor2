@@ -20,10 +20,13 @@ test("Zen details show exactly t1 and t3 with their real level numbers and roles
   assert.ok(ios.locations.some(location => location.number === 57 && location.roles.includes("仅额外")));
 });
 
-test("other games and Zen purchase/wordtime versions do not appear in source details", async () => {
+test("Zen shows t1 and t3 while Word Tiles retains every source version", async () => {
   const groups = sourceLevelsForWord(sources, await readShard("i"), "ICE");
-  assert.deepEqual(groups.map(game => game.id), ["06_Zen_Word"]);
+  assert.deepEqual(groups.map(game => game.id), ["06_Zen_Word", "07_Word_Tiles"]);
   assert.deepEqual(groups[0].configs.map(config => config.id), ["t1", "t3"]);
+  assert.deepEqual(groups[1].configs.map(config => config.id), ["list0", "list5"]);
+  assert.equal(groups[1].configs[0].locations[0].number, 1);
+  assert.equal(groups[1].configs[0].locations[0].id, "191596");
   assert.equal(groups[0].configs[0].locations[0].number, 39);
 });
 

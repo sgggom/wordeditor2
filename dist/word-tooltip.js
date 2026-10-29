@@ -5,7 +5,7 @@ let sourcesPromise;
 let dictionaryPromise;
 const levelSourceLoads = new Map();
 const sourceRoleLabels = ["目标词", "额外词", "仅额外", "奖励词"];
-const detailedSourceGames = new Set(["06_Zen_Word"]);
+const detailedSourceGames = new Set(["06_Zen_Word", "07_Word_Tiles"]);
 const detailedSourceVersions = new Set(["t1", "t3"]);
 let initialized = false;
 
@@ -69,7 +69,7 @@ export function sourceLevelsForWord(sources, shard, word) {
     if (!detailedSourceGames.has(game?.id)) continue;
     const config = game.configs?.[configIndex];
     if (!config) throw new Error("来源关卡版本无效。");
-    if (!detailedSourceVersions.has(config.id)) continue;
+    if (game.id === "06_Zen_Word" && !detailedSourceVersions.has(config.id)) continue;
     if (!games.has(game.id)) games.set(game.id, { ...game, configs: [] });
     games.get(game.id).configs.push({ ...config, locations: locations.map(([number, id, roleMask, shard]) => ({
       number, id, shard,
@@ -121,6 +121,7 @@ export function setupWordTooltips() {
   tip.hidden = true;
   document.body.append(tip);
   let current = null;
+  let pointerAnchor = null;
   let timer;
   let closeTimer;
   let restoringFocus = false;
@@ -140,6 +141,7 @@ export function setupWordTooltips() {
     clearTimeout(timer);
     clearTimeout(closeTimer);
     current = null;
+    pointerAnchor = null;
     clearDescription();
     if (tip.matches(":popover-open")) tip.hidePopover();
     tip.hidden = true;
@@ -169,7 +171,11 @@ export function setupWordTooltips() {
     }
     tip.hidden = false;
     if (!tip.matches(":popover-open")) tip.showPopover();
-    const rect = binding.element.getBoundingClientRect();
+    // Word labels may fill an entire row. Anchor mouse hovers to the cursor,
+    // while keyboard focus continues to use the word element's bounds.
+    const rect = pointerAnchor
+      ? { left: pointerAnchor.x, right: pointerAnchor.x, top: pointerAnchor.y, bottom: pointerAnchor.y }
+      : binding.element.getBoundingClientRect();
     const margin = 8, width = tip.offsetWidth, height = tip.offsetHeight;
     let left, top;
     if (rect.right + 10 + width <= window.innerWidth - margin) { left = rect.right + 10; top = rect.top; }
@@ -241,7 +247,7 @@ export function setupWordTooltips() {
           }
           section.append(version);
         }
-      } else section.append(node("p", "word-tooltip-note", status ?? (groups ? "t1 / t3 暂无来源关卡记录" : "来源关卡加载中…")));
+      } else section.append(node("p", "word-tooltip-note", status ?? (groups ? (game.id === "06_Zen_Word" ? "t1 / t3 暂无来源关卡记录" : "暂无来源关卡记录") : "来源关卡加载中…")));
       block.append(section);
     }
     const others = games.filter(game => !detailedSourceGames.has(game.id));
@@ -277,11 +283,12 @@ export function setupWordTooltips() {
     return sourceBlock;
   }
 
-  function schedule(binding) {
+  function schedule(binding, pointer = null) {
     if (!binding) return;
     clearTimeout(closeTimer);
     if (binding === current) return;
     hide(); current = binding;
+    pointerAnchor = pointer;
     const token = revision;
     timer = setTimeout(async () => {
       if (!visible(binding, token)) return;
@@ -313,7 +320,12 @@ export function setupWordTooltips() {
   function hit(target) {
     return bindings.get(target instanceof Element ? target.closest("[data-tooltip-word]") : null);
   }
-  document.addEventListener("mouseover", event => schedule(hit(event.target)));
+  document.addEventListener("mouseover", event => schedule(hit(event.target), { x: event.clientX, y: event.clientY }));
+  document.addEventListener("mousemove", event => {
+    if (!current || hit(event.target) !== current) return;
+    pointerAnchor = { x: event.clientX, y: event.clientY };
+    if (tip.matches(":popover-open")) place(current);
+  });
   document.addEventListener("mouseout", event => {
     const binding = hit(event.target);
     const to = event.relatedTarget;
