@@ -72,7 +72,7 @@
   ],
   "gameSources": {
     "file": "word-game-sources.json",
-    "sha256": "dd44eb7369048c4ab6742b57eb435b87f866237e8e97b01245e37ba47cbbacc7",
+    "sha256": "17d01322c3e503b5dd54305b40c1428baf1a2af96abb6da94077b77f5bef79ec",
     "gameCount": 7,
     "wordCount": 32268,
     "source": {
@@ -81,6 +81,7 @@
       "sha256": "cb067af2a06d22ad4ad741afa3560a8211bfce61f13122b2ea5f5575e27601cb",
       "datasetHash": "d7b7a2ecb5603dc00efbd9916b5933239addb5abb22537c8b24ad262846bade6",
       "sourceDate": "2026-10-19"
-    }
+    },
+    "levelSourceFiles": 26
   }
 }

@@ -1,6 +1,7 @@
 """Convert the supplied word workbook to static JSON without changing the XLSX."""
 
 import argparse
+import gzip
 import hashlib
 import json
 import posixpath
@@ -15,6 +16,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "data" / "source" / "四游戏词库_精简版.xlsx"
 GUIDE_SOURCE = ROOT / "data" / "source" / "guide-words.json"
 GAME_SOURCES = ROOT / "data" / "source" / "word-game-sources.json"
+LEVEL_SOURCE_DIR = ROOT / "data" / "source" / "word-level-sources"
+SOURCE_ROLES = ("target", "extra", "onlyExtra", "bonus")
+DETAIL_GAMES = ("06_Zen_Word", "07_Word_Tiles")
 DESTINATION = ROOT / "dist" / "data"
 NS = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 RELATIONSHIP_ID = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
@@ -92,6 +96,7 @@ def read_records(archive, sheet_path, shared_strings, group):
 
 
 def write_atomic(path, content):
+    path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as temporary:
         temporary.write(content)
         temp_path = Path(temporary.name)
@@ -104,7 +109,15 @@ def write_atomic(path, content):
 
 def game_sources(catalog_path):
     if catalog_path is None:
-        return GAME_SOURCES.read_bytes()
+        index_bytes = GAME_SOURCES.read_bytes()
+        index = json.loads(index_bytes)
+        files = {}
+        for item in index.get("provenance", {}).get("files", {}).values():
+            payload = (LEVEL_SOURCE_DIR / item["file"]).read_bytes()
+            if hashlib.sha256(payload).hexdigest() != item["sha256"]:
+                raise ValueError(f"来源关卡文件校验失败：{item['file']}")
+            files[item["file"]] = payload
+        return index_bytes, files
     raw = Path(catalog_path).read_bytes()
     catalog = json.loads(raw)
     games = [{key: game[key] for key in ("id", "name", "color")} for game in catalog["games"]]
@@ -113,6 +126,52 @@ def game_sources(catalog_path):
         for word in game["words"]["all"]:
             entries[word] = entries.get(word, 0) | (1 << index)
     zen = next(game for game in catalog["games"] if game["id"] == "06_Zen_Word")
+    shards = {}
+    source_files = []
+    for game_index, game in enumerate(catalog["games"]):
+        if game["id"] not in DETAIL_GAMES:
+            continue
+        source_path = Path(catalog_path).parent / Path(game["provenance"]).name
+        source_bytes = source_path.read_bytes()
+        detail = json.loads(gzip.decompress(source_bytes))
+        if detail["id"] != game["id"] or [item["id"] for item in detail["configs"]] != [item["id"] for item in game["configs"]]:
+            raise ValueError(f"来源关卡与游戏目录不一致：{game['name']}")
+        source_files.append({"file": source_path.name, "sha256": hashlib.sha256(source_bytes).hexdigest()})
+        games[game_index]["configs"] = []
+        for config_index, config in enumerate(detail["configs"]):
+            games[game_index]["configs"].append({key: config[key] for key in ("id", "label", "levelKind", "sourceAliases") if key in config})
+            word_refs = {}
+            for role_index, role in enumerate(SOURCE_ROLES):
+                if len(config["words"][role]) != len(config["wordLevels"][role]):
+                    raise ValueError("来源单词和关卡索引数量不一致。")
+                for word, refs in zip(config["words"][role], config["wordLevels"][role]):
+                    locations = word_refs.setdefault(word, {})
+                    for ref in refs:
+                        if type(ref) is not int or not 0 <= ref < len(config["levelCatalog"]):
+                            raise ValueError("来源关卡索引无效。")
+                        locations[ref] = locations.get(ref, 0) | (1 << role_index)
+            for word, refs in word_refs.items():
+                letter = word[0].lower() if re.match(r"^[A-Z]", word) else "other"
+                locations = []
+                for ref, role_mask in sorted(refs.items()):
+                    number, source_id, *rest = config["levelCatalog"][ref]
+                    locations.append([number, source_id, role_mask, *rest])
+                shards.setdefault(letter, {}).setdefault(word, []).append([game_index, config_index, locations])
+    files, file_index = {}, {}
+    for letter, words in sorted(shards.items()):
+        shard = {"schemaVersion": 1, "datasetHash": catalog["datasetHash"], "entries": dict(sorted(words.items()))}
+        compressed = gzip.compress(json.dumps(shard, ensure_ascii=False, separators=(",", ":")).encode("utf-8"), mtime=0)
+        filename = f"{letter}.json.gz"
+        files[filename] = compressed
+        file_index[letter] = {"file": filename, "sha256": hashlib.sha256(compressed).hexdigest(), "wordCount": len(words)}
+    for word, mask in entries.items():
+        letter = word[0].lower() if re.match(r"^[A-Z]", word) else "other"
+        actual = 0
+        for game_index, _, _ in shards.get(letter, {}).get(word, []):
+            actual |= 1 << game_index
+        detail_mask = sum(1 << index for index, game in enumerate(games) if game["id"] in DETAIL_GAMES)
+        if actual != mask & detail_mask:
+            raise ValueError(f"单词来源游戏与关卡明细不一致：{word}")
     payload = {
         "schemaVersion": 1,
         "source": {"project": "字页关卡台", "file": "data/game_vocab/catalog.json",
@@ -121,8 +180,9 @@ def game_sources(catalog_path):
         "games": games,
         "zenTwoLetterWords": sorted(word for word in zen["words"]["all"] if re.fullmatch(r"[A-Z]{2}", word)),
         "entries": dict(sorted(entries.items())),
+        "provenance": {"directory": "word-level-sources", "gameIds": DETAIL_GAMES, "roles": SOURCE_ROLES, "files": file_index, "sources": source_files},
     }
-    return (json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+    return (json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8"), files
 
 
 def main():
@@ -131,7 +191,7 @@ def main():
     args = parser.parse_args()
     source_bytes = SOURCE.read_bytes()
     guide_bytes = GUIDE_SOURCE.read_bytes()
-    game_source_bytes = game_sources(args.game_catalog)
+    game_source_bytes, provenance_files = game_sources(args.game_catalog)
     game_source_data = json.loads(game_source_bytes)
     guide_records = json.loads(guide_bytes)
     if not isinstance(guide_records, list):
@@ -213,10 +273,12 @@ def main():
         "group": "guide", "count": len(guide_records),
     }]
     outputs["word-game-sources.json"] = game_source_bytes
+    outputs.update((f"word-level-sources/{name}", content) for name, content in provenance_files.items())
     manifest["gameSources"] = {
         "file": "word-game-sources.json", "sha256": hashlib.sha256(game_source_bytes).hexdigest(),
         "gameCount": len(game_source_data["games"]), "wordCount": len(game_source_data["entries"]),
         "source": game_source_data["source"],
+        "levelSourceFiles": len(provenance_files),
     }
     outputs["word-bank.json"] = (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     DESTINATION.mkdir(parents=True, exist_ok=True)
@@ -224,6 +286,8 @@ def main():
         write_atomic(DESTINATION / filename, content)
     if args.game_catalog:
         write_atomic(GAME_SOURCES, game_source_bytes)
+        for name, content in provenance_files.items():
+            write_atomic(LEVEL_SOURCE_DIR / name, content)
     for group in manifest["groups"]:
         print(f"{group['label']}：{group['count']:,} 条")
     print(f"共 {manifest['totalCount']:,} 条，已导入 {DESTINATION}")

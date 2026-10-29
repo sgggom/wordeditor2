@@ -3,6 +3,10 @@ const focusBindings = new WeakMap();
 const emotionLabels = { "-2": "恶性情绪", "-1": "负面情绪", 0: "中性情绪", 1: "正面情绪", 2: "积极情绪" };
 let sourcesPromise;
 let dictionaryPromise;
+const levelSourceLoads = new Map();
+const sourceRoleLabels = ["目标词", "额外词", "仅额外", "奖励词"];
+const detailedSourceGames = new Set(["06_Zen_Word"]);
+const detailedSourceVersions = new Set(["t1", "t3"]);
 let initialized = false;
 
 async function readData(file) {
@@ -23,10 +27,57 @@ function loadDictionary() {
   return dictionaryPromise;
 }
 
+function loadLevelSources(sources, word) {
+  const first = word.trim().toUpperCase()[0];
+  const key = /^[A-Z]$/.test(first) ? first.toLowerCase() : "other";
+  const file = sources.provenance?.files[key];
+  if (!file) return Promise.resolve({ datasetHash: sources.source.datasetHash, entries: {} });
+  const cacheKey = `${file.file}:${file.sha256}`;
+  if (levelSourceLoads.has(cacheKey)) {
+    const cached = levelSourceLoads.get(cacheKey);
+    levelSourceLoads.delete(cacheKey); levelSourceLoads.set(cacheKey, cached);
+    return cached;
+  }
+  if (!levelSourceLoads.has(cacheKey)) {
+    const promise = (async () => {
+      const response = await fetch(new URL(`./data/${sources.provenance.directory}/${file.file}`, import.meta.url));
+      if (!response.ok) throw new Error("来源关卡加载失败");
+      const stream = new Blob([await response.arrayBuffer()]).stream().pipeThrough(new DecompressionStream("gzip"));
+      return JSON.parse(await new Response(stream).text());
+    })().catch(error => { if (levelSourceLoads.get(cacheKey) === promise) levelSourceLoads.delete(cacheKey); throw error; });
+    levelSourceLoads.set(cacheKey, promise);
+    // Keep a few recent letters warm without retaining every game's full
+    // provenance in memory as the user browses different words.
+    while (levelSourceLoads.size > 4) levelSourceLoads.delete(levelSourceLoads.keys().next().value);
+  }
+  return levelSourceLoads.get(cacheKey);
+}
+
 export function sourceGamesForWord(sources, word) {
   const key = String(word).trim().toUpperCase();
   const mask = Object.hasOwn(sources?.entries ?? {}, key) ? sources.entries[key] : 0;
   return (sources?.games ?? []).filter((_, index) => mask & (1 << index));
+}
+
+export function sourceLevelsForWord(sources, shard, word) {
+  if (shard.datasetHash !== sources.source.datasetHash) throw new Error("来源关卡版本不一致，请刷新页面。");
+  const key = String(word).trim().toUpperCase();
+  const entries = Object.hasOwn(shard.entries, key) ? shard.entries[key] : [];
+  const games = new Map();
+  for (const [gameIndex, configIndex, locations] of entries) {
+    const game = sources.games[gameIndex];
+    if (!detailedSourceGames.has(game?.id)) continue;
+    const config = game.configs?.[configIndex];
+    if (!config) throw new Error("来源关卡版本无效。");
+    if (!detailedSourceVersions.has(config.id)) continue;
+    if (!games.has(game.id)) games.set(game.id, { ...game, configs: [] });
+    games.get(game.id).configs.push({ ...config, locations: locations.map(([number, id, roleMask, shard]) => ({
+      number, id, shard,
+      label: config.levelKind === "sharded" ? `分片 ${shard} · 序号 ${number}` : number === null ? `未映射关卡（ID ${id}）` : `第 ${number} 关`,
+      roles: sourceRoleLabels.filter((_, index) => roleMask & (1 << index)),
+    })) });
+  }
+  return [...games.values()];
 }
 
 export function wordTooltipDetails(word, entry) {
@@ -64,12 +115,15 @@ export function setupWordTooltips() {
   const tip = document.createElement("aside");
   tip.id = "word-tooltip";
   tip.className = "word-tooltip";
-  tip.setAttribute("role", "tooltip");
+  tip.setAttribute("role", "dialog");
+  tip.setAttribute("aria-label", "单词信息与来源关卡");
   tip.setAttribute("popover", "manual");
   tip.hidden = true;
   document.body.append(tip);
   let current = null;
   let timer;
+  let closeTimer;
+  let restoringFocus = false;
   let revision = 0;
   let describedElement;
 
@@ -84,10 +138,16 @@ export function setupWordTooltips() {
   function hide() {
     revision++;
     clearTimeout(timer);
+    clearTimeout(closeTimer);
     current = null;
     clearDescription();
     if (tip.matches(":popover-open")) tip.hidePopover();
     tip.hidden = true;
+  }
+
+  function deferHide() {
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(hide, 220);
   }
 
   function visible(binding, token) {
@@ -111,9 +171,14 @@ export function setupWordTooltips() {
     if (!tip.matches(":popover-open")) tip.showPopover();
     const rect = binding.element.getBoundingClientRect();
     const margin = 8, width = tip.offsetWidth, height = tip.offsetHeight;
-    const left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
-    let top = rect.bottom + 6;
-    if (top + height > window.innerHeight - margin) top = rect.top - height - 6;
+    let left, top;
+    if (rect.right + 10 + width <= window.innerWidth - margin) { left = rect.right + 10; top = rect.top; }
+    else if (rect.left - width - 10 >= margin) { left = rect.left - width - 10; top = rect.top; }
+    else {
+      left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
+      top = rect.bottom + 6;
+      if (top + height > window.innerHeight - margin) top = rect.top - height - 6;
+    }
     top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
     tip.style.left = `${Math.round(left)}px`;
     tip.style.top = `${Math.round(top)}px`;
@@ -124,41 +189,99 @@ export function setupWordTooltips() {
     describedElement.setAttribute("aria-describedby", [...ids].join(" "));
   }
 
-  function render(binding, entry, sources, sourceStatus) {
-    const details = wordTooltipDetails(binding.entry.word, entry);
-    const heading = node("div", "word-tooltip-heading");
-    heading.append(node("strong", "", details.word), node("span", "word-tooltip-phonetic", details.phonetic));
-    const sourceBlock = node("section", "word-tooltip-sources");
-    sourceBlock.setAttribute("aria-label", "来源游戏");
-    sourceBlock.append(node("span", "word-tooltip-label", "来源游戏"));
-    const games = sourceGamesForWord(sources, details.word);
-    const chips = node("div", "word-tooltip-games");
-    for (const game of games) {
+  function renderSources(block, sources, word, groups = null, status = null) {
+    block.replaceChildren(node("h3", "word-tooltip-sources-title", "来源游戏与关卡"));
+    const games = sourceGamesForWord(sources, word);
+    if (!games.length) {
+      block.append(node("p", "word-tooltip-note", status ?? "参考项目暂无记录"));
+      return;
+    }
+    function locationRow(location) {
+      const row = node("li", "word-source-level");
+      row.dataset.sourceLevel = location.number === null ? "unmapped" : String(location.number);
+      row.dataset.sourceId = String(location.id);
+      if (location.shard !== undefined) row.dataset.sourceShard = String(location.shard);
+      row.title = `原始 ID：${location.id}`;
+      row.append(node("span", "word-source-number", location.label), node("span", "word-source-role", location.roles.join(" / ")));
+      return row;
+    }
+    function gameChip(game) {
       const chip = node("span", "word-tooltip-game", game.name);
       chip.dataset.sourceGame = game.id;
       if (/^#[\da-f]{6}$/i.test(game.color)) chip.style.setProperty("--game-color", game.color);
-      chips.append(chip);
+      return chip;
     }
-    if (!games.length) chips.append(node("span", "word-tooltip-note", sourceStatus ?? "参考项目暂无记录"));
-    sourceBlock.append(chips);
+    for (const game of games.filter(game => detailedSourceGames.has(game.id))) {
+      const section = node("section", "word-source-game");
+      const heading = node("div", "word-source-heading");
+      const chip = gameChip(game);
+      heading.append(chip); section.append(heading);
+      const configs = groups?.find(group => group.id === game.id)?.configs;
+      if (configs?.length) {
+        heading.append(node("span", "word-source-count", `${configs.reduce((sum, config) => sum + config.locations.length, 0)} 处`));
+        for (const config of configs) {
+          const version = node("section", "word-source-version");
+          version.dataset.sourceConfig = config.id;
+          const label = node("h4", "", `${config.label} · ${config.locations.length} 处`);
+          if (config.sourceAliases?.length) label.title = `相同资源副本：${config.sourceAliases.join("、")}`;
+          const list = node("ol", "word-source-levels word-source-preview");
+          list.append(...config.locations.slice(0, 3).map(locationRow));
+          version.append(label, list);
+          if (config.locations.length > 3) {
+            const more = node("details", "word-source-more");
+            more.append(node("summary", "", `展开其余 ${config.locations.length - 3} 处`));
+            let filled = false;
+            more.addEventListener("toggle", () => {
+              if (!more.open || filled) return;
+              filled = true;
+              const rest = node("ol", "word-source-levels");
+              rest.append(...config.locations.slice(3).map(locationRow)); more.append(rest);
+            });
+            version.append(more);
+          }
+          section.append(version);
+        }
+      } else section.append(node("p", "word-tooltip-note", status ?? (groups ? "t1 / t3 暂无来源关卡记录" : "来源关卡加载中…")));
+      block.append(section);
+    }
+    const others = games.filter(game => !detailedSourceGames.has(game.id));
+    if (others.length) {
+      const summary = node("section", "word-source-other-games");
+      summary.append(node("h4", "", "其他来源游戏"));
+      const chips = node("div", "word-tooltip-games");
+      chips.append(...others.map(gameChip)); summary.append(chips); block.append(summary);
+    }
+  }
+
+  function render(binding, entry, sources, sourceStatus) {
+    const details = wordTooltipDetails(binding.entry.word, entry);
+    const info = node("section", "word-tooltip-info");
+    info.setAttribute("aria-label", "单词信息"); info.tabIndex = 0;
+    const heading = node("div", "word-tooltip-heading");
+    heading.append(node("strong", "", details.word), node("span", "word-tooltip-phonetic", details.phonetic));
+    const sourceBlock = node("section", "word-tooltip-sources");
+    sourceBlock.setAttribute("aria-label", "来源游戏与关卡"); sourceBlock.tabIndex = 0;
+    renderSources(sourceBlock, sources, details.word, null, sourceStatus);
     const fields = node("dl", "word-tooltip-fields");
     for (const [label, value] of details.fields) {
       const field = node("div", "");
-      field.append(node("dt", "", label), node("dd", "", value));
-      fields.append(field);
+      field.append(node("dt", "", label), node("dd", "", value)); fields.append(field);
     }
     const definitions = node("dl", "word-tooltip-definitions");
     definitions.append(node("dt", "", "中文"), node("dd", "word-tooltip-zh", details.definitionZh),
       node("dt", "", "English"), node("dd", "word-tooltip-en", details.definitionEn));
-    tip.replaceChildren(heading, sourceBlock, fields, definitions);
+    info.append(heading, fields, definitions);
     if (!entry) fields.append(node("p", "word-tooltip-note", sourceStatus === "加载中…" ? "词库参数加载中…" : "当前词库未收录参数"));
+    tip.replaceChildren(info, sourceBlock);
     place(binding);
+    return sourceBlock;
   }
 
   function schedule(binding) {
-    if (!binding || binding === current) return;
-    hide();
-    current = binding;
+    if (!binding) return;
+    clearTimeout(closeTimer);
+    if (binding === current) return;
+    hide(); current = binding;
     const token = revision;
     timer = setTimeout(async () => {
       if (!visible(binding, token)) return;
@@ -171,9 +294,19 @@ export function setupWordTooltips() {
         hasDetails ? supplied : loadDictionary().then(dictionary => dictionary.get(binding.entry.word) ?? null),
       ]);
       if (!visible(binding, token)) return;
-      render(binding, record.status === "fulfilled" ? record.value : supplied,
-        sources.status === "fulfilled" ? sources.value : null,
+      const sourceData = sources.status === "fulfilled" ? sources.value : null;
+      const sourceBlock = render(binding, record.status === "fulfilled" ? record.value : supplied, sourceData,
         sources.status === "rejected" ? "来源游戏暂时无法加载" : null);
+      if (!sourceGamesForWord(sourceData, binding.entry.word).some(game => detailedSourceGames.has(game.id))) return;
+      try {
+        const shard = await loadLevelSources(sourceData, binding.entry.word);
+        if (!visible(binding, token)) return;
+        renderSources(sourceBlock, sourceData, binding.entry.word, sourceLevelsForWord(sourceData, shard, binding.entry.word));
+      } catch {
+        if (!visible(binding, token)) return;
+        renderSources(sourceBlock, sourceData, binding.entry.word, null, "来源关卡暂时无法加载，请移开后重试");
+      }
+      place(binding);
     }, 150);
   }
 
@@ -183,14 +316,41 @@ export function setupWordTooltips() {
   document.addEventListener("mouseover", event => schedule(hit(event.target)));
   document.addEventListener("mouseout", event => {
     const binding = hit(event.target);
-    if (binding === current && !(event.relatedTarget instanceof Node && binding.element.contains(event.relatedTarget))) hide();
+    const to = event.relatedTarget;
+    if (binding === current && !(to instanceof Node && (binding.element.contains(to) || tip.contains(to)))) deferHide();
   });
-  document.addEventListener("focusin", event => schedule(focusBindings.get(event.target)));
-  document.addEventListener("focusout", event => { if (focusBindings.get(event.target) === current) hide(); });
-  document.addEventListener("scroll", () => { if (current) hide(); }, true);
+  tip.addEventListener("mouseenter", () => clearTimeout(closeTimer));
+  tip.addEventListener("mouseleave", event => {
+    if (tip.contains(document.activeElement)) return;
+    if (!(event.relatedTarget instanceof Node && current?.element.contains(event.relatedTarget))) deferHide();
+  });
+  document.addEventListener("focusin", event => {
+    if (tip.contains(event.target)) { clearTimeout(closeTimer); return; }
+    if (!restoringFocus) schedule(focusBindings.get(event.target));
+  });
+  document.addEventListener("focusout", event => {
+    if (focusBindings.get(event.target) !== current && !tip.contains(event.target)) return;
+    if (!(event.relatedTarget instanceof Node && (tip.contains(event.relatedTarget) || event.relatedTarget === current?.focusTarget))) deferHide();
+  });
+  document.addEventListener("scroll", event => { if (current && !tip.contains(event.target)) hide(); }, true);
+  tip.addEventListener("toggle", event => {
+    if (!(event.target instanceof HTMLDetailsElement)) return;
+    requestAnimationFrame(() => { if (current && tip.matches(":popover-open")) place(current); });
+  }, true);
   document.addEventListener("close", hide, true);
   document.addEventListener("cancel", hide, true);
-  document.addEventListener("keydown", event => { if (event.key === "Escape") hide(); });
+  document.addEventListener("keydown", event => {
+    if (!current) return;
+    if (event.key === "ArrowRight" && event.target === current.focusTarget && tip.matches(":popover-open")) {
+      event.preventDefault(); tip.querySelector(".word-tooltip-sources")?.focus({ preventScroll: true });
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      const target = tip.contains(document.activeElement) ? current.focusTarget : null;
+      hide();
+      if (target?.isConnected) { restoringFocus = true; target.focus({ preventScroll: true }); restoringFocus = false; }
+    }
+  });
   window.addEventListener("resize", hide);
   new MutationObserver(() => { if (current && !current.element.isConnected) hide(); })
     .observe(document.body, { childList: true, subtree: true });

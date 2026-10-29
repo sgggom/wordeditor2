@@ -34,7 +34,7 @@
 - 工作区固定在当前屏幕内，电脑端采用词表、棋盘、关卡列表三列。关卡卡片保持完整高度，数量增加时在列表内滚动，棋盘随可用空间缩放。
 - 词表的「生僻档位」列直接显示词库原始的 1～5 档，缺失值显示为「—」。
 - 棋盘上方显示「生僻总分」，等于所有目标词的生僻档位之和；手动增删目标词时同步更新，档位缺失时显示「—」。
-- 鼠标悬停单词约 150 毫秒显示悬浮卡片：来源游戏、所属词库、范围库、情绪、缩写、生僻档位、音标及中英文释义。词表、棋盘编辑的搜索结果与固定词、预设关卡中的词共用此逻辑；键盘聚焦也可显示，移开、滚动、关闭弹窗或按 Esc 关闭。卡片自动避让屏幕边缘，长释义显示摘要。
+- 鼠标悬停单词约 150 毫秒显示左右两栏悬浮卡片：左栏显示所属词库、范围库、情绪、缩写、生僻档位、音标及中英文释义；右栏显示来源游戏，关卡明细仅展示 Zen Word 的 t1 和 t3，按版本列出实际关卡号及目标／额外／仅额外／奖励用途，其他游戏保留来源名称。每个版本默认预览 3 处，其余可展开，悬停关号可看原始 ID。词表、棋盘编辑的搜索结果与固定词、预设关卡中的词共用此逻辑；键盘聚焦也可显示，按 → 进入来源栏。鼠标可移入卡片滚动和展开；移开卡片、滚动外部页面、关闭弹窗或按 Esc 关闭。卡片自动避让屏幕边缘，长释义显示摘要。
 
 ## list 0 的 1500 关配置
 
@@ -144,7 +144,7 @@ npm run dev
 
 2词库与旧引导库共用 `guide-words.json`、`guide:` 编号和范围值 `0`，已保存的词库筛选仍有效。Zen Word 全版本的 `target / extra / onlyExtra / bonus` 合并去重后有 28 个两字母词，与旧 28 词重合 26 个；新增 PO、TI，保留原 OH、OK。新词的释义和音标分别参考 [Collins · po](https://www.collinsdictionary.com/dictionary/english/po) 与 [Oxford · ti](https://www.oxfordlearnersdictionaries.com/definition/english/ti)，词条保留 `definitionSources` 供核对。生僻档位 1 的初始词规则仍生效，PO、TI 可作为符合筛选和路径安全规则的候选目标。
 
-来源游戏使用参考项目 `data/game_vocab/catalog.json` 的实际全版本、全词类记录，显示去重后的游戏名；未收录的词显示「参考项目暂无记录」，不按词库档位猜测来源。`data/source/word-game-sources.json` 保存来源 SHA256、7 款游戏、28 个 Zen 两字母词及 32,268 个词的游戏位掩码（对应 games 数组顺序），导入时同步到 `dist/data/`，运行不依赖参考项目目录。需要更新来源快照时运行 `npm run import:words -- --game-catalog /绝对路径/data/game_vocab/catalog.json`；当前两字母词的参数须先补齐。
+来源游戏使用参考项目 `data/game_vocab/catalog.json` 的实际全版本、全词类记录，显示去重后的游戏名；未收录的词显示「参考项目暂无记录」，不按词库档位猜测来源。`data/source/word-game-sources.json` 保存来源 SHA256、7 款游戏、28 个 Zen 两字母词及 32,268 个词的游戏位掩码（对应 games 数组顺序），导入时同步到 `dist/data/`，运行不依赖参考项目目录。来源关卡由 Zen Word 与 Word Tiles 的详细资源构建，按首字母压缩保存在 `data/source/word-level-sources/` 和 `dist/data/word-level-sources/`，悬停时按需读取。每个词保存游戏、版本及实际关卡号、原始 ID、用途，多个用途在同一来源位置合并；当前页面仅显示 Zen Word 的 t1 和 t3 明细，其他游戏保留来源名称。需要更新来源快照时运行 `npm run import:words -- --game-catalog /绝对路径/data/game_vocab/catalog.json`；当前两字母词的参数须先补齐。
 
 以后更新 `data/source/` 中的原词库后，运行 `npm run import:words` 重新生成 JSON。导入脚本使用 Python 3 标准库，无需额外安装依赖。
 

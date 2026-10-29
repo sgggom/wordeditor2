@@ -19,13 +19,15 @@ svg { width: 18px; height: 18px; flex-shrink: 0; }
 h1, h2 { margin: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
-.word-tooltip { position: fixed; inset: auto; margin: 0; width: 380px; max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow: hidden; pointer-events: none; padding: 13px 15px; border: 1px solid #cbd5c5; border-radius: 10px; background: #fffffc; color: #283b31; box-shadow: 0 10px 30px #20332730; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.word-tooltip { position: fixed; inset: auto; margin: 0; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; width: 740px; max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow: hidden; padding: 13px 15px; border: 1px solid #cbd5c5; border-radius: 10px; background: #fffffc; color: #283b31; box-shadow: 0 10px 30px #20332730; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.word-tooltip-info, .word-tooltip-sources { min-width: 0; min-height: 0; max-height: min(520px, calc(100dvh - 46px)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.word-tooltip-info { padding-right: 4px; }
 .word-tooltip-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 12px; }
 .word-tooltip-heading strong { font-size: 19px; letter-spacing: .04em; }
 .word-tooltip-phonetic { color: #687769; font-size: 13px; }
-.word-tooltip-sources { margin-top: 10px; }
+.word-tooltip-sources { border-left: 1px solid #e3e8df; padding-left: 16px; }
+.word-tooltip-sources-title { position: sticky; top: 0; margin: 0 0 9px; padding-bottom: 6px; background: #fffffc; color: #52664a; font-size: 12px; font-weight: 600; }
 .word-tooltip-label, .word-tooltip dt { color: #687769; font-size: 11px; }
-.word-tooltip-games { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
 .word-tooltip-game { display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; border: 1px solid #e0e5db; border-radius: 5px; background: #f6f8f1; font-size: 11px; }
 .word-tooltip-game::before { content: ""; width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--game-color, #708269); }
 .word-tooltip-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; margin: 11px 0; padding: 9px 0; border-block: 1px solid #e3e8df; }
@@ -34,6 +36,27 @@ h1, h2 { margin: 0; }
 .word-tooltip-definitions dd { white-space: pre-line; margin: 0; }
 .word-tooltip-en, .word-tooltip-note { color: #687769; }
 .word-tooltip-note { margin: 0; font-size: 11px; }
+.word-source-game + .word-source-game { margin-top: 12px; padding-top: 10px; border-top: 1px solid #e8ece3; }
+.word-source-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.word-source-count { color: #84907d; font-size: 10px; }
+.word-source-version { margin-top: 8px; }
+.word-source-version h4 { margin: 0 0 3px; color: #52664a; font-size: 11px; font-weight: 600; }
+.word-source-levels { margin: 0; padding: 0; list-style: none; }
+.word-source-preview { display: flex; flex-wrap: wrap; gap: 0 12px; }
+.word-source-preview .word-source-level { gap: 4px; }
+.word-source-level { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 2px 0; font-size: 11px; }
+.word-source-role { color: #84907d; font-size: 10px; }
+.word-source-more { margin-top: 3px; }
+.word-source-more summary { cursor: pointer; color: #668442; font-size: 11px; }
+.word-source-more summary:hover { color: #375c2f; }
+.word-source-other-games { margin-top: 12px; }
+.word-source-other-games h4 { margin: 0 0 6px; color: #84907d; font-size: 11px; font-weight: 500; }
+.word-tooltip-games { display: flex; flex-wrap: wrap; gap: 5px; }
+@media (max-width: 600px) {
+  .word-tooltip { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .word-tooltip-info { max-height: 35dvh; }
+  .word-tooltip-sources { max-height: 40dvh; border-left: 0; border-top: 1px solid #e3e8df; padding: 10px 0 0; }
+}
 [data-tooltip-word]:focus-visible { outline: 2px solid #759e52; outline-offset: 2px; border-radius: 2px; }
 
 .app-header { flex: 0 0 50px; background: #fcfcfa; border-bottom: 1px solid var(--line); }
