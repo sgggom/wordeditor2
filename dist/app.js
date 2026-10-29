@@ -1548,7 +1548,7 @@ import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists
       if (savingLevel || updatingLevelList || batchRunning) throw new Error("请等待当前保存或运行完成后再切换预设。");
       let dictionary = [];
       if (preset.format === "word-tiles") {
-        presetDictionaryPromise ??= Promise.all(["required-words.json", "extra-words.json"].map(async (file, index) => {
+        presetDictionaryPromise ??= Promise.all(["required-words.json", "extra-words.json", "guide-words.json"].map(async (file, index) => {
           const response = await fetch(new URL(`./data/${file}`, import.meta.url));
           if (!response.ok) throw new Error("词库读取失败，请重试。");
           return (await response.json()).map(record => ({ ...record, onlyExtra: index === 1 }));

@@ -17,7 +17,7 @@ export const CONFIG_NUMBER_FIELDS = {
   extraDuplicateRange: { label: "额外词查重", min: 0 },
 };
 export const CONFIG_FILTER_OPTIONS = {
-  scope: [1, 2, 3, 4], emotion: [-2, -1, 0, 1, 2], abbreviation: [0, 1], rarityLevel: [1, 2, 3, 4, 5],
+  scope: [0, 1, 2, 3, 4], emotion: [-2, -1, 0, 1, 2], abbreviation: [0, 1], rarityLevel: [1, 2, 3, 4, 5],
 };
 
 export function validateConfigNumber(field, value) {

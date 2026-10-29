@@ -5,14 +5,14 @@ import { describePath } from "./level-statistics.js";
 
 let vocabularyPromise;
 function loadVocabulary() {
-  vocabularyPromise ??= Promise.all(["required-words.json", "extra-words.json"].map(async file => {
+  vocabularyPromise ??= Promise.all(["required-words.json", "extra-words.json", "guide-words.json"].map(async file => {
     const response = await fetch(new URL(`./data/${file}`, import.meta.url));
     if (!response.ok) throw new Error("词库加载失败，请重试。");
     return response.json();
-  })).then(([normal, extras]) => {
+  })).then(([normal, extras, guide]) => {
     const excluded = new Set(extras.map(entry => entry.word));
     const words = new Map();
-    for (const entry of normal) if (/^[A-Z]+$/.test(entry.word) && !entry.onlyExtra && !excluded.has(entry.word)) words.set(entry.word, entry);
+    for (const entry of [...normal, ...guide]) if (/^[A-Z]+$/.test(entry.word) && !entry.onlyExtra && !excluded.has(entry.word)) words.set(entry.word, entry);
     return [...words.values()].sort((a, b) => a.word.localeCompare(b.word));
   }).catch(error => { vocabularyPromise = null; throw error; });
   return vocabularyPromise;

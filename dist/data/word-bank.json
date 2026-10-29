@@ -52,7 +52,22 @@
       "count": 11692,
       "file": "extra-words.json",
       "sha256": "862fe4393760d2861b60ba97cfe8c49e12042ff8b2be0999e4e1bc269d3f5a7e"
+    },
+    {
+      "key": "guide",
+      "label": "引导库",
+      "count": 28,
+      "file": "guide-words.json",
+      "sha256": "9c71cd3b8c9c02d12c08b199846c884899f8273c2fd3ac0a761b5160f38b28f7"
     }
   ],
-  "totalCount": 22440
+  "totalCount": 22468,
+  "supplements": [
+    {
+      "fileName": "guide-words.json",
+      "sha256": "30b2d0702c2587fd0e79928a558534a0dc3f3108fc25ba72a6568ea431516dbc",
+      "group": "guide",
+      "count": 28
+    }
+  ]
 }

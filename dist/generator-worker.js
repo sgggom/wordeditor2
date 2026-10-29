@@ -5,12 +5,12 @@ let activeRun;
 
 function loadGenerator() {
   if (!generatorPromise) {
-    generatorPromise = Promise.all(["required-words.json", "extra-words.json"].map(async file => {
+    generatorPromise = Promise.all(["required-words.json", "extra-words.json", "guide-words.json"].map(async file => {
       const response = await fetch(new URL(`./data/${file}`, import.meta.url));
       if (!response.ok) throw new Error("词库加载失败，请重试。");
       return response.json();
     }))
-      .then(([normalRecords, onlyExtraRecords]) => createGenerator(normalRecords, onlyExtraRecords))
+      .then(([normalRecords, onlyExtraRecords, guideRecords]) => createGenerator([...normalRecords, ...guideRecords], onlyExtraRecords))
       .catch(error => {
         generatorPromise = null;
         throw error;

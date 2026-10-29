@@ -347,8 +347,8 @@ test("invalid or impossible length limits are rejected without silently relaxing
     assert.throws(() => generator.generate({ rows: 2, columns: 3, maxWordLength }), /最长单词长度/);
     assert.throws(() => generator.generate({ rows: 2, columns: 3, initialMaxWordLength: maxWordLength }), /初始词最长/);
   }
-  assert.throws(() => generator.generate({ rows: 2, columns: 3, maxWordLength: 2 }), /没有可用/);
-  assert.throws(() => generator.generate({ rows: 2, columns: 3, initialMaxWordLength: 2 }), /没有可用/);
+  assert.throws(() => generator.generate({ rows: 2, columns: 3, maxWordLength: 1 }), /没有可用/);
+  assert.throws(() => generator.generate({ rows: 2, columns: 3, initialMaxWordLength: 1 }), /没有可用/);
   assert.throws(() => generator.generate({ rows: 3, columns: 5, targetCount: 4, maxWordLength: 3 }), /至少需要 5/);
   assert.throws(() => generator.generate({ rows: 3, columns: 5, targetCount: 4, initialMaxWordLength: 3 }), /至少需要 5/);
 });

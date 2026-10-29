@@ -12,6 +12,7 @@ from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "data" / "source" / "四游戏词库_精简版.xlsx"
+GUIDE_SOURCE = ROOT / "data" / "source" / "guide-words.json"
 DESTINATION = ROOT / "dist" / "data"
 NS = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 RELATIONSHIP_ID = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
@@ -101,6 +102,24 @@ def write_atomic(path, content):
 
 def main():
     source_bytes = SOURCE.read_bytes()
+    guide_bytes = GUIDE_SOURCE.read_bytes()
+    guide_records = json.loads(guide_bytes)
+    if not isinstance(guide_records, list):
+        raise ValueError("引导库需为列表。")
+    guide_words = set()
+    for record in guide_records:
+        word = record.get("word") if isinstance(record, dict) else None
+        if (not isinstance(word, str) or not re.fullmatch(r"[A-Z]{2}", word)
+                or word in guide_words or record.get("id") != f"guide:{word.lower()}"
+                or any(key not in record for key, _ in FIELDS)
+                or type(record.get("scope")) is not int or record["scope"] != 0
+                or type(record.get("emotion")) is not int or record["emotion"] not in (-2, -1, 0, 1, 2)
+                or type(record.get("abbreviation")) is not int or record["abbreviation"] not in (0, 1)
+                or type(record.get("rarityLevel")) is not int or record["rarityLevel"] not in (1, 2, 3, 4, 5)
+                or any(not isinstance(record.get(key), str) or not record[key].strip()
+                       for key in ("phonetic", "definitionEn", "definitionZh"))):
+            raise ValueError("引导库含重复单词、缺失参数或无效记录。")
+        guide_words.add(word)
     manifest = {
         "schemaVersion": 1,
         "source": {
@@ -132,6 +151,8 @@ def main():
             sheet_path = (target.lstrip("/") if target.startswith("/")
                           else posixpath.normpath(posixpath.join("xl", target)))
             records = read_records(archive, sheet_path, shared_strings, key)
+            if guide_words.intersection(record["word"].strip().upper() for record in records):
+                raise ValueError("引导库与原词库重复，请先确认词库分类。")
             # Preserve order, duplicates, original text, numbers, zeros and blanks.
             payload = ("[\n" + ",\n".join(json.dumps(record, ensure_ascii=False, allow_nan=False,
                          separators=(",", ":")) for record in records) + "\n]\n").encode("utf-8")
@@ -146,6 +167,18 @@ def main():
             })
             manifest["totalCount"] += len(records)
 
+    guide_payload = ("[\n" + ",\n".join(json.dumps(record, ensure_ascii=False, allow_nan=False,
+                     separators=(",", ":")) for record in guide_records) + "\n]\n").encode("utf-8")
+    outputs["guide-words.json"] = guide_payload
+    manifest["groups"].append({
+        "key": "guide", "label": "引导库", "count": len(guide_records), "file": "guide-words.json",
+        "sha256": hashlib.sha256(guide_payload).hexdigest(),
+    })
+    manifest["totalCount"] += len(guide_records)
+    manifest["supplements"] = [{
+        "fileName": GUIDE_SOURCE.name, "sha256": hashlib.sha256(guide_bytes).hexdigest(),
+        "group": "guide", "count": len(guide_records),
+    }]
     outputs["word-bank.json"] = (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     DESTINATION.mkdir(parents=True, exist_ok=True)
     for filename, content in outputs.items():
