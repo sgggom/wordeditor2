@@ -14,6 +14,12 @@ export const CONFIG_FILTER_OPTIONS = {
   scope: [0, 1, 2, 3, 4], emotion: [-2, -1, 0, 1, 2], abbreviation: [0, 1], rarityLevel: [1, 2, 3, 4, 5],
 };
 
+export function createEmptyLevelConfig(current, previous = current) {
+  return { ...structuredClone(current), rows: 3, columns: 3, disabledCells: [],
+    fixedWords: [], fixedWordExemptions: [], fixedLayout: null,
+    filters: structuredClone(previous.filters ?? {}) };
+}
+
 export function previousConfigWordUsage(records, currentIndex, range = 50) {
   const usage = new Map();
   for (let index = Math.max(0, currentIndex - range); index < currentIndex; index++) {

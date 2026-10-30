@@ -1,6 +1,6 @@
 import { resizeDisabledCells } from "./board-shape.js";
-import { CONFIG_NUMBER_FIELDS, MAX_CONFIG_ROWS, readConfigLists, migrateConfigLists, changeConfigLists, saveConfigList,
-  patchLevelConfigs, validateConfigNumber, validateLevelConfig, installConfigPreset, configJobsInRange, previousConfigWordUsage } from "./level-config.js";
+import { CONFIG_NUMBER_FIELDS, CONFIG_FILTER_OPTIONS, MAX_CONFIG_ROWS, readConfigLists, migrateConfigLists, changeConfigLists, saveConfigList,
+  patchLevelConfigs, validateConfigNumber, validateLevelConfig, installConfigPreset, configJobsInRange, previousConfigWordUsage, createEmptyLevelConfig } from "./level-config.js";
 import { REFERENCE_CONFIG_ID } from "./reference-config.js";
 import { formatBatchState } from "./batch-runner.js";
 import { defaultGenerationWorkers, detectedProcessorCount } from "./generation-client.js";
@@ -10,8 +10,8 @@ import { bindWordTooltip } from "./word-tooltip.js";
 
 export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) {
   function newLevelConfig() {
-    return { ...getConfig(), rows: 3, columns: 3, disabledCells: [],
-      fixedWords: [], fixedWordExemptions: [], fixedLayout: null };
+    const current = getConfig();
+    return createEmptyLevelConfig(current, records.at(-1)?.config ?? current);
   }
   const openButton = document.querySelector("#open-config-list");
   const dialog = document.querySelector("#level-config-dialog");
@@ -62,7 +62,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   let nameAction = null;
   let pendingDeleteId = null;
   const columns = ["fixedWords",
-    "initialForwardProbability", "targetDuplicateRange", "extraDuplicateRange"];
+    "initialForwardProbability", "targetDuplicateRange", "extraDuplicateRange", "filters"];
   let records = [];
   let selected = new Set();
   let detailState = null;
@@ -286,8 +286,9 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
           button.type = "button";
           button.className = "config-cell-button";
           button.dataset.configAction = field;
-          button.classList.add("config-board-button");
-          button.setAttribute("aria-label", `第 ${index + 1} 关棋盘编辑`);
+          if (field === "fixedWords") button.classList.add("config-board-button");
+          else button.textContent = Object.keys(record.config.filters ?? {}).length ? `${Object.keys(record.config.filters).length} 项筛选` : "全部";
+          button.setAttribute("aria-label", `第 ${index + 1} 关${field === "fixedWords" ? "棋盘编辑" : "词库筛选"}`);
           cell.append(button);
         }
         row.append(cell);
@@ -381,6 +382,12 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
         detailError.hidden = !message;
         detailError.textContent = message;
       } });
+    } else {
+      const fields = document.querySelector("#word-filter-panel .filter-fields").cloneNode(true);
+      for (const input of fields.querySelectorAll("input[data-word-filter]")) {
+        input.checked = source.config.filters?.[input.dataset.wordFilter]?.includes(Number(input.value)) ?? true;
+      }
+      detailContent.replaceChildren(fields);
     }
     detail.showModal();
   }
@@ -507,7 +514,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   });
 
   for (const [value, label] of [...Object.entries(CONFIG_NUMBER_FIELDS).map(([key, rule]) => [key, rule.label]),
-    ["fixedWords", "棋盘编辑"]]) batchField.add(new Option(label, value));
+    ["fixedWords", "棋盘编辑"], ["filters", "词库筛选"]]) batchField.add(new Option(label, value));
 
   openButton.addEventListener("click", () => {
     workerInfo.textContent = `自动并行 ${defaultGenerationWorkers()} 路`;
@@ -647,6 +654,13 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     if (kind === "fixedWords") {
       try { patch = fixedBoardEditor.getValue(); }
       catch (failure) { showError(failure.message, detailError); return; }
+    } else {
+      const filters = {};
+      for (const [key, options] of Object.entries(CONFIG_FILTER_OPTIONS)) {
+        const values = [...detailContent.querySelectorAll(`input[data-word-filter="${key}"]:checked`)].map(input => Number(input.value));
+        if (values.length !== options.length) filters[key] = values;
+      }
+      patch = { filters };
     }
     try {
       applyPatch(ids, patch);

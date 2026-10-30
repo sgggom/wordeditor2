@@ -93,7 +93,7 @@
 
             <div class="form-actions">
               <span id="active-fixed-words" class="active-fixed-words" hidden>固定词 <output id="fixed-words-summary"></output></span>
-              <button type="button" id="filter-toggle" class="reset-button filter-toggle" popovertarget="word-filter-panel">全局词库筛选 <span id="filter-summary" class="filter-summary">全部</span></button>
+              <button type="button" id="filter-toggle" class="reset-button filter-toggle" popovertarget="word-filter-panel">本关词库筛选 <span id="filter-summary" class="filter-summary">全部</span></button>
               <button type="button" id="generate-level" class="generate-button">生成关卡</button>
               <button type="button" id="reset-size" class="reset-button" disabled>
                 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 8A6.5 6.5 0 1 1 4.8 14M3.5 3.5V8H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -102,7 +102,7 @@
             </div>
             <div id="word-filter-panel" class="filter-panel" popover aria-labelledby="filter-title">
               <div class="filter-panel-heading">
-                <h2 id="filter-title">全局词库筛选</h2>
+                <h2 id="filter-title">本关词库筛选</h2>
                 <button type="button" class="filter-close" popovertarget="word-filter-panel" popovertargetaction="hide" aria-label="关闭词库筛选">×</button>
               </div>
               <div class="filter-fields">
@@ -275,7 +275,7 @@
         <label for="config-add-count">新增</label>
         <input id="config-add-count" type="number" min="1" max="1500" step="1" value="10" aria-label="新增关数" />
         <span>关</span>
-        <button type="button" id="add-config-rows" class="reset-button" title="新增 3×3 空白关卡，不带固定单词">添加</button>
+        <button type="button" id="add-config-rows" class="reset-button" title="新增 3×3 空白关卡，继承上一关词库筛选，不带固定单词">添加</button>
         <button type="button" id="delete-config-rows" class="reset-button" disabled>删除所选</button>
         <span id="config-worker-info" class="config-worker-info" aria-live="polite"></span>
         <span class="config-selection-count">已选 <output id="config-selected-count">0</output> 关</span>
@@ -302,7 +302,7 @@
             <th class="config-index-column">关卡</th>
             <th class="config-fixed-column">棋盘编辑</th>
             <th class="config-forward-column">初始正向 %</th>
-            <th class="config-range-column">目标查重</th><th class="config-range-column">额外查重</th><th class="config-use-column">操作</th>
+            <th class="config-range-column">目标查重</th><th class="config-range-column">额外查重</th><th class="config-filter-column">词库筛选</th><th class="config-use-column">操作</th>
           </tr></thead>
           <tbody id="config-list-body"></tbody>
         </table>

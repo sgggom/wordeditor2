@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { CONFIG_LIST_STORAGE_KEY, patchLevelConfigs, readConfigList, saveConfigList,
-  validateConfigList, validateLevelConfig, configJobsInRange, previousConfigWordUsage } from "../dist/level-config.js";
+  validateConfigList, validateLevelConfig, configJobsInRange, previousConfigWordUsage, createEmptyLevelConfig } from "../dist/level-config.js";
 
 const config = () => ({ rows: 3, columns: 4, targetCount: 6,
   targetLengthPlan: ["short", "medium", "long", "short", "medium", "long"],
@@ -130,4 +130,26 @@ test("recent usage follows the current list order rather than reference or store
   assert.deepEqual([...previousConfigWordUsage(records, 1)], [["CAT", [1]]]);
   records.reverse();
   assert.deepEqual([...previousConfigWordUsage(records, 1)], [["DOG", [1]]]);
+});
+
+
+test("new empty levels inherit the preceding level's filters independently without copying its words or shape", () => {
+  const current = { ...config(), rows: 2, columns: 5, filters: { scope: [1] }, fixedWords: ["TRAIN"],
+    fixedWordExemptions: ["TRAIN"], disabledCells: [4], fixedLayout: { rows: 2, columns: 5, placements: [] } };
+  const previous = { filters: { scope: [0, 2], emotion: [0, 1], rarityLevel: [3, 5] } };
+  const first = createEmptyLevelConfig(current, previous), second = createEmptyLevelConfig(current, first);
+  assert.deepEqual(first.filters, previous.filters);
+  assert.equal(first.rows, 3); assert.equal(first.columns, 3);
+  assert.deepEqual(first.fixedWords, []); assert.deepEqual(first.fixedWordExemptions, []);
+  assert.deepEqual(first.disabledCells, []); assert.equal(first.fixedLayout, null);
+  second.filters.scope.push(4);
+  assert.deepEqual(first.filters.scope, [0, 2]); assert.deepEqual(previous.filters.scope, [0, 2]);
+  assert.deepEqual(current.filters, { scope: [1] });
+});
+
+test("the first new level inherits the current editor's filters when the list is empty", () => {
+  const current = { ...config(), filters: { abbreviation: [0], rarityLevel: [2, 4] } };
+  const next = createEmptyLevelConfig(current);
+  assert.deepEqual(next.filters, current.filters);
+  next.filters.rarityLevel.pop(); assert.deepEqual(current.filters.rarityLevel, [2, 4]);
 });

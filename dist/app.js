@@ -1,4 +1,3 @@
-import { getGlobalWordFilters, setGlobalWordFilters, subscribeGlobalWordFilters } from "./global-word-filters.js";
 import { createTargetPathMonitor } from "./target-path-monitor.js";
 import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
 import { createDuplicateCheck, findDuplicateWords, setTargetWord } from "./level-rules.js";
@@ -86,7 +85,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
 
   let size = readSize();
   let configuredInitialForwardProbability = readInitialForwardProbability();
-  let configuredFilters = getGlobalWordFilters();
+  let configuredFilters = readFilters();
   let configuredFixedWords = readFixedWords();
   let configuredFixedWordExemptions = readFixedWordExemptions();
   let configuredFixedLayout = readFixedLayout();
@@ -288,6 +287,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     selectedWord = null;
     size = { rows: level.rows, columns: level.columns, disabledCells: level.disabledCells ?? [] };
     configuredInitialForwardProbability = level.initialForwardProbability ?? 50;
+    configuredFilters = structuredClone(level.filters ?? {});
     configuredFixedWords = normalizeFixedWords(level.fixedWords ?? []);
     configuredFixedWordExemptions = normalizeFixedWordExemptions(level);
     configuredFixedLayout = structuredClone(level.fixedLayout ?? null);
@@ -342,6 +342,21 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     try { return normalizeFixedWordExemptions({ fixedWords: configuredFixedWords,
       fixedWordExemptions: JSON.parse(localStorage.getItem(FIXED_EXEMPTIONS_STORAGE_KEY)) ?? [] }); }
     catch { return []; }
+  }
+
+  function readFilters() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY));
+      if (!saved || typeof saved !== "object" || Array.isArray(saved)) return {};
+      const filters = {};
+      for (const [key, values] of Object.entries(saved)) {
+        const options = filterOptions[key];
+        if (!options || !Array.isArray(values) || values.some(value => !options.includes(value))) return {};
+        const selected = [...new Set(values)].sort((a, b) => a - b);
+        if (selected.length < options.length) filters[key] = selected;
+      }
+      return filters;
+    } catch { return {}; }
   }
 
   function isValidDuplicateRange(value) {
@@ -847,7 +862,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     if (configuredInitialForwardProbability !== initialForwardProbability || JSON.stringify(configuredFilters) !== JSON.stringify(filters)) clearLevel();
     configuredInitialForwardProbability = initialForwardProbability;
     configuredDuplicateRanges = duplicateRanges;
-    setGlobalWordFilters(filters);
+    configuredFilters = filters;
     if (location.protocol === "file:") {
       showError("请通过本地服务打开编辑器。");
       return;
@@ -1171,7 +1186,9 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       return;
     }
     if (filterInputs.includes(event.target)) {
-      setGlobalWordFilters(filtersFromInputs());
+      clearLevel();
+      configuredFilters = filtersFromInputs();
+      render();
       return;
     }
     if (event.target === initialForwardInput) {
@@ -1220,12 +1237,16 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   });
 
   document.querySelector("#reset-filters").addEventListener("click", () => {
-    setGlobalWordFilters({});
+    configuredFilters = {};
+    restoreFilterInputs();
+    clearLevel();
+    render();
   });
 
   function applyEditorConfig(config) {
     size = { rows: config.rows, columns: config.columns, disabledCells: config.disabledCells ?? [] };
     configuredInitialForwardProbability = config.initialForwardProbability;
+    configuredFilters = structuredClone(config.filters ?? {});
     configuredDuplicateRanges = { target: config.targetDuplicateRange, extra: config.extraDuplicateRange };
     configuredFixedWords = normalizeFixedWords(config.fixedWords ?? []);
     configuredFixedWordExemptions = normalizeFixedWordExemptions(config);
@@ -1256,7 +1277,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
         renderSavedLevels();
         return savedLevels;
       },
-      generate: (config, duplicateCheck, options) => client.generate({ ...config, filters: getGlobalWordFilters() }, duplicateCheck, options),
+      generate: (...args) => client.generate(...args),
       save: async (generated, position) => {
         try { return await (await getLevelStore()).saveLevelAtPosition(generated, position); }
         catch (error) { throw new Error(error.name === "QuotaExceededError" ? "本地存储空间不足，本关未保存。" : "关卡保存失败，请重试。"); }
@@ -1480,12 +1501,6 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     stopRun: () => batchRunner?.stop(),
   });
 
-  subscribeGlobalWordFilters(filters => {
-    configuredFilters = filters;
-    restoreFilterInputs();
-    clearLevel();
-    render();
-  });
 
   initialForwardInput.value = String(configuredInitialForwardProbability);
   for (const [kind, input] of Object.entries(duplicateRangeInputs)) input.value = String(configuredDuplicateRanges[kind]);
