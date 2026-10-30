@@ -1,3 +1,4 @@
+import { renderWordLetters } from "./word-letters.js";
 import { resizeDisabledCells } from "./board-shape.js";
 import { CONFIG_NUMBER_FIELDS, CONFIG_FILTER_OPTIONS, MAX_CONFIG_ROWS, readConfigLists, migrateConfigLists, changeConfigLists, saveConfigList,
   patchLevelConfigs, validateConfigNumber, validateLevelConfig, installConfigPreset, configJobsInRange, previousConfigWordUsage, createEmptyLevelConfig } from "./level-config.js";
@@ -227,7 +228,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
       row.className = "config-word-pool-row";
       row.dataset.poolWord = word;
       const label = document.createElement("strong");
-      label.textContent = word;
+      renderWordLetters(label, word);
       bindWordTooltip(label, { word });
       const frequency = document.createElement("span");
       frequency.className = "config-word-pool-frequency";

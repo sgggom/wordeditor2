@@ -322,7 +322,7 @@ legend { padding: 0; margin-bottom: 5px; color: #66705f; font-size: 11px; }
 .word-counts > span { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
 .word-counts .target-word-count { color: var(--green); }
 .word-scroll { flex: 1; min-height: 0; min-width: 0; padding: 0 8px 8px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #c4cdba transparent; scrollbar-gutter: stable; }
-.word-scroll { --word-path-column: 58px; --word-columns: minmax(60px, 1fr) 44px var(--word-path-column) 34px repeat(3, minmax(33px, .7fr)) 28px; }
+.word-scroll { --word-path-column: 58px; --word-columns: minmax(var(--word-label-width, 60px), 1fr) 44px var(--word-path-column) 34px repeat(3, minmax(33px, .7fr)) 28px; }
 .word-table-header, .word-row { display: grid; grid-template-columns: var(--word-columns); align-items: center; column-gap: 3px; padding: 5px 6px; border: 1px solid #e1e6d9; }
 .word-table-header { position: sticky; top: 0; z-index: 2; min-width: 360px; min-height: 32px; margin-bottom: 4px; border-radius: 5px; background: #f0f4e9; color: #64765a; font-size: 10px; text-align: center; }
 .word-table-header > span:first-child { text-align: left; }
@@ -334,6 +334,11 @@ legend { padding: 0; margin-bottom: 5px; color: #66705f; font-size: 11px; }
 .target-selection { display: grid; place-items: center; align-self: stretch; color: #a3ac99; font-size: 11px; }
 .target-selection input { width: 15px; height: 15px; margin: 0; accent-color: var(--green); cursor: pointer; }
 .target-selection input:disabled { cursor: default; }
+.word-letters { display: inline-flex; align-items: center; gap: 1px; max-width: 100%; min-width: 0; overflow-x: auto; vertical-align: middle; white-space: nowrap; scrollbar-width: thin; }
+.word-letter { display: inline-grid; place-items: center; flex: 0 0 1.45em; width: 1.45em; height: 1.45em; box-sizing: border-box; border: 1px solid #ccd7c2; border-radius: 2px; background: #f0f4e9; color: inherit; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-weight: 600; line-height: 1; }
+.word-row.is-target .word-letter { background: #f8fbf2; border-color: #aec795; }
+.fixed-result-heading > .word-letters { flex-shrink: 1; }
+.fixed-result-heading > span { flex-shrink: 0; }
 .word-text { flex-shrink: 0; }
 .word-value-cell { text-align: center; font-variant-numeric: tabular-nums; }
 .word-path-cell { display: grid; place-items: center; min-width: 0; }

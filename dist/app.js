@@ -1,3 +1,4 @@
+import { renderWordLetters } from "./word-letters.js";
 import { createTargetPathMonitor } from "./target-path-monitor.js";
 import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
 import { createDuplicateCheck, findDuplicateWords, setTargetWord } from "./level-rules.js";
@@ -560,6 +561,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       if (!byWord.has(entry.word)) byWord.set(entry.word, entry);
     }
     const membership = Object.fromEntries(roles.map(role => [role.key, role.words]));
+    wordList.parentElement.style.setProperty("--word-label-width", `${Math.max(60, ...[...byWord.keys()].map(word => word.length * 20))}px`);
     const tagColumns = [...roles.filter(role => role.key !== "target" && role.key !== "extra"),
       { key: "only-extra", label: "仅额外" }];
     const priority = entry => {
@@ -607,7 +609,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       button.setAttribute("aria-pressed", String(entry.word === selectedWord));
       const text = document.createElement("span");
       text.className = "word-text";
-      text.textContent = entry.word;
+      renderWordLetters(text, entry.word);
       const definition = [entry.definitionZh, entry.definitionEn]
         .find(value => typeof value === "string" && value.trim())?.trim() ?? "暂无释义";
       bindWordTooltip(text, entry, button);

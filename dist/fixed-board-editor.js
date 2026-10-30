@@ -1,3 +1,4 @@
+import { renderWordLetters } from "./word-letters.js";
 import { createVirtualList } from "./virtual-list.js";
 import { compileWordSearch } from "./word-search.js";
 import { bindLatinWordInput } from "./latin-word-input.js";
@@ -229,6 +230,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
     const fragment = document.createDocumentFragment();
     for (const entry of extras) {
       const label = element("span", "fixed-extra-word", entry.word);
+      renderWordLetters(label, entry.word);
       bindWordTooltip(label, entry);
       fragment.append(label);
     }
@@ -276,6 +278,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
       const row = element("div", `fixed-preset-row${word === selectedWord || word === activeWord ? " is-selected" : ""}`);
       row.dataset.fixedSelectedWord = word;
       const label = element("button", "fixed-preset-word", word); label.type = "button"; label.dataset.fixedPreview = word;
+      renderWordLetters(label, word);
       bindWordTooltip(label, vocabulary?.find(entry => entry.word === word) ?? { word });
       const state = element("span", "fixed-preset-state", word === activeWord ? "摆放中" : placed ? "固定位置" : pendingPins.has(word) ? "需重新摆放" : "自动摆放");
       const edit = element("button", "reset-button", placed ? "重摆" : "固定位置"); edit.type = "button"; edit.dataset.fixedWord = word;
@@ -313,6 +316,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
     const card = element("div", `fixed-search-result${selected ? " is-selected" : ""}${issue ? " is-disabled" : ""}`);
     const heading = element("span", "fixed-result-heading");
     const wordLabel = element("strong", "", entry.word);
+    renderWordLetters(wordLabel, entry.word);
     bindWordTooltip(wordLabel, entry);
     heading.append(wordLabel, element("span", "", issue ? "不可用" : pinned ? "固定位置" : selected ? "已选择" : ""));
     const actions = element("div", "fixed-result-actions");
