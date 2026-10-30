@@ -42,16 +42,16 @@
     {
       "key": "required",
       "label": "普通词库",
-      "count": 10748,
+      "count": 8348,
       "file": "required-words.json",
-      "sha256": "2e11476a460ada91942b99efe2643e99cbf5937cd1b22e57d972398bb08b12c1"
+      "sha256": "787ebb0be95aae3633732f83ea3eb6bda32f3cadca3768efa083c2470f7a4627"
     },
     {
       "key": "extra",
       "label": "仅额外词库",
-      "count": 11692,
+      "count": 3586,
       "file": "extra-words.json",
-      "sha256": "862fe4393760d2861b60ba97cfe8c49e12042ff8b2be0999e4e1bc269d3f5a7e"
+      "sha256": "07af78e73e04c8101deaff6d3bfb1393e9dfc38689003c54c7c2309609827ab0"
     },
     {
       "key": "guide",
@@ -61,7 +61,12 @@
       "sha256": "1983a0bc52abb2967e55c22f71f2a89fe57afa6f4f2e2cb27a5b496aa60266e6"
     }
   ],
-  "totalCount": 22470,
+  "totalCount": 11964,
+  "exclusions": {
+    "fileName": "excluded-words.json",
+    "sha256": "e631b50fd57fad32b1d7d3c2b365a378a25ee192d95af7bf4f6d074b367cf624",
+    "count": 10506
+  },
   "supplements": [
     {
       "fileName": "guide-words.json",

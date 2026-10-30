@@ -222,15 +222,23 @@
             <h2 id="saved-levels-title">关卡列表</h2>
             <output id="saved-level-count" aria-label="已加入的关卡数量">0</output>
           </header>
+          <div id="saved-library-controls" class="saved-library-controls">
+            <label for="saved-library-select">当前关卡列表</label>
+            <select id="saved-library-select" aria-label="切换关卡列表" disabled></select>
+            <div class="saved-library-buttons">
+              <button type="button" id="new-saved-library" class="reset-button" disabled>新建列表</button>
+              <button type="button" id="delete-saved-library" class="reset-button" disabled>删除列表</button>
+            </div>
+          </div>
           <p id="viewed-level-list-name" class="preset-level-metadata">浏览器关卡</p>
           <p id="level-source-status" class="level-source-status" aria-live="polite">保存在当前浏览器</p>
           <div class="saved-level-actions">
             <button type="button" id="return-to-edited-levels" class="reset-button" hidden>返回浏览器关卡</button>
             <button type="button" id="save-local-level-file" class="generate-button" hidden>保存文件</button>
             <button type="button" id="save-local-level-file-as" class="reset-button" hidden>另存为</button>
-            <button type="button" id="add-level-to-list" class="generate-button" disabled>加入关卡列表</button>
-            <button type="button" id="export-levels" class="reset-button" title="将浏览器中的关卡下载为游戏文件" disabled>导出文件</button>
-            <button type="button" id="import-levels" class="reset-button" title="读取游戏 JSON 并追加到浏览器关卡；编辑原文件请使用“关卡文件与预设”" disabled>追加导入到浏览器</button>
+            <button type="button" id="add-level-to-list" class="generate-button" disabled>保存关卡</button>
+            <button type="button" id="export-levels" class="reset-button" title="将当前关卡列表下载为游戏文件" disabled>导出列表</button>
+            <button type="button" id="import-levels" class="reset-button" title="读取游戏 JSON 并追加到浏览器关卡；编辑原文件请使用“关卡文件与预设”" hidden disabled>追加导入到浏览器</button>
             <input type="file" id="import-levels-file" accept=".json,application/json" hidden>
           </div>
           <p id="saved-level-error" class="saved-level-error" role="alert" hidden></p>
@@ -257,6 +265,23 @@
       </section>
 
     </main>
+
+    <dialog id="saved-library-dialog" class="config-detail-dialog saved-library-dialog" aria-labelledby="saved-library-dialog-title">
+      <form id="saved-library-form">
+        <header class="filter-panel-heading">
+          <h2 id="saved-library-dialog-title">新建关卡列表</h2>
+          <button type="button" class="filter-close" data-close-saved-library aria-label="关闭列表操作">×</button>
+        </header>
+        <label id="saved-library-name-label" for="saved-library-name">列表名称</label>
+        <input id="saved-library-name" type="text" maxlength="40" autocomplete="off" required />
+        <p id="saved-library-message" hidden></p>
+        <p id="saved-library-error" class="saved-library-error" role="alert" hidden></p>
+        <footer class="filter-footer">
+          <button type="button" class="reset-button" data-close-saved-library>取消</button>
+          <button type="submit" id="submit-saved-library" class="generate-button">创建</button>
+        </footer>
+      </form>
+    </dialog>
 
     <dialog id="level-config-dialog" class="config-list-dialog" aria-labelledby="config-list-title">
       <header class="config-dialog-heading">

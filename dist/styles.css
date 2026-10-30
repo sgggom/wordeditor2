@@ -273,6 +273,17 @@ legend { padding: 0; margin-bottom: 5px; color: #66705f; font-size: 11px; }
 .saved-level-heading { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 38px; padding: 6px 12px; border-bottom: 1px solid #eef0e9; }
 .saved-level-heading h2 { margin: 0; font-size: 12px; font-weight: 600; }
 .saved-level-heading output { color: #758069; font-size: 11px; font-variant-numeric: tabular-nums; }
+.saved-library-controls { flex-shrink: 0; display: grid; gap: 6px; padding: 8px; }
+.saved-library-controls label { color: #64765a; font-size: 11px; }
+.saved-library-controls select { min-width: 0; width: 100%; height: 30px; padding: 3px 5px; border: 1px solid #dfe5d7; border-radius: 5px; background: #fafbf8; color: #345038; font: inherit; font-size: 11px; }
+.saved-library-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.saved-library-buttons button { min-width: 0; height: 28px; padding: 0 4px; font-size: 11px; }
+.saved-library-buttons #delete-saved-library { color: #a33d30; }
+.saved-library-dialog { width: min(420px, calc(100vw - 32px)); padding: 18px; }
+.saved-library-dialog label { display: block; margin: 16px 0 7px; color: #52664a; font-size: 12px; }
+.saved-library-dialog input { width: 100%; height: 36px; padding: 7px 9px; border: 1px solid #dfe5d7; border-radius: 5px; font: inherit; }
+.saved-library-dialog p { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.saved-library-error { color: #a33d30; }
 .saved-level-actions { flex-shrink: 0; padding: 8px; }
 .saved-level-actions .generate-button { width: 100%; height: 32px; padding: 0 6px; }
 .saved-level-actions .generate-button:disabled { cursor: default; }

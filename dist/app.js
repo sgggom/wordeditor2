@@ -53,6 +53,15 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   const importLevelsButton = document.querySelector("#import-levels");
   const importLevelsFile = document.querySelector("#import-levels-file");
   const savedLevelList = document.querySelector("#saved-level-list");
+  const savedLibraryControls = document.querySelector("#saved-library-controls");
+  const savedLibrarySelect = document.querySelector("#saved-library-select");
+  const newSavedLibrary = document.querySelector("#new-saved-library");
+  const deleteSavedLibrary = document.querySelector("#delete-saved-library");
+  const savedLibraryDialog = document.querySelector("#saved-library-dialog");
+  const savedLibraryName = document.querySelector("#saved-library-name");
+  const savedLibraryMessage = document.querySelector("#saved-library-message");
+  const savedLibraryError = document.querySelector("#saved-library-error");
+  const submitSavedLibrary = document.querySelector("#submit-saved-library");
   const savedLevelCount = document.querySelector("#saved-level-count");
   const savedLevelError = document.querySelector("#saved-level-error");
   const batchRunBar = document.querySelector("#batch-run-bar");
@@ -101,6 +110,8 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   let generationWorkers = 0;
   let displayedStatistics = null;
   let savedLevels = [];
+  let savedLibraries = [], activeBrowserListId = "default", savedLibraryAction = null;
+  const savedLibraryDrafts = new Map();
   let presetView = null;
   let fileView = null;
   const localFiles = [];
@@ -169,7 +180,8 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   async function loadSavedLevels() {
     try {
       const store = await getLevelStore();
-      savedLevels = await store.getSavedLevels();
+      const [records, catalog] = await Promise.all([store.getSavedLevels(), store.getSavedLevelLists()]);
+      savedLevels = records; savedLibraries = catalog.lists; activeBrowserListId = catalog.activeListId;
       levelLibraryReady = true;
     } catch {
       savedLevelError.textContent = "关卡列表读取失败，请刷新重试。";
@@ -182,12 +194,96 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     }
   }
 
+  async function changeSavedLibrary(operation, deletedId = null) {
+    if (generating || savingLevel || updatingLevelList || batchRunning || presetView || fileView || !levelLibraryReady) return false;
+    const previousId = activeBrowserListId;
+    savedLibraryDrafts.set(previousId, structuredClone(editorSnapshot()));
+    updatingLevelList = true;
+    savedLevelError.hidden = true;
+    render();
+    try {
+      const store = await getLevelStore();
+      await operation(store);
+      const [records, catalog] = await Promise.all([store.getSavedLevels(), store.getSavedLevelLists()]);
+      savedLevels = records; savedLibraries = catalog.lists; activeBrowserListId = catalog.activeListId;
+      if (deletedId) savedLibraryDrafts.delete(deletedId);
+      updatingLevelList = false;
+      clearLevel();
+      const draft = savedLibraryDrafts.get(activeBrowserListId);
+      if (draft) restoreEditor(draft);
+      else if (savedLevels.length) openSavedLevel(savedLevels[0].id);
+      else applyEditorConfig({ ...editorSnapshot().config, rows: 3, columns: 3, disabledCells: [],
+        fixedWords: [], fixedLayout: null, fixedWordExemptions: [] });
+      savedLevelListDirty = true;
+      fileManager?.refresh();
+      render();
+      return true;
+    } catch (error) {
+      savedLibraryError.textContent = error.message || "关卡列表操作失败，请重试。";
+      savedLibraryError.hidden = false;
+      savedLevelError.textContent = savedLibraryError.textContent;
+      savedLevelError.hidden = false;
+      return false;
+    } finally {
+      updatingLevelList = false;
+      render();
+    }
+  }
+
+  function openSavedLibraryDialog(kind) {
+    if (generating || savingLevel || updatingLevelList || batchRunning || presetView || fileView || !levelLibraryReady) return;
+    const list = savedLibraries.find(list => list.id === activeBrowserListId);
+    if (kind === "delete" && savedLibraries.length < 2) return;
+    savedLibraryAction = { kind, id: activeBrowserListId };
+    document.querySelector("#saved-library-dialog-title").textContent = kind === "create" ? "新建关卡列表" : "删除关卡列表";
+    savedLibraryName.hidden = document.querySelector("#saved-library-name-label").hidden = kind === "delete";
+    savedLibraryName.required = kind === "create";
+    savedLibraryMessage.hidden = kind === "create";
+    savedLibraryMessage.textContent = kind === "delete" ? `确定删除“${list.name}”及其中的 ${savedLevels.length} 个关卡？` : "";
+    let name = "新关卡列表", suffix = 2;
+    while (savedLibraries.some(list => list.name === name)) name = `新关卡列表 ${suffix++}`;
+    savedLibraryName.value = name;
+    savedLibraryError.hidden = true;
+    submitSavedLibrary.textContent = kind === "create" ? "创建" : "删除整个列表";
+    savedLibraryDialog.showModal();
+    if (kind === "create") { savedLibraryName.focus(); savedLibraryName.select(); }
+  }
+  newSavedLibrary.addEventListener("click", () => openSavedLibraryDialog("create"));
+  deleteSavedLibrary.addEventListener("click", () => openSavedLibraryDialog("delete"));
+  savedLibrarySelect.addEventListener("change", () => {
+    const id = savedLibrarySelect.value;
+    if (id !== activeBrowserListId) changeSavedLibrary(store => store.switchSavedLevelList(id));
+  });
+  for (const button of savedLibraryDialog.querySelectorAll("[data-close-saved-library]")) button.addEventListener("click", () => {
+    if (!updatingLevelList) savedLibraryDialog.close();
+  });
+  savedLibraryDialog.addEventListener("cancel", event => { if (updatingLevelList) event.preventDefault(); });
+  document.querySelector("#saved-library-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!savedLibraryAction || updatingLevelList) return;
+    const { kind, id } = savedLibraryAction;
+    submitSavedLibrary.disabled = true;
+    try {
+      const success = await changeSavedLibrary(store => kind === "create"
+        ? store.createSavedLevelList(savedLibraryName.value) : store.deleteSavedLevelList(id), kind === "delete" ? id : null);
+      if (success) savedLibraryDialog.close();
+    } finally { submitSavedLibrary.disabled = false; }
+  });
+
   function renderSavedLevels() {
     const displayedLevels = presetView?.records ?? fileView?.records ?? savedLevels;
     const busy = generating || savingLevel || updatingLevelList || batchRunning;
     const view = currentListView();
-    importLevelsButton.hidden = Boolean(presetView || fileView);
-    importLevelsButton.disabled = busy || exportingLevels || !levelLibraryReady;
+    savedLibraryControls.hidden = Boolean(presetView || fileView);
+    savedLibrarySelect.replaceChildren(...savedLibraries.map(list => new Option(
+      `${list.name}（${list.id === activeBrowserListId ? savedLevels.length : list.count} 关）`, list.id)));
+    savedLibrarySelect.value = activeBrowserListId;
+    savedLibrarySelect.disabled = newSavedLibrary.disabled = busy || !levelLibraryReady;
+    deleteSavedLibrary.disabled = busy || !levelLibraryReady || savedLibraries.length < 2;
+    deleteSavedLibrary.title = savedLibraries.length < 2 ? "至少保留一个关卡列表，可先新建另一份列表" : "删除当前列表及其中的关卡";
+    document.querySelector("#viewed-level-list-name").hidden = !presetView && !fileView;
+    importLevelsButton.hidden = true;
+    importLevelsButton.disabled = true;
     importLevelsButton.textContent = updatingLevelList ? "处理中…" : "追加导入到浏览器";
     savedLevelCount.textContent = String(displayedLevels.length);
     document.querySelector("#viewed-level-list-name").textContent = view.label;
@@ -202,11 +298,11 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     saveFileAsButton.hidden ||= !view.canSaveAs;
     exportLevelsButton.hidden = Boolean(fileView);
     exportLevelsButton.disabled = exportingLevels || busy || !displayedLevels.length;
-    exportLevelsButton.textContent = exportingLevels ? "导出中…" : "导出文件";
+    exportLevelsButton.textContent = exportingLevels ? "导出中…" : "导出列表";
     addLevelButton.hidden = Boolean(fileView);
     addLevelButton.disabled = Boolean(presetView) || !level || busy || !levelLibraryReady || (activeSavedLevelId !== null && !savedLevelEdited);
     addLevelButton.textContent = presetView ? "自带预设 · 只读" : savingLevel ? "保存中…" : activeSavedLevelId !== null
-      ? (savedLevelEdited ? "保存修改到浏览器" : "已保存到浏览器") : "加入浏览器关卡";
+      ? (savedLevelEdited ? "保存关卡" : "关卡已保存") : "保存关卡";
     if (!savedLevelListDirty && displayedSavedLevelId === activeSavedLevelId && displayedLevelListBusy === busy) return;
     savedLevelListDirty = false;
     displayedSavedLevelId = activeSavedLevelId;
@@ -1345,7 +1441,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
           `本地文件 · ${fileView.dirty ? "未保存修改" : "已保存"}${fileView.handle ? "" : " · 保存将生成副本"}` };
     }
     if (presetView) return { ...presetView, kind: "preset", activeId: activeSavedLevelId, busy, status: "自带预设 · 只读" };
-    return { id: "browser", label: "浏览器关卡", kind: "browser", records: savedLevels, activeId: activeSavedLevelId,
+    return { id: "browser", label: savedLibraries.find(list => list.id === activeBrowserListId)?.name ?? "浏览器关卡", kind: "browser", records: savedLevels, activeId: activeSavedLevelId,
       busy, status: levelLibraryReady ? "保存在当前浏览器；导出文件后可在本地编辑" : savedLevelsLoading ? "正在读取浏览器关卡…" : "浏览器存储不可用，可打开本地文件" };
   }
   function stageFileLevel() {

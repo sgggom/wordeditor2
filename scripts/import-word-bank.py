@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "data" / "source" / "四游戏词库_精简版.xlsx"
 GUIDE_SOURCE = ROOT / "data" / "source" / "guide-words.json"
 GAME_SOURCES = ROOT / "data" / "source" / "word-game-sources.json"
+EXCLUDED_SOURCE = ROOT / "data" / "source" / "excluded-words.json"
 LEVEL_SOURCE_DIR = ROOT / "data" / "source" / "word-level-sources"
 SOURCE_ROLES = ("target", "extra", "onlyExtra", "bonus")
 DETAIL_GAMES = ("06_Zen_Word", "07_Word_Tiles")
@@ -190,6 +191,15 @@ def main():
     parser.add_argument("--game-catalog", help="从参考项目的 data/game_vocab/catalog.json 更新来源游戏快照")
     args = parser.parse_args()
     source_bytes = SOURCE.read_bytes()
+    excluded_bytes = EXCLUDED_SOURCE.read_bytes()
+    excluded_data = json.loads(excluded_bytes)
+    excluded_list = excluded_data.get("words")
+    if (not isinstance(excluded_list, list)
+            or any(not isinstance(word, str) or not re.fullmatch(r"[A-Z]+", word)
+                   for word in excluded_list)
+            or len(set(excluded_list)) != len(excluded_list)):
+        raise ValueError("删除词列表需包含不重复的大写单词。")
+    excluded_words = set(excluded_list)
     guide_bytes = GUIDE_SOURCE.read_bytes()
     game_source_bytes, provenance_files = game_sources(args.game_catalog)
     game_source_data = json.loads(game_source_bytes)
@@ -222,6 +232,11 @@ def main():
         "fields": [{"key": key, "label": label} for key, label in FIELDS],
         "groups": [],
         "totalCount": 0,
+        "exclusions": {
+            "fileName": EXCLUDED_SOURCE.name,
+            "sha256": hashlib.sha256(excluded_bytes).hexdigest(),
+            "count": len(excluded_words),
+        },
     }
     outputs = {}
     with ZipFile(SOURCE) as archive:
@@ -244,6 +259,8 @@ def main():
             sheet_path = (target.lstrip("/") if target.startswith("/")
                           else posixpath.normpath(posixpath.join("xl", target)))
             records = read_records(archive, sheet_path, shared_strings, key)
+            records = [record for record in records
+                       if record["word"].strip().upper() not in excluded_words]
             if guide_words.intersection(record["word"].strip().upper() for record in records):
                 raise ValueError("2词库与原词库重复，请先确认词库分类。")
             # Preserve order, duplicates, original text, numbers, zeros and blanks.
