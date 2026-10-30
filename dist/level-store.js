@@ -80,6 +80,24 @@ export async function saveLevel(level, existingRecord = null) {
   });
 }
 
+export function saveLevelAtPosition(level, position) {
+  if (!Number.isSafeInteger(position) || position < 1) throw new Error("关卡位置需为正整数。");
+  const snapshot = structuredClone(level);
+  return transact("readwrite", (store, request, done) => {
+    request(store.getAll(), records => {
+      const current = ordered(records)[position - 1] ?? records.findLast(record => record.level.sourceConfig?.position === position);
+      if (current) {
+        const record = { ...current, level: snapshot };
+        request(store.put(record), () => done(record));
+      } else {
+        const nextPosition = records.reduce((maximum, record) => Math.max(maximum, positionOf(record)), 0) + 1;
+        const record = { createdAt: Date.now(), position: nextPosition, level: snapshot };
+        request(store.add(record), id => done({ ...record, id }));
+      }
+    });
+  });
+}
+
 export function deleteSavedLevel(id) {
   return transact("readwrite", (store, request, done) => {
     request(store.getAll(), records => {

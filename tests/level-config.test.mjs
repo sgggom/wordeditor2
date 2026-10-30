@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { CONFIG_LIST_STORAGE_KEY, patchLevelConfigs, readConfigList, saveConfigList,
-  validateConfigList, validateLevelConfig, configJobsInRange } from "../dist/level-config.js";
+  validateConfigList, validateLevelConfig, configJobsInRange, previousConfigWordUsage } from "../dist/level-config.js";
 
 const config = () => ({ rows: 3, columns: 4, targetCount: 6,
   targetLengthPlan: ["short", "medium", "long", "short", "medium", "long"],
@@ -108,4 +108,26 @@ test("invalid generation ranges fail instead of truncating, swapping or rounding
     assert.throws(() => configJobsInRange(list, from, to), /起始关|结束关/);
   }
   assert.throws(() => configJobsInRange([], 1, 1), /为空/);
+});
+
+
+test("recent configured-word usage includes the previous 50 levels and excludes current, future and older levels", () => {
+  const records = Array.from({ length: 56 }, () => ({ config: { fixedWords: [] } }));
+  records[3].config.fixedWords = ["AN"];
+  records[4].config.fixedWords = ["am", " AM "];
+  records[53].config.fixedWords = ["AM", "GO"];
+  records[54].config.fixedWords = ["AT"];
+  records[55].config.fixedWords = ["AS"];
+  assert.deepEqual([...previousConfigWordUsage(records, 54)], [["AM", [5, 54]], ["GO", [54]]]);
+  assert.deepEqual([...previousConfigWordUsage(records, 0)], []);
+  assert.deepEqual([...previousConfigWordUsage(records, 1)], []);
+  assert.equal(records[4].config.fixedWords.length, 2);
+});
+
+test("recent usage follows the current list order rather than reference or stored level numbers", () => {
+  const records = [{ reference: { position: 999 }, config: { fixedWords: ["CAT"] } },
+    { reference: { position: 1 }, config: { fixedWords: ["DOG"] } }];
+  assert.deepEqual([...previousConfigWordUsage(records, 1)], [["CAT", [1]]]);
+  records.reverse();
+  assert.deepEqual([...previousConfigWordUsage(records, 1)], [["DOG", [1]]]);
 });

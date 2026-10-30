@@ -1,16 +1,23 @@
 import { resizeDisabledCells } from "./board-shape.js";
-import { CONFIG_NUMBER_FIELDS, CONFIG_FILTER_OPTIONS, MAX_CONFIG_ROWS, readConfigLists, migrateConfigLists, changeConfigLists, saveConfigList,
-  patchLevelConfigs, validateConfigNumber, validateLevelConfig, installConfigPreset, configJobsInRange } from "./level-config.js";
+import { CONFIG_NUMBER_FIELDS, MAX_CONFIG_ROWS, readConfigLists, migrateConfigLists, changeConfigLists, saveConfigList,
+  patchLevelConfigs, validateConfigNumber, validateLevelConfig, installConfigPreset, configJobsInRange, previousConfigWordUsage } from "./level-config.js";
 import { REFERENCE_CONFIG_ID } from "./reference-config.js";
 import { formatBatchState } from "./batch-runner.js";
 import { defaultGenerationWorkers, detectedProcessorCount } from "./generation-client.js";
 import { mountFixedBoardEditor, createConfigBoardPreview } from "./fixed-board-editor.js";
 import { configureOpeningWords, OPENING_WORDS_PRESET_ID } from "./opening-words-preset.js";
+import { bindWordTooltip } from "./word-tooltip.js";
 
 export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) {
+  function newLevelConfig() {
+    return { ...getConfig(), rows: 3, columns: 3, disabledCells: [],
+      fixedWords: [], fixedWordExemptions: [], fixedLayout: null };
+  }
   const openButton = document.querySelector("#open-config-list");
   const dialog = document.querySelector("#level-config-dialog");
   const body = document.querySelector("#config-list-body");
+  const wordPool = document.querySelector("#config-word-pool-items");
+  const wordPoolCount = document.querySelector("#config-word-pool-count");
   const error = document.querySelector("#config-list-error");
   const count = document.querySelector("#config-list-count");
   const selectedCount = document.querySelector("#config-selected-count");
@@ -55,7 +62,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   let nameAction = null;
   let pendingDeleteId = null;
   const columns = ["fixedWords",
-    "initialForwardProbability", "targetDuplicateRange", "extraDuplicateRange", "filters"];
+    "initialForwardProbability", "targetDuplicateRange", "extraDuplicateRange"];
   let records = [];
   let selected = new Set();
   let detailState = null;
@@ -203,6 +210,45 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
       (config.fixedWords?.length ? `；固定词：${config.fixedWords.join("、")}` : "；点击编辑棋盘与固定单词");
   }
 
+  function renderWordPool() {
+    const usage = new Map();
+    for (const [index, record] of records.entries()) {
+      const words = new Set((record.config.fixedWords ?? []).map(word => word.trim().toUpperCase()).filter(Boolean));
+      for (const word of words) {
+        if (!usage.has(word)) usage.set(word, []);
+        usage.get(word).push(index + 1);
+      }
+    }
+    const total = [...usage.values()].reduce((sum, levels) => sum + levels.length, 0);
+    wordPoolCount.textContent = `${usage.size} 个单词 · ${total} 次使用`;
+    const fragment = document.createDocumentFragment();
+    for (const [word, levels] of [...usage].sort(([a], [b]) => a.localeCompare(b))) {
+      const row = document.createElement("div");
+      row.className = "config-word-pool-row";
+      row.dataset.poolWord = word;
+      const label = document.createElement("strong");
+      label.textContent = word;
+      bindWordTooltip(label, { word });
+      const frequency = document.createElement("span");
+      frequency.className = "config-word-pool-frequency";
+      frequency.textContent = `${levels.length} 关`;
+      const locations = document.createElement("span");
+      locations.className = "config-word-pool-levels";
+      const number = level => String(level).padStart(3, "0");
+      locations.textContent = `第 ${levels.slice(0, 6).map(number).join("、")} 关${levels.length > 6 ? `等 ${levels.length} 关` : ""}`;
+      locations.title = `第 ${levels.map(number).join("、")} 关`;
+      row.append(label, frequency, locations);
+      fragment.append(row);
+    }
+    if (!usage.size) {
+      const empty = document.createElement("p");
+      empty.className = "config-word-pool-empty";
+      empty.textContent = "当前列表还没有配置固定单词";
+      fragment.append(empty);
+    }
+    wordPool.replaceChildren(fragment);
+  }
+
   function renderRows() {
     const scroll = body.closest(".config-table-scroll");
     const scrollTop = scroll.scrollTop;
@@ -240,13 +286,8 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
           button.type = "button";
           button.className = "config-cell-button";
           button.dataset.configAction = field;
-          if (field === "fixedWords") {
-            button.classList.add("config-board-button");
-
-          } else {
-            button.textContent = Object.keys(record.config.filters).length ? `${Object.keys(record.config.filters).length} 项筛选` : "全部";
-          }
-          button.setAttribute("aria-label", `第 ${index + 1} 关${field === "fixedWords" ? "棋盘编辑" : "词库筛选"}`);
+          button.classList.add("config-board-button");
+          button.setAttribute("aria-label", `第 ${index + 1} 关棋盘编辑`);
           cell.append(button);
         }
         row.append(cell);
@@ -274,6 +315,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
       fragment.append(row);
     }
     body.replaceChildren(fragment);
+    renderWordPool();
     renderSelection();
     markRunningRow();
     scroll.scrollTop = scrollTop;
@@ -331,16 +373,14 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     detailTitle.textContent = `${ids.length > 1 ? `所选 ${ids.length} 关 · ` : `第 ${records.indexOf(source) + 1} 关 · `}${kind === "fixedWords" ? "棋盘编辑" : "词库筛选"}`;
     detailError.hidden = true;
     if (kind === "fixedWords") {
-      fixedBoardEditor = mountFixedBoardEditor(detailContent, detailState.config, { configs: settings, onError: message => {
+      const sourceIndex = records.indexOf(source);
+      fixedBoardEditor = mountFixedBoardEditor(detailContent, detailState.config, { configs: settings,
+        recentWordUsage: previousConfigWordUsage(records, sourceIndex),
+        historyReference: ids.length > 1 ? `用词提示以第 ${sourceIndex + 1} 关之前的 50 关为准` : "",
+        onError: message => {
         detailError.hidden = !message;
         detailError.textContent = message;
       } });
-    } else {
-      const fields = document.querySelector("#word-filter-panel .filter-fields").cloneNode(true);
-      for (const input of fields.querySelectorAll("input[data-word-filter]")) {
-        input.checked = source.config.filters[input.dataset.wordFilter]?.includes(Number(input.value)) ?? true;
-      }
-      detailContent.replaceChildren(fields);
     }
     detail.showModal();
   }
@@ -467,7 +507,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   });
 
   for (const [value, label] of [...Object.entries(CONFIG_NUMBER_FIELDS).map(([key, rule]) => [key, rule.label]),
-    ["fixedWords", "棋盘编辑"], ["filters", "词库筛选"]]) batchField.add(new Option(label, value));
+    ["fixedWords", "棋盘编辑"]]) batchField.add(new Option(label, value));
 
   openButton.addEventListener("click", () => {
     workerInfo.textContent = `自动并行 ${defaultGenerationWorkers()} 路`;
@@ -476,7 +516,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     try {
       library = readConfigLists();
       if (!library) {
-        saveConfigList([{ id: crypto.randomUUID(), config: structuredClone(getConfig()) }]);
+        saveConfigList([{ id: crypto.randomUUID(), config: newLevelConfig() }]);
         library = readConfigLists();
       }
       activeListId = library.activeListId;
@@ -538,7 +578,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
       addCount.focus();
       return;
     }
-    const config = getConfig();
+    const config = newLevelConfig();
     const additions = Array.from({ length: amount }, () => ({ id: crypto.randomUUID(), config: structuredClone(config) }));
     records.push(...additions);
     selected = new Set(additions.map(record => record.id));
@@ -607,13 +647,6 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     if (kind === "fixedWords") {
       try { patch = fixedBoardEditor.getValue(); }
       catch (failure) { showError(failure.message, detailError); return; }
-    } else {
-      const filters = {};
-      for (const [key, options] of Object.entries(CONFIG_FILTER_OPTIONS)) {
-        const values = [...detailContent.querySelectorAll(`input[data-word-filter="${key}"]:checked`)].map(input => Number(input.value));
-        if (values.length !== options.length) filters[key] = values;
-      }
-      patch = { filters };
     }
     try {
       applyPatch(ids, patch);

@@ -14,6 +14,17 @@ export const CONFIG_FILTER_OPTIONS = {
   scope: [0, 1, 2, 3, 4], emotion: [-2, -1, 0, 1, 2], abbreviation: [0, 1], rarityLevel: [1, 2, 3, 4, 5],
 };
 
+export function previousConfigWordUsage(records, currentIndex, range = 50) {
+  const usage = new Map();
+  for (let index = Math.max(0, currentIndex - range); index < currentIndex; index++) {
+    for (const word of new Set(normalizeFixedWords(records[index].config.fixedWords))) {
+      if (!usage.has(word)) usage.set(word, []);
+      usage.get(word).push(index + 1);
+    }
+  }
+  return usage;
+}
+
 export function validateConfigNumber(field, value) {
   const rule = CONFIG_NUMBER_FIELDS[field];
   if (!rule || !Number.isSafeInteger(value) || value < rule.min || (rule.max !== undefined && value > rule.max)) {

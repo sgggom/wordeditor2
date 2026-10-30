@@ -183,3 +183,28 @@ test("a range run generates and saves only its inclusive configuration interval"
     { id: "row-2", position: 2 }, { id: "row-3", position: 3 }, { id: "row-4", position: 4 },
   ]);
 });
+
+test("rerunning replaces visible positions and subsequent checks use replacements despite stale source positions", async () => {
+  const initial = [1, 2, 3, 4].map(position => ({ id: position, level: {
+    ...level(`OLD${position}`), sourceConfig: { id: `old-${position}`, position: 100 - position },
+  } }));
+  const persisted = structuredClone(initial), checks = [], positions = [];
+  const runner = createBatchRunner({
+    getHistory: async () => structuredClone(persisted),
+    generate: async (_, check) => { checks.push(check); return level(`NEW${checks.length + 1}`); },
+    save: async (generated, position) => {
+      positions.push(position);
+      const record = { ...persisted[position - 1], level: generated };
+      persisted[position - 1] = record;
+      return record;
+    },
+  });
+  const state = await runner.run([2, 3].map(position => ({ id: `config-${position}`, position, config: config() })));
+  assert.equal(state.phase, "complete");
+  assert.deepEqual(positions, [2, 3]);
+  assert.deepEqual(checks[0].target.words, ["OLD1"]);
+  assert.deepEqual(checks[1].target.words, ["OLD1", "NEW2"]);
+  assert.deepEqual(persisted.map(record => record.id), [1, 2, 3, 4]);
+  assert.deepEqual(persisted.map(record => record.level.targetWords[0].word), ["OLD1", "NEW2", "NEW3", "OLD4"]);
+  assert.deepEqual(initial.map(record => record.level.targetWords[0].word), ["OLD1", "OLD2", "OLD3", "OLD4"]);
+});

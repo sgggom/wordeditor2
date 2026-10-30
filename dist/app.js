@@ -1,4 +1,5 @@
-import { createPathSafetyChecker } from "./path-safety.js";
+import { getGlobalWordFilters, setGlobalWordFilters, subscribeGlobalWordFilters } from "./global-word-filters.js";
+import { createTargetPathMonitor } from "./target-path-monitor.js";
 import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
 import { createDuplicateCheck, findDuplicateWords, setTargetWord } from "./level-rules.js";
 import { setupConfigList } from "./config-list.js";
@@ -63,6 +64,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   const generateButton = document.querySelector("#generate-level");
   const errorMessage = document.querySelector("#generation-error");
   const ambiguityWarning = document.querySelector("#ambiguity-warning");
+  const targetPathMonitor = createTargetPathMonitor(ambiguityWarning);
   const emotionWarning = document.querySelector("#emotion-warning");
   const wordList = document.querySelector("#word-list");
   const wordCount = document.querySelector("#word-count");
@@ -84,7 +86,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
 
   let size = readSize();
   let configuredInitialForwardProbability = readInitialForwardProbability();
-  let configuredFilters = readFilters();
+  let configuredFilters = getGlobalWordFilters();
   let configuredFixedWords = readFixedWords();
   let configuredFixedWordExemptions = readFixedWordExemptions();
   let configuredFixedLayout = readFixedLayout();
@@ -286,7 +288,6 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     selectedWord = null;
     size = { rows: level.rows, columns: level.columns, disabledCells: level.disabledCells ?? [] };
     configuredInitialForwardProbability = level.initialForwardProbability ?? 50;
-    configuredFilters = level.filters ?? {};
     configuredFixedWords = normalizeFixedWords(level.fixedWords ?? []);
     configuredFixedWordExemptions = normalizeFixedWordExemptions(level);
     configuredFixedLayout = structuredClone(level.fixedLayout ?? null);
@@ -341,23 +342,6 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     try { return normalizeFixedWordExemptions({ fixedWords: configuredFixedWords,
       fixedWordExemptions: JSON.parse(localStorage.getItem(FIXED_EXEMPTIONS_STORAGE_KEY)) ?? [] }); }
     catch { return []; }
-  }
-
-  function readFilters() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY));
-      if (!saved || typeof saved !== "object" || Array.isArray(saved)) return {};
-      const result = {};
-      for (const [key, values] of Object.entries(saved)) {
-        const options = filterOptions[key];
-        if (!options || !Array.isArray(values) || values.some(value => !options.includes(value))) return {};
-        const selected = [...new Set(values)].sort((a, b) => a - b);
-        if (selected.length < options.length) result[key] = selected;
-      }
-      return result;
-    } catch {
-      return {};
-    }
   }
 
   function isValidDuplicateRange(value) {
@@ -497,7 +481,6 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       segment.setAttribute("aria-hidden", "true");
       pathShareBar.append(segment);
     });
-    const safePath = level ? createPathSafetyChecker(level) : () => false;
     const buttons = document.createDocumentFragment();
     for (const entry of entries) {
       const row = document.createElement("div");
@@ -556,7 +539,6 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
         checkbox.disabled = Boolean(presetView) || locked || generating || savingLevel || updatingLevelList || batchRunning;
         checkbox.setAttribute("aria-label", `${entry.word} 设为目标词`);
         selection.title = locked ? "固定单词不能移除" : checkbox.checked ? "移出目标词" : "加入目标词";
-        if (!safePath(entry.word)) selection.title += "；该词存在用格歧义，仅作提示";
         selection.append(checkbox);
       } else {
         selection.textContent = "—";
@@ -709,11 +691,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   }
 
   function render() {
-    const safePath = level ? createPathSafetyChecker(level) : () => true;
-    const ambiguous = (level?.targetWords ?? []).filter(entry => !safePath(entry.word)).map(entry => entry.word);
-    ambiguityWarning.hidden = !ambiguous.length;
-    ambiguityWarning.textContent = ambiguous.length
-      ? `歧义提示：${ambiguous.join("、")} 存在使用不同格子的路径，可能影响作答；仅作提示，不影响生成、保存或导出。` : "";
+    targetPathMonitor.update(level);
     const warningEmotionTotal = level?.statistics?.emotion?.total;
     emotionWarning.hidden = !level || (Number.isFinite(warningEmotionTotal) && warningEmotionTotal >= 0);
     emotionWarning.textContent = !level ? "" : Number.isFinite(warningEmotionTotal)
@@ -869,7 +847,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     if (configuredInitialForwardProbability !== initialForwardProbability || JSON.stringify(configuredFilters) !== JSON.stringify(filters)) clearLevel();
     configuredInitialForwardProbability = initialForwardProbability;
     configuredDuplicateRanges = duplicateRanges;
-    configuredFilters = filters;
+    setGlobalWordFilters(filters);
     if (location.protocol === "file:") {
       showError("请通过本地服务打开编辑器。");
       return;
@@ -1193,9 +1171,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       return;
     }
     if (filterInputs.includes(event.target)) {
-      clearLevel();
-      configuredFilters = filtersFromInputs();
-      render();
+      setGlobalWordFilters(filtersFromInputs());
       return;
     }
     if (event.target === initialForwardInput) {
@@ -1244,17 +1220,13 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   });
 
   document.querySelector("#reset-filters").addEventListener("click", () => {
-    configuredFilters = {};
-    restoreFilterInputs();
-    clearLevel();
-    render();
+    setGlobalWordFilters({});
   });
 
   function applyEditorConfig(config) {
     size = { rows: config.rows, columns: config.columns, disabledCells: config.disabledCells ?? [] };
     configuredInitialForwardProbability = config.initialForwardProbability;
     configuredDuplicateRanges = { target: config.targetDuplicateRange, extra: config.extraDuplicateRange };
-    configuredFilters = config.filters;
     configuredFixedWords = normalizeFixedWords(config.fixedWords ?? []);
     configuredFixedWordExemptions = normalizeFixedWordExemptions(config);
     configuredFixedLayout = structuredClone(config.fixedLayout ?? null);
@@ -1284,13 +1256,14 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
         renderSavedLevels();
         return savedLevels;
       },
-      generate: (...args) => client.generate(...args),
-      save: async generated => {
-        try { return await (await getLevelStore()).saveLevel(generated); }
+      generate: (config, duplicateCheck, options) => client.generate({ ...config, filters: getGlobalWordFilters() }, duplicateCheck, options),
+      save: async (generated, position) => {
+        try { return await (await getLevelStore()).saveLevelAtPosition(generated, position); }
         catch (error) { throw new Error(error.name === "QuotaExceededError" ? "本地存储空间不足，本关未保存。" : "关卡保存失败，请重试。"); }
       },
       onSaved: (record, job) => {
-        savedLevels = [...savedLevels, record];
+        const existing = savedLevels.some(saved => saved.id === record.id);
+        savedLevels = existing ? savedLevels.map(saved => saved.id === record.id ? record : saved) : [...savedLevels, record];
         savedLevelListDirty = true;
         level = structuredClone(record.level);
         activeSavedLevelId = record.id;
@@ -1505,6 +1478,13 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     },
     runConfigs: runConfigList,
     stopRun: () => batchRunner?.stop(),
+  });
+
+  subscribeGlobalWordFilters(filters => {
+    configuredFilters = filters;
+    restoreFilterInputs();
+    clearLevel();
+    render();
   });
 
   initialForwardInput.value = String(configuredInitialForwardProbability);

@@ -31,7 +31,11 @@ export function createBatchRunner({ getHistory, generate, save, onSaved = () => 
         for (const job of queue) {
           if (signal.aborted) break;
           publish({ phase: "generating", position: job.position, configId: job.id, attempts: 0, workers: 0 });
-          const duplicateCheck = createDuplicateCheck(history, {
+          // Replacement follows the visible list order, including imported or
+          // manually reordered records with older sourceConfig annotations.
+          const precedingHistory = history.map((record, index) => ({ ...record, level: { ...record.level,
+            sourceConfig: { ...record.level.sourceConfig, position: index + 1 } } }));
+          const duplicateCheck = createDuplicateCheck(precedingHistory, {
             target: job.config.targetDuplicateRange, extra: job.config.extraDuplicateRange,
           }, job.position);
           const level = await generate(job.config, duplicateCheck, {
@@ -43,10 +47,13 @@ export function createBatchRunner({ getHistory, generate, save, onSaved = () => 
           if (signal.aborted) break;
           if (!level) throw new Error("生成器没有返回关卡。");
           publish({ phase: "saving" });
-          const record = await save({ ...level, sourceConfig: { id: job.id, position: job.position } });
+          const record = await save({ ...level, sourceConfig: { id: job.id, position: job.position } }, job.position);
           // A save already in progress is allowed to commit when stopping. Only
           // committed results enter history and advance the completed count.
-          history.push(record);
+          const replaceIndex = job.position <= history.length ? job.position - 1
+            : history.findLastIndex(previous => previous.level.sourceConfig?.position === job.position);
+          if (replaceIndex >= 0) history[replaceIndex] = record;
+          else history.push(record);
           state.completed += 1;
           onSaved(record, job);
           publish({ phase: "saved" });
