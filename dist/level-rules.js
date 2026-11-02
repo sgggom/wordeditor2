@@ -1,5 +1,11 @@
 import { calculateLevelStatistics } from "./level-statistics.js";
 
+export const EXTRA_DUPLICATE_ATTEMPT_LIMIT = 100_000;
+
+export function acceptExtraDuplicateFallback(level, attempts, duplicateWords) {
+  return { ...level, extraDuplicateFallback: { attempts, duplicateCount: duplicateWords.length, words: [...duplicateWords] } };
+}
+
 export function createDuplicateCheck(records, ranges, beforePosition = null) {
   let history = records;
   if (beforePosition !== null) {

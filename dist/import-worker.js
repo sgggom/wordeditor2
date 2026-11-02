@@ -4,7 +4,9 @@ import { parseLevelFile } from "./level-file.js";
 self.onmessage = async ({ data }) => {
   try {
     const records = await Promise.all(["required-words.json", "extra-words.json", "guide-words.json"].map(async (file, index) => {
-      const response = await fetch(new URL(`./data/${file}`, import.meta.url));
+      let response;
+      try { response = await fetch(new URL(`./data/${file}`, import.meta.url)); }
+      catch { throw new Error("本地词库连接失败。请重新启动关卡编辑器本地服务，刷新页面后再打开文件。"); }
       if (!response.ok) throw new Error("词库读取失败，请重试。");
       return (await response.json()).map(record => ({ ...record, onlyExtra: index === 1 }));
     }));

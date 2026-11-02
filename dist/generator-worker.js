@@ -29,10 +29,13 @@ self.onmessage = async ({ data }) => {
   activeRun = run;
   try {
     const generator = await loadGenerator();
-    const options = { rows, columns, disabledCells, initialForwardProbability,
-      minimumEmotionScore: 0, filters, fixedWords, fixedLayout, fixedWordExemptions, duplicateCheck };
+    const options = { rows, columns, disabledCells, randomBoardShape: data.randomBoardShape, initialForwardProbability,
+      minimumEmotionScore: 0, minimumWordLength: data.minimumWordLength, reservedTargetWords: data.reservedTargetWords,
+      filters, fixedWords, fixedLayout, fixedWordExemptions, duplicateCheck };
     const level = await generateUntilComplete(generator, options, {
       isCurrent: () => activeRun === run,
+      // The client applies the limit to the combined attempts of all workers.
+      extraDuplicateAttemptLimit: Infinity,
       onProgress: progress => self.postMessage({ requestId, progress }),
     });
     if (level && activeRun === run) self.postMessage({ requestId, level });

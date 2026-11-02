@@ -957,6 +957,9 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       return;
     }
     const filters = filtersFromInputs();
+    const generationRecords = fileView ? fileView.records : savedLevels;
+    const generationIndex = generationRecords.findIndex(record => record.id === activeSavedLevelId);
+    const generationPosition = generationIndex >= 0 ? generationIndex + 1 : generationRecords.length + 1;
     if (configuredInitialForwardProbability !== initialForwardProbability || JSON.stringify(configuredFilters) !== JSON.stringify(filters)) clearLevel();
     configuredInitialForwardProbability = initialForwardProbability;
     configuredDuplicateRanges = duplicateRanges;
@@ -979,7 +982,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       const history = fileView ? fileView.records.slice(0, fileIndex < 0 ? fileView.records.length : fileIndex) : savedLevels;
       const duplicateCheck = createDuplicateCheck(history, configuredDuplicateRanges);
       const generated = await getGenerationClient().generate({ ...size, initialForwardProbability, filters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
-        fixedWordExemptions: configuredFixedWordExemptions }, duplicateCheck, {
+        fixedWordExemptions: configuredFixedWordExemptions, minimumWordLength: generationPosition === 1 ? 2 : 3 }, duplicateCheck, {
         signal: controller.signal,
         onProgress: ({ attempts, workers }) => {
           if (currentRequestId !== requestId || controller.signal.aborted) return;
@@ -1354,7 +1357,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     restoreFilterInputs();
   }
 
-  async function runConfigList(jobs, onUpdate) {
+  async function runConfigList(jobs, onUpdate, allConfigs = jobs) {
     if (batchRunning || savingLevel || updatingLevelList) throw new Error("请等待当前保存或运行完成。");
     if (!levelLibraryReady) throw new Error("关卡列表尚未加载完成，暂时不能批量生成。");
     returnToEditedLevels();
@@ -1402,7 +1405,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
         onUpdate(state);
       },
     });
-    try { return await batchRunner.run(jobs); }
+    try { return await batchRunner.run(jobs, allConfigs); }
     finally {
       client.close();
       batchRunner = null;

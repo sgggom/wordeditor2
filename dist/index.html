@@ -79,7 +79,7 @@
             </div>
 
             <div class="target-setting duplicate-range-setting">
-              <label for="extra-duplicate-range" title="当前额外词与关卡列表中最近 N 关的额外词查重；0 为关闭。">额外词查重</label>
+              <label for="extra-duplicate-range" title="与最近 N 关的额外词查重；0 为关闭。优先零重复，累计尝试超过 10 万次后选额外重复词最少的一关；目标词查重仍严格限制。">额外词查重</label>
               <div class="percentage-input">
                 <input id="extra-duplicate-range" name="extraDuplicateRange" type="number" min="0" step="1" value="20" required />
                 <span>关</span>
@@ -311,6 +311,14 @@
         <input id="config-batch-value" type="number" step="1" />
         <button type="button" id="apply-config-batch" class="generate-button" disabled>应用到所选</button>
       </div>
+      <div class="config-list-toolbar config-table-toolbar">
+        <button type="button" id="download-config-table-template" class="reset-button">下载配置表模板</button>
+        <button type="button" id="import-config-table" class="reset-button">读取配置表</button>
+        <button type="button" id="export-config-table" class="reset-button">导出配置表</button>
+        <input id="config-table-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.csv,text/csv" hidden />
+        <span class="config-library-hint">Excel .xlsx，读取为新列表；运行按表格顺序</span>
+      </div>
+      <p class="config-table-help">棋盘造型填写宽x高，如 3x3、4x3、5x3（宽高均为 2～5）。这三种尺寸生成时随机选择对应造型，失败后回退到同尺寸完整棋盘；其他尺寸使用完整棋盘。初始单词可留空。范围库 [0,1,2,3,4]，情绪 [-2,-1,0,1,2]，生僻程度 [1,2,3,4,5]；[] 表示无匹配。配置表只包含这七项，未列参数沿用编辑器当前设置，不记录固定路径。</p>
       <div class="config-list-content">
         <section class="config-word-pool" aria-labelledby="config-word-pool-title">
           <header class="config-word-pool-heading">

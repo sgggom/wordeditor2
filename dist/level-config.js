@@ -31,6 +31,22 @@ export function previousConfigWordUsage(records, currentIndex, range = 50) {
   return usage;
 }
 
+export function futureFixedTargetWords(records, position, fixedWords = []) {
+  const current = new Set(normalizeFixedWords(fixedWords));
+  const reserved = new Set();
+  records.forEach((record, index) => {
+    const futurePosition = record.position ?? index + 1;
+    const distance = futurePosition - position;
+    // The later level's window determines whether this level could block it.
+    if (distance <= 0 || distance > record.config.targetDuplicateRange) return;
+    const exempt = new Set(normalizeFixedWordExemptions(record.config));
+    for (const word of normalizeFixedWords(record.config.fixedWords)) {
+      if (!current.has(word) && !exempt.has(word)) reserved.add(word);
+    }
+  });
+  return [...reserved];
+}
+
 export function validateConfigNumber(field, value) {
   const rule = CONFIG_NUMBER_FIELDS[field];
   if (!rule || !Number.isSafeInteger(value) || value < rule.min || (rule.max !== undefined && value > rule.max)) {
@@ -198,7 +214,8 @@ export function changeConfigLists(action, storage = localStorage) {
     if (action.type === "rename") target.name = name;
     else {
       const list = { id: crypto.randomUUID(), name, records: action.type === "copy"
-        ? structuredClone(target.records).map(record => ({ ...record, id: crypto.randomUUID() })) : [] };
+        ? structuredClone(target.records).map(record => ({ ...record, id: crypto.randomUUID() })) : structuredClone(action.records ?? []) };
+      validateConfigList(list.records);
       library.lists.push(list);
       library.activeListId = list.id;
     }

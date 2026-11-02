@@ -1,7 +1,7 @@
 import { normalizeDisabledCells } from "./board-shape.js";
 import { calculateLevelStatistics, compareRepresentativePaths, describePath } from "./level-statistics.js";
-import { createDuplicateCheck, findDuplicateWords } from "./level-rules.js";
-import { validateFixedWords, normalizeFixedLayout, fixedLayoutLetters, normalizeFixedWordExemptions } from "./fixed-words.js";
+import { createDuplicateCheck, findDuplicateWords, EXTRA_DUPLICATE_ATTEMPT_LIMIT, acceptExtraDuplicateFallback } from "./level-rules.js";
+import { validateFixedWords, normalizeFixedWords, normalizeFixedLayout, fixedLayoutLetters, normalizeFixedWordExemptions } from "./fixed-words.js";
 
 function shuffled(items, random) {
   const result = [...items];
@@ -30,16 +30,35 @@ function validateTargetCount(targetCount) {
 const TARGET_LENGTH_GROUPS = ["short", "medium", "long"];
 const GENERATION_BATCH_SIZE = 80;
 
-export async function generateUntilComplete(generator, options, { onProgress = () => {}, isCurrent = () => true } = {}) {
+export async function generateUntilComplete(generator, options, { onProgress = () => {}, isCurrent = () => true,
+  extraDuplicateAttemptLimit = EXTRA_DUPLICATE_ATTEMPT_LIMIT } = {}) {
   let attempts = 0;
+  let bestLevel = null, bestExtraWords = [];
+  let currentOptions = options;
   while (isCurrent()) {
     try {
-      return generator.generate(options);
+      return generator.generate(currentOptions);
     } catch (error) {
+      if (currentOptions.randomBoardShape && currentOptions.disabledCells?.length && !currentOptions.fixedLayout) {
+        // One search batch (80 attempts), or an impossible shape: retry the same
+        // level on its full rectangle, retaining words, filters and history.
+        currentOptions = { ...currentOptions, disabledCells: [], randomBoardShape: false };
+        attempts += error.attempts ?? 0;
+        if (!isCurrent()) return null;
+        onProgress({ attempts });
+        await new Promise(resolve => setTimeout(resolve, 0));
+        continue;
+      }
       if (error.code !== "GENERATION_RETRY") throw error;
       attempts += error.attempts;
       if (!isCurrent()) return null;
-      onProgress({ attempts });
+      const improved = error.bestLevel && (!bestLevel || error.bestExtraWords.length < bestExtraWords.length);
+      if (improved) { bestLevel = error.bestLevel; bestExtraWords = error.bestExtraWords; }
+      onProgress({ attempts, ...(improved ? { bestLevel, bestExtraWords } : {}) });
+      if (!isCurrent()) return null;
+      if (attempts > extraDuplicateAttemptLimit && bestLevel) {
+        return acceptExtraDuplicateFallback(bestLevel, attempts, bestExtraWords);
+      }
     }
     // Yield between batches so a newer request can replace this search.
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -194,12 +213,13 @@ export function createGenerator(records, onlyExtraRecords = []) {
   // Search candidate words and routes lazily. Long words can use the whole
   // enabled board without materializing every possible 5 × 5 route first.
   function findPlacement({ rows, columns, disabledCells = [], letters, usedWords = [], initialForwardProbability = 50,
-    initialRarityLevel = null, filters = {}, fixedWord = null, fixedWordExemptions = [], random = Math.random }) {
+    initialRarityLevel = null, filters = {}, fixedWord = null, fixedWordExemptions = [], minimumWordLength = 2, reservedTargetWords = [], random = Math.random }) {
     validateInitialForwardProbability(initialForwardProbability);
     const { cells, neighbors } = boardGeometry(rows, columns, disabledCells);
     const used = new Set(usedWords);
+    const reserved = new Set(reservedTargetWords);
     const pool = getPool(initialWordFilters(filters, initialRarityLevel), new Set(fixedWordExemptions));
-    const options = pool.entries.filter(entry => !used.has(entry.word) && entry.word.length <= cells.length && (!fixedWord || entry.word === fixedWord));
+    const options = pool.entries.filter(entry => entry.word.length >= minimumWordLength && !reserved.has(entry.word) && !used.has(entry.word) && entry.word.length <= cells.length && (!fixedWord || entry.word === fixedWord));
     if (!options.length) return null;
     const emptyCount = cells.filter(cell => !letters[cell]).length;
     if (!emptyCount && !fixedWord) return null;
@@ -246,14 +266,14 @@ export function createGenerator(records, onlyExtraRecords = []) {
     return null;
   }
 
-  function fillBoard({ rows, columns, disabledCells, initialForwardProbability, initialRarityLevel, filters, fixedWords, fixedLayout, fixedWordExemptions, random }) {
+  function fillBoard({ rows, columns, disabledCells, initialForwardProbability, initialRarityLevel, filters, fixedWords, fixedLayout, fixedWordExemptions, minimumWordLength, reservedTargetWords, random }) {
     const placements = fixedLayout?.placements ?? [];
     const letters = fixedLayoutLetters(rows, columns, placements);
     const initialWords = placements.map(({ word, path }) => ({ ...dictionary.get(word), path: [...path] }));
     const pinned = new Set(initialWords.map(entry => entry.word));
     const place = fixedWord => {
       const placement = findPlacement({ rows, columns, disabledCells, letters, usedWords: initialWords.map(entry => entry.word),
-        initialForwardProbability, initialRarityLevel, filters, fixedWord, fixedWordExemptions, random });
+        initialForwardProbability, initialRarityLevel, filters, fixedWord, fixedWordExemptions, minimumWordLength, reservedTargetWords, random });
       if (!placement) return false;
       placement.path.forEach((cell, index) => { letters[cell] = placement.word[index]; });
       initialWords.push(placement);
@@ -269,7 +289,7 @@ export function createGenerator(records, onlyExtraRecords = []) {
   }
 
   // Stage 2: retain the assigned route and analyze all legal routes, with no cell counters.
-  function findWords({ rows, columns, letters, initialWords = [], disabledCells = [] }) {
+  function findWords({ rows, columns, letters, initialWords = [], disabledCells = [], minimumWordLength = 2 }) {
     const disabled = new Set(disabledCells);
     if (letters.length !== rows * columns || letters.some((letter, cell) => !disabled.has(cell) && !/^[A-Z]$/.test(letter))) {
       throw new Error("请先填满棋盘，再查找候选词。");
@@ -284,7 +304,7 @@ export function createGenerator(records, onlyExtraRecords = []) {
       word += letters[cell];
       if (!prefixes.has(word)) return;
       path = [...path, cell]; mask |= 1 << cell;
-      if (dictionary.has(word)) routes.push({ path, mask });
+      if (word.length >= minimumWordLength && dictionary.has(word)) routes.push({ path, mask });
       const row = Math.floor(cell / columns), column = cell % columns;
       for (const next of [row > 0 ? cell - columns : -1, row < rows - 1 ? cell + columns : -1,
         column > 0 ? cell - 1 : -1, column < columns - 1 ? cell + 1 : -1]) {
@@ -318,15 +338,17 @@ export function createGenerator(records, onlyExtraRecords = []) {
   // Keep the covering initial words selected; expose all eligible
   // candidates for manual selection without quantity or length quotas.
   function selectTargets({ rows, columns, disabledCells = [], letters, initialWords, foundWords,
-    filters = {}, fixedWords = [], fixedWordExemptions = [] }) {
+    filters = {}, fixedWords = [], fixedWordExemptions = [], minimumWordLength = 2, reservedTargetWords = [] }) {
+    foundWords = foundWords.filter(entry => entry.word.length >= minimumWordLength);
     const normalized = normalizeFilters(filters);
+    const reserved = new Set(reservedTargetWords);
     const initialNames = new Set(initialWords.map(entry => entry.word));
     const exemptions = new Set(normalizeFixedWordExemptions({ fixedWords, fixedWordExemptions }));
     if ([...exemptions].some(word => !initialNames.has(word))) throw new Error("豁免词必须是已摆入的初始固定词。");
     const foundByWord = new Map(foundWords.map(entry => [entry.word, entry]));
     const canTarget = entry => {
       const record = dictionary.get(entry.word);
-      return record?.onlyExtra === false && matchesFilters(record, normalized, exemptions.has(record.word));
+      return record?.onlyExtra === false && !reserved.has(record.word) && record.word.length >= minimumWordLength && matchesFilters(record, normalized, exemptions.has(record.word));
     };
     if (initialNames.size !== initialWords.length || initialWords.some(entry => !canTarget(entry))) {
       throw new Error("初始词不能重复、包含仅额外词或不符合词库筛选。");
@@ -338,23 +360,28 @@ export function createGenerator(records, onlyExtraRecords = []) {
     const extraWords = foundWords.filter(entry => !initialNames.has(entry.word));
     const cells = letters.map((letter, index) => ({ letter, count: 0, ...(disabledCells.includes(index) ? { disabled: true } : {}) }));
     for (const entry of targetWords) for (const cell of entry.path) cells[cell].count++;
-    const level = { rows, columns, disabledCells: [...disabledCells], targetCount: targetWords.length, targetLimitsEnabled: false,
+    const level = { rows, columns, minimumWordLength, disabledCells: [...disabledCells], targetCount: targetWords.length, targetLimitsEnabled: false,
       filters: normalized, fixedWords: [...fixedWords], fixedWordExemptions: [...exemptions], cells, initialWords, candidateWords, targetWords, extraWords };
     return { ...level, statistics: calculateLevelStatistics(level) };
   }
 
   function generate({ rows, columns, disabledCells = [], initialForwardProbability = 50, initialRarityLevel = null,
-    minimumEmotionScore = null, filters = {}, fixedWords = [], fixedLayout = null, fixedWordExemptions = [],
+    minimumEmotionScore = null, minimumWordLength = 2, reservedTargetWords = [], filters = {}, fixedWords = [], fixedLayout = null, fixedWordExemptions = [],
     duplicateCheck = createDuplicateCheck([], { target: 0, extra: 0 }), random = Math.random }) {
     validateSize(rows, columns);
+    if (![2, 3].includes(minimumWordLength)) throw new Error("最短单词长度需为 2 或 3。");
     disabledCells = normalizeDisabledCells({ rows, columns, disabledCells });
     const capacity = rows * columns - disabledCells.length;
     validateInitialForwardProbability(initialForwardProbability);
     if (minimumEmotionScore !== null && !Number.isFinite(minimumEmotionScore)) throw new Error("情绪总分下限需为有效数字。");
     fixedWords = validateFixedWords({ rows, columns, disabledCells, fixedWords });
+    reservedTargetWords = normalizeFixedWords(reservedTargetWords).filter(word => !fixedWords.includes(word));
     fixedWordExemptions = normalizeFixedWordExemptions({ fixedWords, fixedWordExemptions });
     const exemptions = new Set(fixedWordExemptions);
     fixedLayout = normalizeFixedLayout({ rows, columns, disabledCells, fixedWords, fixedLayout });
+    if ([...fixedWords, ...(fixedLayout?.placements.map(entry => entry.word) ?? [])].some(word => word.length < minimumWordLength)) {
+      throw new Error(`本关单词至少 ${minimumWordLength} 个字母，固定词不能短于此长度。`);
+    }
     const pinned = new Set(fixedLayout?.placements.map(entry => entry.word) ?? []);
     const pinnedLetters = fixedLayoutLetters(rows, columns, fixedLayout?.placements ?? []);
     const pool = getPool(filters, exemptions);
@@ -370,7 +397,8 @@ export function createGenerator(records, onlyExtraRecords = []) {
     }
     if (!pool.entries.length) throw new Error("筛选后没有可用的初始词，请调整词库筛选。");
     if (!initialPool.entries.length) throw new Error("当前词库筛选与初始词生僻档位下没有可用的初始词。");
-    const usable = initialPool.entries.filter(entry => entry.word.length <= capacity);
+    const reserved = new Set(reservedTargetWords);
+    const usable = initialPool.entries.filter(entry => !reserved.has(entry.word) && entry.word.length >= minimumWordLength && entry.word.length <= capacity);
     if (!usable.length) throw new Error("当前棋盘尺寸与词库筛选下没有可用的初始词。");
     if (disabledCells.length && !shapeSupportsWords(rows, columns, disabledCells, Math.min(...usable.map(entry => entry.word.length)))) {
       throw new Error("当前棋盘造型存在无法连接初始词的格子，请调整造型或词库筛选。");
@@ -379,23 +407,31 @@ export function createGenerator(records, onlyExtraRecords = []) {
       .reduce((sum, entry) => sum + entry.word.length, 0);
     if (maximumCoverage < capacity) throw new Error("当前可用的初始词无法填满棋盘，请调整造型或词库筛选。");
     let duplicateFailure = false;
+    let bestLevel = null, bestExtraWords = [];
     for (let attempt = 0; attempt < GENERATION_BATCH_SIZE; attempt++) {
       const filled = fillBoard({ rows, columns, disabledCells, initialForwardProbability, initialRarityLevel,
-        filters: pool.filters, fixedWords, fixedLayout, fixedWordExemptions, random });
+        filters: pool.filters, fixedWords, fixedLayout, fixedWordExemptions, minimumWordLength, reservedTargetWords, random });
       if (!filled) continue;
-      const foundWords = findWords({ rows, columns, disabledCells, ...filled });
-      const result = selectTargets({ rows, columns, disabledCells, ...filled, foundWords, filters: pool.filters, fixedWords, fixedWordExemptions });
+      const foundWords = findWords({ rows, columns, disabledCells, ...filled, minimumWordLength });
+      const result = selectTargets({ rows, columns, disabledCells, ...filled, foundWords, filters: pool.filters, fixedWords, fixedWordExemptions, minimumWordLength, reservedTargetWords });
       const duplicates = findDuplicateWords(result, duplicateCheck);
-      if (duplicates.target.length || duplicates.extra.length) { duplicateFailure = true; continue; }
-      return { ...result, initialForwardProbability, initialRarityLevel, minimumEmotionScore, fixedLayout: structuredClone(fixedLayout),
+      if (duplicates.target.length) { duplicateFailure = true; continue; }
+      // Only candidates satisfying strict target checks may enter the fallback pool.
+      const candidate = { ...result, initialForwardProbability, initialRarityLevel, minimumEmotionScore, fixedLayout: structuredClone(fixedLayout),
         duplicateCheck: Object.fromEntries(["target", "extra"].map(kind => [kind, {
           range: duplicateCheck[kind].range, levelIds: [...duplicateCheck[kind].levelIds],
         }])) };
+      if (!duplicates.extra.length) return candidate;
+      duplicateFailure = true;
+      if (!bestLevel || duplicates.extra.length < bestExtraWords.length) {
+        bestLevel = candidate; bestExtraWords = duplicates.extra;
+      }
     }
     const reason = duplicateFailure ? "本轮生成的关卡与查重范围内的关卡存在重复单词。"
       : "本轮未能用初始词填满棋盘。";
     const error = new Error(reason);
     error.code = "GENERATION_RETRY"; error.attempts = GENERATION_BATCH_SIZE;
+    if (bestLevel) { error.bestLevel = bestLevel; error.bestExtraWords = bestExtraWords; }
     throw error;
   }
 

@@ -1,4 +1,4 @@
-import { validateConfigList } from "./level-config.js";
+import { validateConfigList, futureFixedTargetWords } from "./level-config.js";
 import { createDuplicateCheck } from "./level-rules.js";
 
 export function createBatchRunner({ getHistory, generate, save, onSaved = () => {}, onUpdate = () => {} }) {
@@ -16,11 +16,13 @@ export function createBatchRunner({ getHistory, generate, save, onSaved = () => 
       controller.abort();
       publish({ phase: "stopping" });
     },
-    async run(jobs) {
+    async run(jobs, allConfigs = jobs) {
       if (controller) throw new Error("已有配置列表正在运行。");
       validateConfigList(jobs);
+      validateConfigList(allConfigs);
       if (!jobs.length) throw new Error("请先选择要运行的配置。");
       const queue = structuredClone(jobs);
+      const configurations = structuredClone(allConfigs);
       controller = new AbortController();
       const { signal } = controller;
       state = { phase: "loading", total: queue.length, completed: 0, position: queue[0].position,
@@ -38,7 +40,8 @@ export function createBatchRunner({ getHistory, generate, save, onSaved = () => 
           const duplicateCheck = createDuplicateCheck(precedingHistory, {
             target: job.config.targetDuplicateRange, extra: job.config.extraDuplicateRange,
           }, job.position);
-          const level = await generate(job.config, duplicateCheck, {
+          const reservedTargetWords = futureFixedTargetWords(configurations, job.position, job.config.fixedWords);
+          const level = await generate({ ...job.config, reservedTargetWords, minimumWordLength: job.position === 1 ? 2 : 3 }, duplicateCheck, {
             signal,
             onProgress: ({ attempts, workers }) => {
               if (!signal.aborted) publish({ attempts, ...(Number.isInteger(workers) ? { workers } : {}) });

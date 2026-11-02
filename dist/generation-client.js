@@ -1,3 +1,6 @@
+import { randomizeBoardShape } from './board-shape.js';
+import { EXTRA_DUPLICATE_ATTEMPT_LIMIT, acceptExtraDuplicateFallback, findDuplicateWords } from './level-rules.js';
+
 export function detectedProcessorCount(cores = globalThis.navigator?.hardwareConcurrency) {
   return Number.isSafeInteger(cores) && cores > 0 ? cores : 1;
 }
@@ -41,6 +44,9 @@ export function createGenerationClient({ workerCount = defaultGenerationWorkers(
     const attempts = [...run.attempts.values()].reduce((sum, value) => sum + value, 0);
     try { run.onProgress({ attempts, workers: run.active.size }); }
     catch (error) { finish(run, error); }
+    if (pending === run && attempts > EXTRA_DUPLICATE_ATTEMPT_LIMIT && run.bestLevel) {
+      finish(run, null, acceptExtraDuplicateFallback(run.bestLevel, attempts, run.bestExtraWords));
+    }
   }
 
   function failLane(run, lane, error, terminate = false) {
@@ -60,6 +66,14 @@ export function createGenerationClient({ workerCount = defaultGenerationWorkers(
       if (data.progress) {
         const attempts = data.progress.attempts;
         if (Number.isSafeInteger(attempts) && attempts >= 0) {
+          if (data.progress.bestLevel) {
+            const candidate = data.progress.bestLevel;
+            const duplicates = findDuplicateWords(candidate, run.duplicateCheck);
+            if (!duplicates.target.length && (!run.bestLevel || duplicates.extra.length < run.bestExtraWords.length)) {
+              run.bestLevel = candidate;
+              run.bestExtraWords = duplicates.extra;
+            }
+          }
           run.attempts.set(lane, Math.max(run.attempts.get(lane) ?? 0, attempts));
           progress(run);
         }
@@ -82,8 +96,10 @@ export function createGenerationClient({ workerCount = defaultGenerationWorkers(
     generate(config, duplicateCheck, { signal, onProgress = () => {} }) {
       if (pending) return Promise.reject(new Error("生成器正在处理上一关。"));
       if (signal.aborted) return Promise.resolve(null);
+      config = randomizeBoardShape(config);
       return new Promise((resolve, reject) => {
-        const run = { id: ++requestId, signal, onProgress, resolve, reject, active: new Set(), attempts: new Map() };
+        const run = { id: ++requestId, signal, onProgress, resolve, reject, duplicateCheck,
+          bestLevel: null, bestExtraWords: [], active: new Set(), attempts: new Map() };
         run.cancel = () => { terminateAll(); finish(run, null, null); };
         pending = run;
         signal.addEventListener("abort", run.cancel, { once: true });

@@ -83,7 +83,9 @@ export function setupPresetLevelLists({ getView, getFiles, onSelect, onBrowser, 
   let busy = false;
 
   async function read(file) {
-    const response = await fetch(new URL(file, new URL('./data/', import.meta.url)));
+    let response;
+    try { response = await fetch(new URL(file, new URL('./data/', import.meta.url))); }
+    catch { throw new Error('本地服务连接失败。请重新启动关卡编辑器本地服务，刷新页面后重试。'); }
     if (!response.ok) throw new Error('预设关卡读取失败，请重试。');
     return response.json();
   }

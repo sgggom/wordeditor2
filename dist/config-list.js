@@ -8,6 +8,7 @@ import { defaultGenerationWorkers, detectedProcessorCount } from "./generation-c
 import { mountFixedBoardEditor, createConfigBoardPreview } from "./fixed-board-editor.js";
 import { configureOpeningWords, OPENING_WORDS_PRESET_ID } from "./opening-words-preset.js";
 import { bindWordTooltip } from "./word-tooltip.js";
+import { parseConfigTable } from "./config-table.js";
 
 export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) {
   function newLevelConfig() {
@@ -127,7 +128,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     updateRunState({ phase: "loading", total: jobs.length, completed: 0, position: jobs[0].position,
       configId: jobs[0].id, attempts: 0, error: "" });
     try {
-      await runConfigs(jobs, updateRunState);
+      await runConfigs(jobs, updateRunState, records.map((record, index) => ({ ...record, position: index + 1 })));
     } catch (failure) {
       updateRunState({ ...runState, phase: "error", error: failure.message || "运行失败，请重试。" });
     } finally {
@@ -268,6 +269,10 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
       const number = document.createElement("th");
       number.scope = "row";
       number.textContent = String(index + 1).padStart(3, "0");
+      if (record.levelId) {
+        number.textContent = record.levelId;
+        number.title = `配置表关卡 id：${record.levelId}；列表顺序：第 ${index + 1} 关`;
+      }
       row.append(selectCell, number);
       for (const field of columns) {
         const cell = document.createElement("td");
@@ -550,6 +555,50 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   document.querySelector("#close-config-detail").addEventListener("click", () => detail.close());
   detail.addEventListener("close", () => { fixedBoardEditor?.destroy(); fixedBoardEditor = null; detailState = null; });
   saveButton.addEventListener("click", persist);
+  function downloadTable(data, filename, type) {
+    const url = URL.createObjectURL(new Blob([data], { type }));
+    const link = document.createElement("a");
+    link.href = url; link.download = filename;
+    document.body.append(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const tableInput = document.querySelector("#config-table-file");
+  document.querySelector("#import-config-table").addEventListener("click", () => {
+    if (!running) tableInput.click();
+  });
+  tableInput.addEventListener("change", async () => {
+    const file = tableInput.files[0];
+    tableInput.value = "";
+    if (!file || running || !library) return;
+    // Capture the destination and defaults before reading the local file.
+    const destination = activeListId;
+    const defaults = getConfig();
+    try {
+      let imported;
+      if (/\.xlsx$/i.test(file.name)) {
+        const { parseConfigXlsx } = await import("./config-table-xlsx.js");
+        imported = parseConfigXlsx(await file.arrayBuffer(), defaults);
+      } else if (/\.csv$/i.test(file.name)) imported = parseConfigTable(await file.text(), defaults);
+      else throw new Error("请选择 .xlsx 格式的配置表（也支持原 CSV 文件）。");
+      if (running || activeListId !== destination || !dialog.open) throw new Error("配置列表状态已变化，请重新读取配置表。");
+      performListAction({ type: "create", name: suggestedListName(file.name.replace(/\.(xlsx|csv)$/i, "") || "配置表"), records: imported });
+    } catch (failure) { showError(failure.message || "配置表读取失败。"); }
+  });
+  document.querySelector("#export-config-table").addEventListener("click", async () => {
+    if (running) return;
+    try {
+      const { serializeConfigXlsx, XLSX_MIME } = await import("./config-table-xlsx.js");
+      if (!running && dialog.open) downloadTable(serializeConfigXlsx(records), "关卡配置表.xlsx", XLSX_MIME);
+    }
+    catch (failure) { showError(failure.message); }
+  });
+  document.querySelector("#download-config-table-template").addEventListener("click", async () => {
+    if (running) return;
+    try {
+      const { configXlsxTemplate, XLSX_MIME } = await import("./config-table-xlsx.js");
+      if (!running && dialog.open) downloadTable(configXlsxTemplate(), "关卡配置表模板.xlsx", XLSX_MIME);
+    } catch (failure) { showError(failure.message || "配置表模板下载失败。"); }
+  });
   runSelectedButton.addEventListener("click", () => startRun(records.map((record, index) => ({ ...record, position: index + 1 }))
     .filter(record => selected.has(record.id))));
   runAllButton.addEventListener("click", () => {
