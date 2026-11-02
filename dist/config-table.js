@@ -2,6 +2,7 @@ import { CONFIG_FILTER_OPTIONS, MAX_CONFIG_ROWS, validateConfigList } from "./le
 import { normalizeFixedWords } from "./fixed-words.js";
 
 export const CONFIG_TABLE_HEADERS = ["关卡id", "棋盘造型", "初始单词1", "初始单词2", "范围库", "情绪", "生僻程度"];
+export const CONFIG_TABLE_OPTIONAL_HEADERS = ["目标重复检测", "目标数量"];
 
 // CSV supports quoted commas, escaped quotes, CRLF and multiline cells.
 function readCsv(text) {
@@ -64,7 +65,7 @@ export function parseConfigTable(text, defaults) {
 export function parseConfigTableRows(input, defaults) {
   const rows = input.map(row => row.map(value => String(value ?? "")));
   const headers = rows.shift()?.map(value => value.trim().toLowerCase());
-  if (!headers || ![7,8].includes(headers.length) || headers.some(label => ![...CONFIG_TABLE_HEADERS, "目标重复检测"].includes(label)) || new Set(headers).size !== headers.length ||
+  if (!headers || headers.some(label => ![...CONFIG_TABLE_HEADERS, ...CONFIG_TABLE_OPTIONAL_HEADERS].includes(label)) || new Set(headers).size !== headers.length ||
       CONFIG_TABLE_HEADERS.some(label => !headers.includes(label))) throw new Error(`表头需包含：${CONFIG_TABLE_HEADERS.join("、")}。`);
   const records = [], ids = new Set();
   for (const [index, row] of rows.entries()) {
@@ -78,6 +79,7 @@ export function parseConfigTableRows(input, defaults) {
       if (words.some(word => word && !/^[a-z]+$/i.test(word))) throw new Error("初始单词只能填写一个英文单词，也可留空。");
       if (words[0] && words[0].toUpperCase() === words[1].toUpperCase()) throw new Error("两个初始单词不能相同。");
       const config = { ...structuredClone(defaults), ...parseShape(cells["棋盘造型"]),
+        desiredTargetCount: defaults.desiredTargetCount ?? 0,
         fixedWords: normalizeFixedWords(words), fixedLayout: null, fixedWordExemptions: [],
         filters: { ...structuredClone(defaults.filters ?? {}),
           scope: parseArray(cells["范围库"], "scope", "范围库"),
@@ -86,6 +88,10 @@ export function parseConfigTableRows(input, defaults) {
       if (headers.includes("目标重复检测")) {
         if (!/^\d+$/.test(cells["目标重复检测"])) throw new Error("目标重复检测需为 0 及以上的整数。");
         config.targetDuplicateRange = Number(cells["目标重复检测"]);
+      }
+      if (headers.includes("目标数量")) {
+        if (cells["目标数量"] && !/^\d+$/.test(cells["目标数量"])) throw new Error("目标数量需留空或填写 0 及以上的整数。");
+        config.desiredTargetCount = cells["目标数量"] ? Number(cells["目标数量"]) : 0;
       }
       const record = { id: crypto.randomUUID(), levelId, config };
       validateConfigList([record]);
@@ -108,7 +114,7 @@ export function serializeConfigTable(records) {
 export function configTableRows(records) {
   validateConfigList(records);
   const ids = new Set();
-  return [CONFIG_TABLE_HEADERS, ...records.map((record, index) => {
+  return [[...CONFIG_TABLE_HEADERS, ...CONFIG_TABLE_OPTIONAL_HEADERS], ...records.map((record, index) => {
     const { config } = record;
     const id = record.levelId ?? String(index + 1);
     if (ids.has(id)) throw new Error(`关卡 id「${id}」重复，请先调整配置列表。`);
@@ -116,7 +122,7 @@ export function configTableRows(records) {
     const words = normalizeFixedWords(config.fixedWords);
     if (words.length > 2) throw new Error(`第 ${index + 1} 关超过两个初始单词，无法导出到此配置表。`);
     return [id, `${config.columns}x${config.rows}`, words[0] ?? "", words[1] ?? "", ...["scope", "emotion", "rarityLevel"]
-      .map(field => JSON.stringify(config.filters[field] ?? CONFIG_FILTER_OPTIONS[field]))];
+      .map(field => JSON.stringify(config.filters[field] ?? CONFIG_FILTER_OPTIONS[field])), config.targetDuplicateRange, config.desiredTargetCount ?? 0];
   })];
 }
 
@@ -125,5 +131,5 @@ export function configTableTemplate() {
 }
 
 export function configTableTemplateRows() {
-  return [CONFIG_TABLE_HEADERS, ["001", "3x3", "CAT", "DOG", "[0,1,2,3,4]", "[-2,-1,0,1,2]", "[1,2,3,4,5]"]];
+  return [[...CONFIG_TABLE_HEADERS, ...CONFIG_TABLE_OPTIONAL_HEADERS], ["001", "3x3", "CAT", "DOG", "[0,1,2,3,4]", "[-2,-1,0,1,2]", "[1,2,3,4,5]", 50, 0]];
 }

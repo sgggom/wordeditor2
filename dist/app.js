@@ -1,5 +1,8 @@
 import { renderWordLetters } from "./word-letters.js";
-import { createTargetPathMonitor } from "./target-path-monitor.js";
+import { createTargetPathMonitor, targetPathKey } from "./target-path-monitor.js";
+import { createTargetPathBatchChecker } from "./target-path-batch.js";
+import { createTargetPathCheckClient, createTargetPathRepairRunner, repairConfigurations } from "./target-path-repair.js";
+import { readConfigList, readConfigLists } from "./level-config.js";
 import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
 import { createDuplicateCheck, findDuplicateWords, setTargetWord } from "./level-rules.js";
 import { setupConfigList } from "./config-list.js";
@@ -65,6 +68,28 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   const submitSavedLibrary = document.querySelector("#submit-saved-library");
   const savedLevelCount = document.querySelector("#saved-level-count");
   const savedLevelError = document.querySelector("#saved-level-error");
+  const checkAllLevelsButton = document.querySelector("#check-all-levels");
+  const allLevelsCheckStatus = document.querySelector("#all-levels-check-status");
+  const allLevelsCheckSource = document.querySelector("#all-levels-check-source");
+  const pathCheckResults = new Map();
+  let allLevelsCheckState = null, allLevelsCheckSignature = null, allLevelsCheckNotice = "";
+  let pathRepairRunning = false, pathRepairRunner = null, pathRepairState = null;
+  const repairConfigImport = document.querySelector("#repair-config-import");
+  const repairConfigFile = document.querySelector("#repair-config-file");
+  let needsRepairConfig = false, readingRepairConfig = false;
+  const allLevelsChecker = createTargetPathBatchChecker({
+    onResult(job, result) {
+      pathCheckResults.set(job.key, result);
+      refreshPathCheckBadge(job.id);
+    },
+    onUpdate(state) {
+      const previousId = allLevelsCheckState?.id;
+      allLevelsCheckState = state;
+      renderPathCheckControls();
+      if (previousId !== null && previousId !== undefined) refreshPathCheckBadge(previousId);
+      if (state.id !== null) refreshPathCheckBadge(state.id);
+    },
+  });
   const batchRunBar = document.querySelector("#batch-run-bar");
   const batchRunStatus = document.querySelector("#batch-run-status");
   const batchRunProgress = document.querySelector("#batch-run-progress");
@@ -73,7 +98,10 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   const generateButton = document.querySelector("#generate-level");
   const errorMessage = document.querySelector("#generation-error");
   const ambiguityWarning = document.querySelector("#ambiguity-warning");
-  const targetPathMonitor = createTargetPathMonitor(ambiguityWarning);
+  const targetPathMonitor = createTargetPathMonitor(ambiguityWarning, { showSafe: true, onStatus(result) {
+    pathCheckResults.set(result.key, result);
+    if (activeSavedLevelId !== null) refreshPathCheckBadge(activeSavedLevelId);
+  } });
   const emotionWarning = document.querySelector("#emotion-warning");
   const wordList = document.querySelector("#word-list");
   const wordCount = document.querySelector("#word-count");
@@ -95,6 +123,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
 
   let size = readSize();
   let configuredInitialForwardProbability = readInitialForwardProbability();
+  let configuredDesiredTargetCount = 0;
   let configuredFilters = readFilters();
   let configuredFixedWords = readFixedWords();
   let configuredFixedWordExemptions = readFixedWordExemptions();
@@ -271,7 +300,164 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     } finally { submitSavedLibrary.disabled = false; }
   });
 
+  function pathCheckLevel(record) {
+    return record.id === activeSavedLevelId && level ? level : record.level;
+  }
+  function pathCheckRecords() {
+    return currentListView().records.map(record => ({ id: record.id, level: pathCheckLevel(record) }));
+  }
+  function pathCheckListSignature() {
+    return JSON.stringify([presetView?.id ?? fileView?.id ?? activeBrowserListId,
+      pathCheckRecords().map(record => [record.id, targetPathKey(record.level)])]);
+  }
+  function renderPathCheckBadge(badge, key) {
+    const repairing = pathRepairRunning && String(pathRepairState?.id) === badge.dataset.levelPathCheck;
+    const checking = allLevelsCheckState?.phase === "running" && allLevelsCheckState.key === key &&
+      allLevelsCheckState.position > allLevelsCheckState.completed;
+    const entry = checking || repairing ? { status: "checking" } : pathCheckResults.get(key);
+    const status = entry?.status ?? "idle";
+    badge.dataset.pathStatus = status;
+    badge.textContent = { idle: "未检测", checking: "检测中", safe: "通过", unsafe: "存在问题", error: "检测失败" }[status];
+    if (repairing) badge.textContent = "重跑中";
+    badge.title = status === "unsafe" ? (entry.result.solvable ? "存在会导致无解的目标作答路径，点击关卡查看详情" : "目标答案无法全部完成，点击关卡查看详情")
+      : status === "error" ? entry.error : status === "safe" ? "所有合法目标路径与作答顺序均可完成" : badge.textContent;
+  }
+  function refreshPathCheckBadge(id) {
+    const record = currentListView().records.find(record => record.id === id);
+    const badge = savedLevelList.querySelector(`[data-level-path-check="${CSS.escape(String(id))}"]`);
+    if (record && badge) renderPathCheckBadge(badge, targetPathKey(pathCheckLevel(record)));
+  }
+  function renderPathCheckControls() {
+    const running = allLevelsCheckState?.phase === "running";
+    const view = currentListView();
+    const source = view.kind === "browser" ? "浏览器列表" : view.kind === "file" ? "本地文件" : "参考预设";
+    checkAllLevelsButton.textContent = pathRepairRunning ? "停止重跑" : running ? "停止检测" : `全部检测（${view.records.length}关）`;
+    checkAllLevelsButton.title = "检测当前列表；可编辑列表检测完成后自动重跑问题关卡，通过无解检测后才替换。";
+    allLevelsCheckSource.textContent = `检测范围：${source} · ${view.label} · ${view.records.length}关`;
+    checkAllLevelsButton.disabled = readingRepairConfig || (!running && !pathRepairRunning && (generating || savingLevel || updatingLevelList || batchRunning || !view.records.length));
+    repairConfigImport.hidden = !needsRepairConfig;
+    repairConfigImport.disabled = readingRepairConfig || running || pathRepairRunning || batchRunning;
+    const state = allLevelsCheckState;
+    allLevelsCheckStatus.hidden = !state && !allLevelsCheckNotice;
+    allLevelsCheckStatus.textContent = allLevelsCheckNotice || (state ?
+      `${state.phase === "running" ? "检测中" : state.phase === "complete" ? "检测完成" : state.phase === "stopped" ? "已停止" : "检测未完成"} ${state.completed}/${state.total} · 通过 ${state.passed} · 存在问题 ${state.issues}${state.errors ? ` · 失败 ${state.errors}` : ""}` : "");
+    if (pathRepairState) {
+      const repair = pathRepairState;
+      allLevelsCheckStatus.textContent += pathRepairRunning ? ` · 重跑修复 ${repair.completed}/${repair.total}，第 ${repair.position} 关，第 ${repair.attempts} 次${repair.phase === "checking" ? "，无解复检中" : ""}`
+        : ` · 重跑${repair.phase === "complete" ? "完成" : repair.phase === "stopped" ? "已停止" : "中断"} ${repair.completed}/${repair.total}${repair.error ? `：${repair.error}` : ""}`;
+    }
+  }
+  async function repairProblemLevels(importedConfigs = null) {
+    const records = pathCheckRecords();
+    const problemIds = records.filter(record => pathCheckResults.get(targetPathKey(record.level))?.status === "unsafe").map(record => record.id);
+    if (!problemIds.length) return;
+    if (presetView) {
+      allLevelsCheckNotice = "检测完成；参考预设只读，问题关卡不会替换。请打开可编辑关卡文件后重新检测。";
+      renderPathCheckControls(); return;
+    }
+    let configs;
+    const candidates = importedConfigs ? [importedConfigs] : [readConfigList() ?? [],
+      ...(readConfigLists()?.lists.map(list => list.records) ?? [])];
+    for (const candidate of candidates) {
+      try {
+        configs = repairConfigurations(records, candidate, configuredDuplicateRanges,
+          { requireLinked: Boolean(importedConfigs || (fileView && fileView.format !== "editor")) });
+        break;
+      } catch (error) { if (error.code !== "MISSING_REPAIR_CONFIG") throw error; }
+    }
+    if (!configs) {
+      needsRepairConfig = true;
+      allLevelsCheckNotice = "检测已完成，问题关卡等待重跑。游戏文件缺少生成配置，请读取对应配置表继续；原关卡已保留。";
+      renderPathCheckControls(); return;
+    }
+    needsRepairConfig = false; allLevelsCheckNotice = "";
+    const generator = createGenerationClient(), checker = createTargetPathCheckClient();
+    pathRepairRunning = true; batchRunning = true; batchRunBar.hidden = true;
+    stopGeneration();
+    pathRepairRunner = createTargetPathRepairRunner({
+      generate: (...args) => generator.generate(...args),
+      check: (...args) => checker.check(...args),
+      save: async (generated, original) => {
+        if (fileView) {
+          updateFileLevel(fileView, original.id, generated);
+          fileView.downloaded = false;
+          return fileView.records.find(record => record.id === original.id);
+        }
+        const existing = savedLevels.find(record => record.id === original.id);
+        if (!existing) throw new Error("原关卡已被删除，停止替换。");
+        const saved = await (await getLevelStore()).saveLevel(generated, existing);
+        savedLevels = savedLevels.map(record => record.id === saved.id ? saved : record);
+        return saved;
+      },
+      onSaved(saved, result, position) {
+        pathCheckResults.set(targetPathKey(saved.level), { status: "safe", result });
+        if (activeSavedLevelId === saved.id) {
+          level = structuredClone(saved.level); savedLevelEdited = false; selectedWord = null;
+          applyEditorConfig(configs[position - 1].config);
+        }
+        allLevelsCheckState.passed++;
+        allLevelsCheckState.issues = Math.max(0, allLevelsCheckState.issues - 1);
+        allLevelsCheckSignature = pathCheckListSignature();
+        savedLevelListDirty = true; render(); fileManager?.refresh();
+      },
+      onUpdate(state) {
+        const previousId = pathRepairState?.id;
+        pathRepairState = state;
+        renderPathCheckControls();
+        if (previousId !== null && previousId !== undefined) refreshPathCheckBadge(previousId);
+        if (state.id !== null) refreshPathCheckBadge(state.id);
+      },
+    });
+    render();
+    try { await pathRepairRunner.run(records, configs, problemIds); }
+    finally {
+      generator.close(); checker.close(); pathRepairRunner = null;
+      pathRepairRunning = false; batchRunning = false;
+      allLevelsCheckSignature = pathCheckListSignature();
+      savedLevelListDirty = true; render(); fileManager?.refresh();
+    }
+  }
+  repairConfigImport.addEventListener("click", () => {
+    if (!repairConfigImport.disabled) repairConfigFile.click();
+  });
+  repairConfigFile.addEventListener("change", async () => {
+    const file = repairConfigFile.files[0]; repairConfigFile.value = "";
+    if (!file || readingRepairConfig || !needsRepairConfig) return;
+    const signature = pathCheckListSignature(), defaults = currentGenerationConfig();
+    readingRepairConfig = true; renderPathCheckControls();
+    try {
+      let configs;
+      if (/\.xlsx$/i.test(file.name)) {
+        const { parseConfigXlsx } = await import("./config-table-xlsx.js");
+        configs = parseConfigXlsx(await file.arrayBuffer(), defaults);
+      } else if (/\.csv$/i.test(file.name)) {
+        const { parseConfigTable } = await import("./config-table.js");
+        configs = parseConfigTable(await file.text(), defaults);
+      } else throw new Error("请选择 .xlsx 或 .csv 配置表。");
+      if (signature !== pathCheckListSignature()) return;
+      readingRepairConfig = false;
+      await repairProblemLevels(configs);
+    } catch (error) {
+      if (signature === pathCheckListSignature()) allLevelsCheckNotice = `配置表读取或重跑失败：${error.message}`;
+    } finally { readingRepairConfig = false; renderPathCheckControls(); }
+  });
+  checkAllLevelsButton.addEventListener("click", async () => {
+    if (pathRepairRunning) { pathRepairRunner?.stop(); return; }
+    if (allLevelsCheckState?.phase === "running") { allLevelsChecker.stop(); return; }
+    if (checkAllLevelsButton.disabled) return;
+    allLevelsCheckNotice = ""; pathRepairState = null; needsRepairConfig = false;
+    allLevelsCheckSignature = pathCheckListSignature();
+    try {
+      const result = await allLevelsChecker.run(pathCheckRecords());
+      if (result.phase === "complete" && result.issues > 0) await repairProblemLevels();
+    } catch (error) {
+      allLevelsCheckNotice = `检测或自动重跑未完成：${error.message}`;
+      renderPathCheckControls();
+    }
+  });
+
   function renderSavedLevels() {
+    renderPathCheckControls();
     const displayedLevels = presetView?.records ?? fileView?.records ?? savedLevels;
     const busy = generating || savingLevel || updatingLevelList || batchRunning;
     const view = currentListView();
@@ -349,6 +535,10 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       button.append(heading, meta);
       const footer = document.createElement("div");
       footer.className = "saved-level-footer";
+      const checkBadge = document.createElement("span");
+      checkBadge.className = "target-check-badge";
+      checkBadge.dataset.levelPathCheck = String(record.id);
+      renderPathCheckBadge(checkBadge, targetPathKey(pathCheckLevel(record)));
       const controls = document.createElement("div");
       controls.className = "saved-level-controls";
       for (const [action, label, text] of [["up", "上移", "↑"], ["down", "下移", "↓"], ["delete", "删除", "删除"]]) {
@@ -363,7 +553,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
         control.disabled = busy || (action === "up" && index === 0) || (action === "down" && index === displayedLevels.length - 1) || (action === "delete" && fileView?.format === "single");
         controls.append(control);
       }
-      footer.append(score);
+      footer.append(score, checkBadge);
       if (!presetView) footer.append(controls);
       card.append(button, footer);
       fragment.append(card);
@@ -384,6 +574,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     selectedWord = null;
     size = { rows: level.rows, columns: level.columns, disabledCells: level.disabledCells ?? [] };
     configuredInitialForwardProbability = level.initialForwardProbability ?? 50;
+    configuredDesiredTargetCount = level.desiredTargetCount ?? 0;
     configuredFilters = structuredClone(level.filters ?? {});
     configuredFixedWords = normalizeFixedWords(level.fixedWords ?? []);
     configuredFixedWordExemptions = normalizeFixedWordExemptions(level);
@@ -804,7 +995,14 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   }
 
   function render() {
+    if (!pathRepairRunning && allLevelsCheckSignature && allLevelsCheckSignature !== pathCheckListSignature()) {
+      const wasRunning = allLevelsCheckState?.phase === "running";
+      allLevelsChecker.stop();
+      allLevelsCheckState = null; allLevelsCheckSignature = null; pathRepairState = null; needsRepairConfig = false;
+      allLevelsCheckNotice = wasRunning ? "列表或目标词已改变，全部检测已停止，请重新检测。" : "";
+    }
     targetPathMonitor.update(level);
+    renderPathCheckControls();
     const warningEmotionTotal = level?.statistics?.emotion?.total;
     emotionWarning.hidden = !level || (Number.isFinite(warningEmotionTotal) && warningEmotionTotal >= 0);
     emotionWarning.textContent = !level ? "" : Number.isFinite(warningEmotionTotal)
@@ -982,6 +1180,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       const history = fileView ? fileView.records.slice(0, fileIndex < 0 ? fileView.records.length : fileIndex) : savedLevels;
       const duplicateCheck = createDuplicateCheck(history, configuredDuplicateRanges);
       const generated = await getGenerationClient().generate({ ...size, initialForwardProbability, filters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
+        desiredTargetCount: configuredDesiredTargetCount,
         fixedWordExemptions: configuredFixedWordExemptions, minimumWordLength: generationPosition === 1 ? 2 : 3 }, duplicateCheck, {
         signal: controller.signal,
         onProgress: ({ attempts, workers }) => {
@@ -1248,6 +1447,23 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     if (button) openSavedLevel(Number(button.dataset.savedLevelId));
   });
 
+  savedLevelList.addEventListener("keydown", event => {
+    if (!["ArrowUp", "ArrowDown"].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing || event.defaultPrevented) return;
+    if (event.target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
+    if (generating || savingLevel || updatingLevelList || batchRunning || readingSingleLevel) return;
+    const records = currentListView().records;
+    if (!records.length) return;
+    const focusedId = event.target.closest("[data-saved-level-id]")?.dataset.savedLevelId;
+    const currentIndex = records.findIndex(record => record.id === (focusedId === undefined ? activeSavedLevelId : Number(focusedId)));
+    const nextIndex = currentIndex < 0 ? (event.key === "ArrowDown" ? 0 : records.length - 1)
+      : Math.max(0, Math.min(records.length - 1, currentIndex + (event.key === "ArrowDown" ? 1 : -1)));
+    event.preventDefault();
+    if (records[nextIndex].id !== activeSavedLevelId) openSavedLevel(records[nextIndex].id);
+    const button = savedLevelList.querySelector(`[data-saved-level-id="${records[nextIndex].id}"]`);
+    button?.focus({ preventScroll: true });
+    button?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
+
   wordList.addEventListener("change", event => {
     const checkbox = event.target.closest("input[data-target-word]");
     if (!checkbox || !level || generating || savingLevel || updatingLevelList || batchRunning) return;
@@ -1346,6 +1562,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
 
   function applyEditorConfig(config) {
     size = { rows: config.rows, columns: config.columns, disabledCells: config.disabledCells ?? [] };
+    configuredDesiredTargetCount = config.desiredTargetCount ?? 0;
     configuredInitialForwardProbability = config.initialForwardProbability;
     configuredFilters = structuredClone(config.filters ?? {});
     configuredDuplicateRanges = { target: config.targetDuplicateRange, extra: config.extraDuplicateRange };
@@ -1421,6 +1638,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   function editorSnapshot() {
     return { level, activeSavedLevelId, savedLevelEdited, selectedWord,
       config: { ...size, initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters,
+        desiredTargetCount: configuredDesiredTargetCount,
         fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout, fixedWordExemptions: configuredFixedWordExemptions,
         targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra } };
   }
@@ -1583,14 +1801,18 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     },
   });
 
-  setupConfigList({
-    getConfig: () => structuredClone({
+  function currentGenerationConfig() {
+    return structuredClone({
       ...size,
+      desiredTargetCount: configuredDesiredTargetCount,
       initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
       fixedWordExemptions: configuredFixedWordExemptions,
       minimumEmotionScore: 0,
       targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra,
-    }),
+    });
+  }
+  setupConfigList({
+    getConfig: currentGenerationConfig,
     loadConfig: config => {
       canSwitchSource();
       if (!fileView) returnToEditedLevels();

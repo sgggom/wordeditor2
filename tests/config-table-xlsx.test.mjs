@@ -11,18 +11,20 @@ function editTemplate(edit) {
   return XLSX.write(book, { type: 'array', bookType: 'xlsx' });
 }
 
-test('template is a genuine XLSX workbook with seven columns and literal text IDs', () => {
+test('template is a genuine XLSX workbook with optional quantity and duplicate columns and literal text IDs', () => {
   const file = configXlsxTemplate();
   assert.deepEqual([...new Uint8Array(file).slice(0, 2)], [80, 75]);
   const book = XLSX.read(file, { type: 'array' });
   assert.deepEqual(book.SheetNames, ['关卡配置']);
   const sheet = book.Sheets['关卡配置'];
   assert.equal(sheet.A2.t, 's'); assert.equal(sheet.A2.v, '001');
-  assert.equal(sheet['!ref'], 'A1:G2');
+  assert.equal(sheet['!ref'], 'A1:I2');
+  assert.equal(sheet.I1.v, '目标数量');
   assert.equal(sheet.B2.v, '3x3');
   const [record] = parseConfigXlsx(file, defaults);
   assert.equal(record.levelId, '001');
   assert.deepEqual(record.config.fixedWords, ['CAT', 'DOG']);
+  assert.equal(record.config.desiredTargetCount, 0);
 });
 
 test('XLSX export stores dimensions and reimports random shapes, words, filters and IDs', () => {

@@ -31,6 +31,7 @@ self.onmessage = async ({ data }) => {
     const generator = await loadGenerator();
     const options = { rows, columns, disabledCells, randomBoardShape: data.randomBoardShape, initialForwardProbability,
       minimumEmotionScore: 0, minimumWordLength: data.minimumWordLength, reservedTargetWords: data.reservedTargetWords,
+      desiredTargetCount: data.desiredTargetCount,
       filters, fixedWords, fixedLayout, fixedWordExemptions, duplicateCheck };
     const level = await generateUntilComplete(generator, options, {
       isCurrent: () => activeRun === run,

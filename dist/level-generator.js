@@ -210,8 +210,8 @@ export function createGenerator(records, onlyExtraRecords = []) {
     return false;
   }
 
-  // Search candidate words and routes lazily. Long words can use the whole
-  // enabled board without materializing every possible 5 × 5 route first.
+  // Search lazily by coverage, then by total path score. Scores only increase
+  // along a route, so a score budget prunes hard paths without storing them all.
   function findPlacement({ rows, columns, disabledCells = [], letters, usedWords = [], initialForwardProbability = 50,
     initialRarityLevel = null, filters = {}, fixedWord = null, fixedWordExemptions = [], minimumWordLength = 2, reservedTargetWords = [], random = Math.random }) {
     validateInitialForwardProbability(initialForwardProbability);
@@ -231,34 +231,52 @@ export function createGenerator(records, onlyExtraRecords = []) {
     const maximumAdded = Math.min(emptyCount, Math.max(...options.map(entry => entry.word.length)));
     const minimumAdded = fixedWord ? 0 : 1;
     for (let added = maximumAdded; added >= minimumAdded; added--) {
-      for (const direction of directions) {
-        for (const entry of candidates) {
-          const { word } = entry;
-          if (word.length < added || word.length > knownCount + added) continue;
-          const path = [];
-          function visit(cell, mask, filled) {
-            if (letters[cell] && letters[cell] !== word[path.length]) return null;
-            filled += letters[cell] ? 0 : 1;
-            const remaining = word.length - path.length - 1;
-            if (filled > added || filled + remaining < added) return null;
-            path.push(cell); mask |= 1 << cell;
-            let result = null;
-            if (!remaining) {
-              result = { ...entry, path: [...path] };
-            } else {
-              for (const next of nextCells[cell]) {
-                if (mask & (1 << next)) continue;
-                if (path.length === 1 && (next > cell ? "forward" : "reverse") !== direction) continue;
-                result = visit(next, mask, filled);
-                if (result) break;
+      const fitting = candidates.filter(entry => entry.word.length >= added && entry.word.length <= knownCount + added);
+      if (!fitting.length) continue;
+      const maximumScore = Math.max(...fitting.map(entry => Math.max(0, 2 * (entry.word.length - 2) + 1)));
+      for (let scoreLimit = 0; scoreLimit <= maximumScore; scoreLimit++) {
+        for (const direction of directions) {
+          for (const entry of fitting) {
+            const { word } = entry;
+            const path = [];
+            function visit(cell, mask, filled, previous = null, horizontal = null, vertical = null, score = 0) {
+              if (letters[cell] && letters[cell] !== word[path.length]) return null;
+              if (path.length) {
+                const last = path.at(-1);
+                const step = cell === last + columns ? "D" : cell === last - columns ? "U" : cell > last ? "R" : "L";
+                score += previous === null ? Number(step === "L" || step === "U") : Number(previous !== step);
+                if (step === "L" || step === "R") {
+                  score += Number(horizontal !== null && horizontal !== step);
+                  horizontal = step;
+                } else {
+                  score += Number(vertical !== null && vertical !== step);
+                  vertical = step;
+                }
+                previous = step;
               }
+              if (score > scoreLimit) return null;
+              filled += letters[cell] ? 0 : 1;
+              const remaining = word.length - path.length - 1;
+              if (filled > added || filled + remaining < added) return null;
+              path.push(cell); mask |= 1 << cell;
+              let result = null;
+              if (!remaining) {
+                result = { ...entry, path: [...path] };
+              } else {
+                for (const next of nextCells[cell]) {
+                  if (mask & (1 << next)) continue;
+                  if (path.length === 1 && (next > cell ? "forward" : "reverse") !== direction) continue;
+                  result = visit(next, mask, filled, previous, horizontal, vertical, score);
+                  if (result) break;
+                }
+              }
+              path.pop();
+              return result;
             }
-            path.pop();
-            return result;
-          }
-          for (const cell of starts) {
-            const placement = visit(cell, 0, 0);
-            if (placement) return placement;
+            for (const cell of starts) {
+              const placement = visit(cell, 0, 0);
+              if (placement) return placement;
+            }
           }
         }
       }
@@ -335,10 +353,12 @@ export function createGenerator(records, onlyExtraRecords = []) {
     return [...found.values()].sort((a, b) => a.word.localeCompare(b.word));
   }
 
-  // Keep the covering initial words selected; expose all eligible
-  // candidates for manual selection without quantity or length quotas.
+  // Initial words cover the board. The optional goal adds eligible candidates
+  // without turning a shortage into a failed generation.
   function selectTargets({ rows, columns, disabledCells = [], letters, initialWords, foundWords,
-    filters = {}, fixedWords = [], fixedWordExemptions = [], minimumWordLength = 2, reservedTargetWords = [] }) {
+    filters = {}, fixedWords = [], fixedWordExemptions = [], minimumWordLength = 2, reservedTargetWords = [], desiredTargetCount = 0,
+    duplicateCheck = createDuplicateCheck([], { target: 0, extra: 0 }) }) {
+    if (!Number.isSafeInteger(desiredTargetCount) || desiredTargetCount < 0) throw new Error("目标数量需为 0 及以上的整数。");
     foundWords = foundWords.filter(entry => entry.word.length >= minimumWordLength);
     const normalized = normalizeFilters(filters);
     const reserved = new Set(reservedTargetWords);
@@ -357,18 +377,35 @@ export function createGenerator(records, onlyExtraRecords = []) {
       pathAnalysis: foundByWord.get(entry.word).pathAnalysis }));
     const candidateWords = foundWords.filter(canTarget);
     const targetWords = [...initialWords];
-    const extraWords = foundWords.filter(entry => !initialNames.has(entry.word));
+    const targetNames = new Set(initialNames);
+    const uses = Array(letters.length).fill(0);
+    for (const entry of targetWords) for (const cell of entry.path) uses[cell]++;
+    if (desiredTargetCount > targetWords.length) {
+      const previous = new Set(duplicateCheck.target.range > 0 ? duplicateCheck.target.words.map(word => word.toUpperCase()) : []);
+      const additions = candidateWords.filter(entry => !targetNames.has(entry.word) && !previous.has(entry.word))
+        .sort((a, b) => a.pathAnalysis.assigned.difficultyScore - b.pathAnalysis.assigned.difficultyScore || a.word.localeCompare(b.word));
+      for (const entry of additions) {
+        if (targetWords.length >= desiredTargetCount) break;
+        if (targetNames.has(entry.word)) continue;
+        if (entry.path.some(cell => uses[cell] >= 35)) continue;
+        targetNames.add(entry.word);
+        targetWords.push(entry);
+        for (const cell of entry.path) uses[cell]++;
+      }
+    }
+    const extraWords = foundWords.filter(entry => !targetNames.has(entry.word));
     const cells = letters.map((letter, index) => ({ letter, count: 0, ...(disabledCells.includes(index) ? { disabled: true } : {}) }));
     for (const entry of targetWords) for (const cell of entry.path) cells[cell].count++;
-    const level = { rows, columns, minimumWordLength, disabledCells: [...disabledCells], targetCount: targetWords.length, targetLimitsEnabled: false,
+    const level = { rows, columns, minimumWordLength, disabledCells: [...disabledCells], desiredTargetCount, targetCount: targetWords.length, targetLimitsEnabled: false,
       filters: normalized, fixedWords: [...fixedWords], fixedWordExemptions: [...exemptions], cells, initialWords, candidateWords, targetWords, extraWords };
     return { ...level, statistics: calculateLevelStatistics(level) };
   }
 
   function generate({ rows, columns, disabledCells = [], initialForwardProbability = 50, initialRarityLevel = null,
-    minimumEmotionScore = null, minimumWordLength = 2, reservedTargetWords = [], filters = {}, fixedWords = [], fixedLayout = null, fixedWordExemptions = [],
+    minimumEmotionScore = null, minimumWordLength = 2, reservedTargetWords = [], desiredTargetCount = 0, filters = {}, fixedWords = [], fixedLayout = null, fixedWordExemptions = [],
     duplicateCheck = createDuplicateCheck([], { target: 0, extra: 0 }), random = Math.random }) {
     validateSize(rows, columns);
+    if (!Number.isSafeInteger(desiredTargetCount) || desiredTargetCount < 0) throw new Error("目标数量需为 0 及以上的整数。");
     if (![2, 3].includes(minimumWordLength)) throw new Error("最短单词长度需为 2 或 3。");
     disabledCells = normalizeDisabledCells({ rows, columns, disabledCells });
     const capacity = rows * columns - disabledCells.length;
@@ -413,7 +450,7 @@ export function createGenerator(records, onlyExtraRecords = []) {
         filters: pool.filters, fixedWords, fixedLayout, fixedWordExemptions, minimumWordLength, reservedTargetWords, random });
       if (!filled) continue;
       const foundWords = findWords({ rows, columns, disabledCells, ...filled, minimumWordLength });
-      const result = selectTargets({ rows, columns, disabledCells, ...filled, foundWords, filters: pool.filters, fixedWords, fixedWordExemptions, minimumWordLength, reservedTargetWords });
+      const result = selectTargets({ rows, columns, disabledCells, ...filled, foundWords, filters: pool.filters, fixedWords, fixedWordExemptions, minimumWordLength, reservedTargetWords, desiredTargetCount, duplicateCheck });
       const duplicates = findDuplicateWords(result, duplicateCheck);
       if (duplicates.target.length) { duplicateFailure = true; continue; }
       // Only candidates satisfying strict target checks may enter the fallback pool.

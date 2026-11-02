@@ -120,7 +120,7 @@ test("placement prefers empty cells and allows multiple existing letters anywher
   assert.equal(overlap.findPlacement({ rows: 2, columns: 3, letters: ["A", "B", "C", "F", "E", "D"] }), null);
 });
 
-test("initial forward probability controls direction preference when both directions fit", () => {
+test("initial forward probability breaks ties between paths with equal coverage and total score", () => {
   const simple = createGenerator(entries(["ABC"]));
   for (const initialForwardProbability of [0, 25, 50, 75, 100]) {
     let forwardCount = 0;
@@ -132,7 +132,9 @@ test("initial forward probability controls direction preference when both direct
         firstDraw = false;
         return (sample + 0.5) / 100;
       };
-      const placement = simple.findPlacement({ rows: 2, columns: 3, letters: Array(6).fill(""), initialForwardProbability, random });
+      const placement = simple.findPlacement({ rows: 3, columns: 3,
+        letters: ["C", "B", "A", "Z", "C", "Z", "A", "B", "Z"], fixedWord: "ABC", initialForwardProbability, random });
+      assert.equal(describePath(placement.path, 3).difficultyScore, 1);
       if (["R", "D"].includes(describePath(placement.path, 3).firstDirection)) forwardCount += 1;
     }
     assert.equal(forwardCount, initialForwardProbability);
@@ -157,7 +159,7 @@ test("probability reaches initial placement and is retained in generated level d
         const level = generator.generate({ rows, columns, targetCount: 6, initialForwardProbability, random: seededRandom(42) });
         verifyLevel(level);
         assert.equal(level.initialForwardProbability, initialForwardProbability);
-        assert.equal(["R", "D"].includes(level.initialWords[0].pathAnalysis.assigned.firstDirection), initialForwardProbability === 100);
+        assert.ok(["R", "D", "L", "U"].includes(level.initialWords[0].pathAnalysis.assigned.firstDirection));
       }
     }
   }

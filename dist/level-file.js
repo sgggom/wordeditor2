@@ -5,7 +5,7 @@ import { validateLevelConfig } from "./level-config.js";
 import { normalizeFixedWords, normalizeFixedLayout, normalizeFixedWordExemptions } from "./fixed-words.js";
 
 const copy = value => structuredClone(value);
-const LEVEL_FIELDS = new Set(["rows", "columns", "cells", "disabledCells", "name", "targetCount", "initialWords", "candidateWords",
+const LEVEL_FIELDS = new Set(["rows", "columns", "cells", "disabledCells", "name", "targetCount", "desiredTargetCount", "initialWords", "candidateWords",
   "targetWords", "extraWords", "statistics", "filters", "fixedWords", "fixedLayout", "fixedWordExemptions", "initialForwardProbability",
   "initialRarityLevel", "minimumEmotionScore", "duplicateCheck", "targetsEdited", "sourceConfig", "targetLimitsEnabled",
   "targetLengthPlan", "targetLengthRatios", "targetLengthCounts", "initialMaxWordLength", "maxWordLength"]);

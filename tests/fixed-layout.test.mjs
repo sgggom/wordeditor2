@@ -108,7 +108,7 @@ test("fully pinned boards ignore old target settings and allow negative emotion 
   assert.deepEqual(negative.fixedLayout, config.fixedLayout);
 });
 
-test("automatic-only preset words follow the initial direction preference without pinning their paths", () => {
+test("automatic-only preset words prefer the simplest path over direction preference without pinning their paths", () => {
   const generator = createGenerator(records(["CAT", "DOG", "HEN"]));
   for (const initialForwardProbability of [0, 100]) {
     const level = generator.generate({ ...settings(), fixedLayout: null, initialForwardProbability, random: randomFrom(31) });
@@ -116,7 +116,8 @@ test("automatic-only preset words follow the initial direction preference withou
     assert.deepEqual(level.fixedWords, ["CAT", "DOG"]);
     assert.ok(level.fixedWords.every(word => level.initialWords.some(entry => entry.word === word)));
     const first = level.initialWords[0].path;
-    assert.equal(first[1] > first[0], initialForwardProbability === 100);
+    assert.ok(first[1] > first[0]);
+    assert.equal(level.initialWords[0].pathAnalysis.assigned.difficultyScore, 0);
   }
 });
 

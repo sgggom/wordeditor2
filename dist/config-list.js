@@ -64,7 +64,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   let nameAction = null;
   let pendingDeleteId = null;
   const columns = ["fixedWords",
-    "initialForwardProbability", "targetDuplicateRange", "extraDuplicateRange", "filters"];
+    "desiredTargetCount", "initialForwardProbability", "targetDuplicateRange", "extraDuplicateRange", "filters"];
   let records = [];
   let selected = new Set();
   let detailState = null;
@@ -283,7 +283,8 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
           input.min = String(rule.min);
           if (rule.max !== undefined) input.max = String(rule.max);
           input.step = "1";
-          input.value = Number.isFinite(record.config[field]) ? String(record.config[field]) : "";
+          input.value = Number.isFinite(record.config[field]) ? String(record.config[field]) : rule.optional ? "0" : "";
+          if (field === "desiredTargetCount") input.title = "尽量补选到此数量；0 表示不自动补选，初始词不删除，候选不足时按实际数量生成。";
           input.dataset.configField = field;
           input.setAttribute("aria-label", `第 ${index + 1} 关${rule.label}`);
           cell.append(input);
@@ -338,7 +339,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
       batchValue.min = String(rule.min);
       if (rule.max === undefined) batchValue.removeAttribute("max");
       else batchValue.max = String(rule.max);
-      batchValue.value = String(first[field]);
+      batchValue.value = String(first[field] ?? (rule.optional ? 0 : ""));
       batchValue.setAttribute("aria-label", `批量设置${rule.label}`);
     }
   }

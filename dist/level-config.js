@@ -9,6 +9,7 @@ export const CONFIG_NUMBER_FIELDS = {
   initialForwardProbability: { label: "初始正向概率", min: 0, max: 100 },
   targetDuplicateRange: { label: "目标词查重", min: 0 },
   extraDuplicateRange: { label: "额外词查重", min: 0 },
+  desiredTargetCount: { label: "目标数量", min: 0, optional: true },
 };
 export const CONFIG_FILTER_OPTIONS = {
   scope: [0, 1, 2, 3, 4], emotion: [-2, -1, 0, 1, 2], abbreviation: [0, 1], rarityLevel: [1, 2, 3, 4, 5],
@@ -49,6 +50,7 @@ export function futureFixedTargetWords(records, position, fixedWords = []) {
 
 export function validateConfigNumber(field, value) {
   const rule = CONFIG_NUMBER_FIELDS[field];
+  if (rule?.optional && value === undefined) return;
   if (!rule || !Number.isSafeInteger(value) || value < rule.min || (rule.max !== undefined && value > rule.max)) {
     throw new Error(`${rule?.label ?? "配置值"}需为${rule?.max !== undefined ? `${rule.min}–${rule.max}` : `${rule?.min ?? 0} 及以上`}的整数。`);
   }

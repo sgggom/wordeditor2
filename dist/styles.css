@@ -296,6 +296,14 @@ legend { padding: 0; margin-bottom: 5px; color: #66705f; font-size: 11px; }
 .saved-level-empty { margin: 6px 0; color: #89977e; font-size: 11px; text-align: center; }
 .saved-level-card { flex: 0 0 auto; min-width: 0; border: 1px solid #e1e6d9; border-radius: 7px; background: #fafbf8; color: #52664a; overflow: hidden; }
 .saved-level-card:hover { background: #f0f4e9; }
+.target-check-actions { flex-wrap: wrap; }
+.target-check-source { flex-basis: 100%; font-size: 11px; line-height: 1.5; color: #64765a; overflow-wrap: anywhere; }
+.target-check-summary { font-size: 11px; line-height: 1.5; color: #64765a; }
+.target-check-badge { font-size: 10px; color: #89977e; white-space: nowrap; }
+.target-check-badge[data-path-status="safe"] { color: #39804a; }
+.target-check-badge[data-path-status="unsafe"], .target-check-badge[data-path-status="error"] { color: #b44736; }
+.target-check-badge[data-path-status="checking"] { color: #50769b; }
+#ambiguity-warning[data-path-status="safe"] { color: #39804a; background: #eef6eb; border-color: #b8d3af; }
 .saved-level-card:has(.saved-level-item[aria-pressed="true"]) { border-color: #a5bd7f; background: #e8f1dc; box-shadow: inset 0 0 0 1px #a5bd7f; }
 .saved-level-item { display: grid; gap: 6px; min-width: 0; width: 100%; padding: 10px 10px 6px; border: 0; background: transparent; color: inherit; text-align: left; }
 .saved-level-footer { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 0 8px 8px; }

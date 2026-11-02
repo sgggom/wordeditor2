@@ -45,3 +45,21 @@ test("actual deadlock examples display words and one-based grid coordinates, wit
   assert.match(output.textContent, /仅作警告/);
   monitor.update(null); assert.equal(output.hidden, true); assert.equal(output.dataset.pathStatus, "idle");
 });
+
+test('visible single-level success and every changed target state publish fresh results', () => {
+  const output = { dataset: {}, hidden: true }, workers = [], changes = [];
+  const monitor = createTargetPathMonitor(output, { showSafe: true, onStatus: value => changes.push(value), workerFactory() {
+    const worker = { postMessage() {}, terminate() {} }; workers.push(worker); return worker;
+  } });
+  monitor.update(board());
+  workers[0].onmessage({ data: { result: { allChoicesComplete: true, solvable: true } } });
+  assert.equal(output.hidden, false);
+  assert.match(output.textContent, /无解检测通过/);
+  const changed = board(); changed.targetWords.push({ word: 'ABAB' }); changed.cells.forEach(cell => cell.count++);
+  monitor.update(changed);
+  assert.equal(output.dataset.pathStatus, 'checking');
+  workers[0].onmessage({ data: { result: { allChoicesComplete: false, solvable: false } } });
+  assert.equal(output.dataset.pathStatus, 'checking');
+  workers[1].onmessage({ data: { result: { allChoicesComplete: false, solvable: false } } });
+  assert.deepEqual(changes.map(value => value.status), ['checking','safe','checking','unsafe']);
+});
