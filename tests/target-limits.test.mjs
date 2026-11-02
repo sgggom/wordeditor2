@@ -69,7 +69,7 @@ test('post-generation selection can replace an initial word only while every ena
 
 test('post-selection keeps explicit fixed words and permits ambiguous candidate paths', () => {
   const fixed = createGenerator(dictionary).generate(shape());
-  assert.throws(() => setTargetWord(fixed, 'CAT', false), /固定单词/);
+  assert.throws(() => setTargetWord(fixed, 'CAT', false), /固定词/);
   const generator = createGenerator(['CATOTO', 'CAT', 'COT', 'TOT'].map(word => ({ word })));
   const board = { rows: 2, columns: 3, letters: [...'CATOTO'], initialWords: [{ word: 'CATOTO', path: [0, 1, 2, 5, 4, 3] }] };
   const level = generator.selectTargets({ ...board, foundWords: generator.findWords(board), targetCount: 100, targetLimitsEnabled: false });

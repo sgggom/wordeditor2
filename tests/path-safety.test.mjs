@@ -94,22 +94,20 @@ test("ambiguous candidates remain selectable and carry accurate analysis", () =>
   assert.ok(createGameExport([{ level: edited }]));
 });
 
-test("ambiguous automatic and fully pinned boards generate without retries", async () => {
-  const repeated = createGenerator(["AAA", "AAAA"].map(word => ({ word })));
-  for (const fixedWords of [[], ["AAA"]]) {
-    let retries = 0;
-    const level = await generateUntilComplete(repeated, { rows: 2, columns: 3, fixedWords, random: () => 0.5 },
-      { onProgress: () => { retries++; } });
-    assert.equal(retries, 0);
-    assert.ok(level.targetWords.some(entry => !entry.pathAnalysis.safe));
-    assert.ok(level.cells.every(cell => cell.count > 0));
+test("automatic boards complete for every legal choice and fully pinned deadlocks fail without retries", async () => {
+  for (let seed = 1; seed <= 8; seed++) {
+    let state = seed;
+    const random = () => ((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 4294967296);
+    const level = generator.generate({ rows: 2, columns: 3, desiredTargetCount: 4, random });
+    assert.ok(everyChoiceCompletes(level));
     assert.ok(createGameExport([{ level }]));
   }
   const bad = legacyTrap();
   const fixedLayout = { rows: 2, columns: 3, placements: bad.targetWords.map(({ word, path }) => ({ word, path })) };
-  const level = generator.generate({ rows: 2, columns: 3, fixedWords: ["CAT", "COT", "TOT"], fixedLayout });
-  assert.deepEqual(level.fixedLayout, fixedLayout);
-  assert.equal(level.targetWords.find(entry => entry.word === "CAT").pathAnalysis.safe, false);
+  let retries = 0;
+  await assert.rejects(generateUntilComplete(generator, { rows: 2, columns: 3, fixedWords: ["CAT", "COT", "TOT"], fixedLayout },
+    { onProgress: () => { retries++; } }), /安全完成/);
+  assert.equal(retries, 0);
 });
 
 test("legacy ambiguity remains detectable but does not prevent export", () => {
@@ -149,7 +147,7 @@ test("real vocabulary across all six board sizes keeps valid assigned paths and 
   }
 });
 
-test("Edge level 41 keeps ambiguity diagnostics and its fixed layout can generate", async () => {
+test("Edge level 41 keeps legacy diagnostics but cannot regenerate its pinned deadlock", async () => {
   const data = JSON.parse(await readFile(new URL('./fixtures/shaped-level-41.json', import.meta.url), 'utf8'));
   const [level] = importGameLevels({ books: [{ levels: [data] }], daily: [] });
   const check = createPathSafetyChecker(level);
@@ -160,8 +158,5 @@ test("Edge level 41 keeps ambiguity diagnostics and its fixed layout can generat
   const fixedLayout = { rows: 3, columns: 4, placements: [
     { word: 'THAN', path: [1, 2, 6, 7] }, { word: 'BANK', path: [8, 9, 5, 4] }, { word: 'SNAP', path: [3, 7, 6, 10] },
   ] };
-  const generated = createGenerator(level.targetWords).generate({ rows: 3, columns: 4, disabledCells: [0, 11], fixedWords, fixedLayout });
-  assert.deepEqual(generated.fixedLayout, fixedLayout);
-  assert.equal(createPathSafetyChecker(generated)('THAN'), false);
-  assert.ok(createGameExport([{ level: generated }]));
+  assert.throws(() => createGenerator(level.targetWords).generate({ rows: 3, columns: 4, disabledCells: [0, 11], fixedWords, fixedLayout }), /安全完成/);
 });

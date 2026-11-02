@@ -2,6 +2,7 @@ import { normalizeDisabledCells } from "./board-shape.js";
 import { calculateLevelStatistics, compareRepresentativePaths, describePath } from "./level-statistics.js";
 import { createDuplicateCheck, findDuplicateWords, EXTRA_DUPLICATE_ATTEMPT_LIMIT, acceptExtraDuplicateFallback } from "./level-rules.js";
 import { validateFixedWords, normalizeFixedWords, normalizeFixedLayout, fixedLayoutLetters, normalizeFixedWordExemptions } from "./fixed-words.js";
+import { analyzeTargetPaths } from "./target-path-analysis.js";
 
 function shuffled(items, random) {
   const result = [...items];
@@ -29,6 +30,7 @@ function validateTargetCount(targetCount) {
 // These helpers do not constrain generation.
 const TARGET_LENGTH_GROUPS = ["short", "medium", "long"];
 const GENERATION_BATCH_SIZE = 80;
+const PLACEMENT_SEARCH_LIMIT = 256;
 
 export async function generateUntilComplete(generator, options, { onProgress = () => {}, isCurrent = () => true,
   extraDuplicateAttemptLimit = EXTRA_DUPLICATE_ATTEMPT_LIMIT } = {}) {
@@ -213,13 +215,15 @@ export function createGenerator(records, onlyExtraRecords = []) {
   // Search lazily by coverage, then by total path score. Scores only increase
   // along a route, so a score budget prunes hard paths without storing them all.
   function findPlacement({ rows, columns, disabledCells = [], letters, usedWords = [], initialForwardProbability = 50,
-    initialRarityLevel = null, filters = {}, fixedWord = null, fixedWordExemptions = [], minimumWordLength = 2, reservedTargetWords = [], random = Math.random }) {
+    initialRarityLevel = null, filters = {}, fixedWord = null, fixedWordExemptions = [], minimumWordLength = 2, reservedTargetWords = [],
+    excludedTargetWords = [], random = Math.random }, accept = () => true, search = { remaining: Infinity }) {
     validateInitialForwardProbability(initialForwardProbability);
     const { cells, neighbors } = boardGeometry(rows, columns, disabledCells);
     const used = new Set(usedWords);
     const reserved = new Set(reservedTargetWords);
+    const excluded = new Set(excludedTargetWords);
     const pool = getPool(initialWordFilters(filters, initialRarityLevel), new Set(fixedWordExemptions));
-    const options = pool.entries.filter(entry => entry.word.length >= minimumWordLength && !reserved.has(entry.word) && !used.has(entry.word) && entry.word.length <= cells.length && (!fixedWord || entry.word === fixedWord));
+    const options = pool.entries.filter(entry => entry.word.length >= minimumWordLength && !reserved.has(entry.word) && !excluded.has(entry.word) && !used.has(entry.word) && entry.word.length <= cells.length && (!fixedWord || entry.word === fixedWord));
     if (!options.length) return null;
     const emptyCount = cells.filter(cell => !letters[cell]).length;
     if (!emptyCount && !fixedWord) return null;
@@ -240,6 +244,7 @@ export function createGenerator(records, onlyExtraRecords = []) {
             const { word } = entry;
             const path = [];
             function visit(cell, mask, filled, previous = null, horizontal = null, vertical = null, score = 0) {
+              if (search.remaining <= 0) return null;
               if (letters[cell] && letters[cell] !== word[path.length]) return null;
               if (path.length) {
                 const last = path.at(-1);
@@ -261,7 +266,13 @@ export function createGenerator(records, onlyExtraRecords = []) {
               path.push(cell); mask |= 1 << cell;
               let result = null;
               if (!remaining) {
-                result = { ...entry, path: [...path] };
+                // Visit each placement once, even when continuing after a
+                // rejected completion at a higher score budget.
+                if (score === scoreLimit) {
+                  const placement = { ...entry, path: [...path] };
+                  search.remaining--;
+                  if (accept(placement)) result = placement;
+                }
               } else {
                 for (const next of nextCells[cell]) {
                   if (mask & (1 << next)) continue;
@@ -276,6 +287,7 @@ export function createGenerator(records, onlyExtraRecords = []) {
             for (const cell of starts) {
               const placement = visit(cell, 0, 0);
               if (placement) return placement;
+              if (search.remaining <= 0) return null;
             }
           }
         }
@@ -284,26 +296,41 @@ export function createGenerator(records, onlyExtraRecords = []) {
     return null;
   }
 
-  function fillBoard({ rows, columns, disabledCells, initialForwardProbability, initialRarityLevel, filters, fixedWords, fixedLayout, fixedWordExemptions, minimumWordLength, reservedTargetWords, random }) {
+  function fillBoard({ rows, columns, disabledCells, initialForwardProbability, initialRarityLevel, filters, fixedWords, fixedLayout, fixedWordExemptions, minimumWordLength, reservedTargetWords, excludedTargetWords, random }, accept) {
     const placements = fixedLayout?.placements ?? [];
     const letters = fixedLayoutLetters(rows, columns, placements);
     const initialWords = placements.map(({ word, path }) => ({ ...dictionary.get(word), path: [...path] }));
     const pinned = new Set(initialWords.map(entry => entry.word));
-    const place = fixedWord => {
-      const placement = findPlacement({ rows, columns, disabledCells, letters, usedWords: initialWords.map(entry => entry.word),
-        initialForwardProbability, initialRarityLevel, filters, fixedWord, fixedWordExemptions, minimumWordLength, reservedTargetWords, random });
-      if (!placement) return false;
-      placement.path.forEach((cell, index) => { letters[cell] = placement.word[index]; });
-      initialWords.push(placement);
-      return true;
-    };
-    for (const word of shuffled(fixedWords.filter(word => !pinned.has(word)), random).sort((a, b) => b.length - a.length)) {
-      if (!place(word)) return null;
+    const pending = shuffled(fixedWords.filter(word => !pinned.has(word)), random).sort((a, b) => b.length - a.length);
+    const search = { remaining: PLACEMENT_SEARCH_LIMIT };
+    const uses = Array(letters.length).fill(0);
+    for (const entry of initialWords) for (const cell of entry.path) uses[cell]++;
+    const canComplete = () => initialWords.length < 2 || analyzeTargetPaths({ rows, columns, disabledCells,
+      targetWords: initialWords, cells: letters.map((letter, cell) => ({ letter, count: uses[cell] })),
+    }).allChoicesComplete;
+    // Later targets cannot repair an existing trap: playing their assigned
+    // paths first would return to this same partial board and its counts.
+    if (!canComplete()) return { accepted: false, completeSearch: true };
+    function place(index) {
+      const fixedWord = pending[index] ?? null;
+      if (!fixedWord && !letters.some((letter, cell) => !letter && !disabledCells.includes(cell))) {
+        return accept({ letters, initialWords });
+      }
+      return Boolean(findPlacement({ rows, columns, disabledCells, letters, usedWords: initialWords.map(entry => entry.word),
+        initialForwardProbability, initialRarityLevel, filters, fixedWord, fixedWordExemptions, minimumWordLength,
+        reservedTargetWords, excludedTargetWords, random }, placement => {
+        const added = placement.path.filter(cell => !letters[cell]);
+        placement.path.forEach((cell, step) => { letters[cell] = placement.word[step]; });
+        initialWords.push(placement);
+        for (const cell of placement.path) uses[cell]++;
+        if (canComplete() && place(index + Number(Boolean(fixedWord)))) return true;
+        for (const cell of placement.path) uses[cell]--;
+        initialWords.pop();
+        for (const cell of added) letters[cell] = "";
+        return false;
+      }, search));
     }
-    while (letters.some((letter, index) => !letter && !disabledCells.includes(index))) {
-      if (!place(null)) return null;
-    }
-    return { letters, initialWords };
+    return { accepted: place(0), completeSearch: search.remaining > 0 };
   }
 
   // Stage 2: retain the assigned route and analyze all legal routes, with no cell counters.
@@ -357,7 +384,7 @@ export function createGenerator(records, onlyExtraRecords = []) {
   // without turning a shortage into a failed generation.
   function selectTargets({ rows, columns, disabledCells = [], letters, initialWords, foundWords,
     filters = {}, fixedWords = [], fixedWordExemptions = [], minimumWordLength = 2, reservedTargetWords = [], desiredTargetCount = 0,
-    duplicateCheck = createDuplicateCheck([], { target: 0, extra: 0 }) }) {
+    duplicateCheck = createDuplicateCheck([], { target: 0, extra: 0 }), requireSafePaths = false }) {
     if (!Number.isSafeInteger(desiredTargetCount) || desiredTargetCount < 0) throw new Error("目标数量需为 0 及以上的整数。");
     foundWords = foundWords.filter(entry => entry.word.length >= minimumWordLength);
     const normalized = normalizeFilters(filters);
@@ -380,6 +407,10 @@ export function createGenerator(records, onlyExtraRecords = []) {
     const targetNames = new Set(initialNames);
     const uses = Array(letters.length).fill(0);
     for (const entry of targetWords) for (const cell of entry.path) uses[cell]++;
+    const safe = () => targetWords.every(entry => entry.pathAnalysis.safe) || analyzeTargetPaths({
+      rows, columns, disabledCells, targetWords, cells: letters.map((letter, cell) => ({ letter, count: uses[cell] })),
+    }).allChoicesComplete;
+    if (requireSafePaths && !safe()) return null;
     if (desiredTargetCount > targetWords.length) {
       const previous = new Set(duplicateCheck.target.range > 0 ? duplicateCheck.target.words.map(word => word.toUpperCase()) : []);
       const additions = candidateWords.filter(entry => !targetNames.has(entry.word) && !previous.has(entry.word))
@@ -388,9 +419,14 @@ export function createGenerator(records, onlyExtraRecords = []) {
         if (targetWords.length >= desiredTargetCount) break;
         if (targetNames.has(entry.word)) continue;
         if (entry.path.some(cell => uses[cell] >= 35)) continue;
-        targetNames.add(entry.word);
         targetWords.push(entry);
         for (const cell of entry.path) uses[cell]++;
+        if (requireSafePaths && !safe()) {
+          targetWords.pop();
+          for (const cell of entry.path) uses[cell]--;
+          continue;
+        }
+        targetNames.add(entry.word);
       }
     }
     const extraWords = foundWords.filter(entry => !targetNames.has(entry.word));
@@ -424,19 +460,21 @@ export function createGenerator(records, onlyExtraRecords = []) {
     const pool = getPool(filters, exemptions);
     const initialPool = getPool(initialWordFilters(filters, initialRarityLevel), exemptions);
     const duplicateTargets = new Set(duplicateCheck.target.range > 0 ? duplicateCheck.target.words.map(word => word.toUpperCase()) : []);
+    const excludedTargetWords = [...duplicateTargets].filter(word => !exemptions.has(word));
+    const excluded = new Set(excludedTargetWords);
     for (const word of fixedWords) {
       const entry = dictionary.get(word);
-      if (!entry) throw new Error(`固定单词 ${word} 不在词库中。`);
-      if (entry.onlyExtra) throw new Error(`固定单词 ${word} 属于仅额外词，不能作为初始词。`);
-      if (!matchesFilters(entry, pool.filters, exemptions.has(word))) throw new Error(`固定单词 ${word} 不符合当前词库筛选。`);
-      if (!exemptions.has(word) && initialRarityLevel !== null && entry.rarityLevel !== initialRarityLevel) throw new Error(`固定单词 ${word} 不符合初始词生僻档位 ${initialRarityLevel}。`);
-      if (!exemptions.has(word) && duplicateTargets.has(word)) throw new Error(`固定单词 ${word} 与最近 ${duplicateCheck.target.range} 关的目标词重复，请调整固定词或查重范围。`);
+      if (!entry) throw new Error(`固定词 ${word} 不在词库中。`);
+      if (entry.onlyExtra) throw new Error(`固定词 ${word} 属于仅额外词，不能作为初始词。`);
+      if (!matchesFilters(entry, pool.filters, exemptions.has(word))) throw new Error(`固定词 ${word} 不符合当前词库筛选。`);
+      if (!exemptions.has(word) && initialRarityLevel !== null && entry.rarityLevel !== initialRarityLevel) throw new Error(`固定词 ${word} 不符合初始词生僻档位 ${initialRarityLevel}。`);
+      if (!exemptions.has(word) && duplicateTargets.has(word)) throw new Error(`固定词 ${word} 与最近 ${duplicateCheck.target.range} 关的目标词重复，请调整固定词或查重范围。`);
     }
     if (!pool.entries.length) throw new Error("筛选后没有可用的初始词，请调整词库筛选。");
     if (!initialPool.entries.length) throw new Error("当前词库筛选与初始词生僻档位下没有可用的初始词。");
     const reserved = new Set(reservedTargetWords);
-    const usable = initialPool.entries.filter(entry => !reserved.has(entry.word) && entry.word.length >= minimumWordLength && entry.word.length <= capacity);
-    if (!usable.length) throw new Error("当前棋盘尺寸与词库筛选下没有可用的初始词。");
+    const usable = initialPool.entries.filter(entry => !reserved.has(entry.word) && !excluded.has(entry.word) && entry.word.length >= minimumWordLength && entry.word.length <= capacity);
+    if (!usable.length) throw new Error("当前棋盘尺寸、词库筛选与目标词查重下没有可用的初始词。");
     if (disabledCells.length && !shapeSupportsWords(rows, columns, disabledCells, Math.min(...usable.map(entry => entry.word.length)))) {
       throw new Error("当前棋盘造型存在无法连接初始词的格子，请调整造型或词库筛选。");
     }
@@ -446,11 +484,17 @@ export function createGenerator(records, onlyExtraRecords = []) {
     let duplicateFailure = false;
     let bestLevel = null, bestExtraWords = [];
     for (let attempt = 0; attempt < GENERATION_BATCH_SIZE; attempt++) {
-      const filled = fillBoard({ rows, columns, disabledCells, initialForwardProbability, initialRarityLevel,
-        filters: pool.filters, fixedWords, fixedLayout, fixedWordExemptions, minimumWordLength, reservedTargetWords, random });
-      if (!filled) continue;
-      const foundWords = findWords({ rows, columns, disabledCells, ...filled, minimumWordLength });
-      const result = selectTargets({ rows, columns, disabledCells, ...filled, foundWords, filters: pool.filters, fixedWords, fixedWordExemptions, minimumWordLength, reservedTargetWords, desiredTargetCount, duplicateCheck });
+      let result;
+      const search = fillBoard({ rows, columns, disabledCells, initialForwardProbability, initialRarityLevel,
+        filters: pool.filters, fixedWords, fixedLayout, fixedWordExemptions, minimumWordLength, reservedTargetWords, excludedTargetWords, random }, filled => {
+        const foundWords = findWords({ rows, columns, disabledCells, ...filled, minimumWordLength });
+        result = selectTargets({ rows, columns, disabledCells, ...filled, foundWords, filters: pool.filters, fixedWords, fixedWordExemptions, minimumWordLength, reservedTargetWords, desiredTargetCount, duplicateCheck, requireSafePaths: true });
+        return Boolean(result);
+      });
+      if (!search.accepted) {
+        if (search.completeSearch) throw new Error("当前固定词、造型、筛选与查重条件下没有可安全完成的摆法，请调整配置。");
+        continue;
+      }
       const duplicates = findDuplicateWords(result, duplicateCheck);
       if (duplicates.target.length) { duplicateFailure = true; continue; }
       // Only candidates satisfying strict target checks may enter the fallback pool.

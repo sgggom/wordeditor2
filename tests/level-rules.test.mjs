@@ -60,12 +60,18 @@ test("checking ignores letter case but compares only the same word category", ()
   assert.deepEqual(findDuplicateWords(level, oppositeRoles), { target: [], extra: [] });
 });
 
-test("generated boards with repeat initial or extra words fail and continue retrying", async () => {
+test("an exhausted target pool fails immediately while extra duplicates keep retrying", async () => {
   const simple = createGenerator([{ word: "ABCDEF" }], [{ word: "ABC" }]);
   for (const kind of ["target", "extra"]) {
     const duplicateCheck = createDuplicateCheck([historyEntry(1, ["ABCDEF"], ["ABC"])],
       { target: 0, extra: 0, [kind]: 20 });
     const options = { rows: 2, columns: 3, targetCount: 1, duplicateCheck, random: () => 0 };
+    if (kind === "target") {
+      let retries = 0;
+      await assert.rejects(generateUntilComplete(simple, options, { onProgress: () => { retries++; } }), /查重下没有可用/);
+      assert.equal(retries, 0);
+      continue;
+    }
     assert.throws(() => simple.generate(options), error => error.code === "GENERATION_RETRY" && /重复单词/.test(error.message));
     let current = true;
     const attempts = [];

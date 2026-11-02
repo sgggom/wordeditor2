@@ -67,7 +67,7 @@ test("pinned overlap counts as covered cells rather than summed word lengths in 
   assert.throws(() => generator.generate(config), error => error.code !== "GENERATION_RETRY" && /无法填满/.test(error.message));
 });
 
-test("legacy automatic words keep pinned paths while ambiguous completions succeed", () => {
+test("legacy automatic words keep pinned paths and impossible safe completions are rejected", () => {
   const generator = createGenerator(records(["CAT", "DOG", "HEN"]));
   const config = settings();
   config.fixedLayout.placements.pop();
@@ -76,9 +76,8 @@ test("legacy automatic words keep pinned paths while ambiguous completions succe
   assert.ok(level.targetWords.some(entry => entry.word === "DOG"));
   const unsafe = { ...settings(), rows: 2, targetLengthPlan: null, fixedWords: ["CAT", "CO"], fixedLayout: { rows: 2, columns: 3,
     placements: [{ word: "CAT", path: [0, 1, 2] }, { word: "CO", path: [0, 3] }] } };
-  const completed = createGenerator(records(["CAT", "CO", "COT", "TOT"])).generate({ ...unsafe, random: randomFrom(3) });
-  assert.ok(completed.cells.every(cell => cell.count > 0));
-  assert.deepEqual(completed.fixedLayout, unsafe.fixedLayout);
+  assert.throws(() => createGenerator(records(["CAT", "CO", "COT", "TOT"])).generate({ ...unsafe, random: randomFrom(3) }),
+    /安全完成/);
   assert.deepEqual(unsafe.fixedLayout.placements[0].path, [0, 1, 2]);
 });
 

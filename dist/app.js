@@ -1,10 +1,11 @@
+import { mountFixedBoardEditor } from "./fixed-board-editor.js";
 import { renderWordLetters } from "./word-letters.js";
 import { createTargetPathMonitor, targetPathKey } from "./target-path-monitor.js";
 import { createTargetPathBatchChecker } from "./target-path-batch.js";
 import { createTargetPathCheckClient, createTargetPathRepairRunner, repairConfigurations } from "./target-path-repair.js";
-import { readConfigList, readConfigLists } from "./level-config.js";
+import { readConfigList, readConfigLists, defaultGenerationConfig, validateLevelConfig } from "./level-config.js";
 import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
-import { createDuplicateCheck, findDuplicateWords, setTargetWord } from "./level-rules.js";
+import { createDuplicateCheck, findDuplicateWords, setTargetWord, generationContext, resizeFixedLayout, prepareGeneration, configDestination, resolveConfigSource } from "./level-rules.js";
 import { setupConfigList } from "./config-list.js";
 import { calculateRarityTotal } from "./level-statistics.js";
 import { createBatchRunner, formatBatchState } from "./batch-runner.js";
@@ -14,6 +15,7 @@ import { normalizeFixedWords, normalizeFixedLayout, normalizeFixedWordExemptions
 import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists.js";
 import { bindWordTooltip, setupWordTooltips } from "./word-tooltip.js";
 import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } from "./level-file.js";
+import { setupPlaytest } from "./playtest-dialog.js";
 
 (() => {
   "use strict";
@@ -54,8 +56,6 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   const saveFileButton = document.querySelector("#save-local-level-file");
   const saveFileAsButton = document.querySelector("#save-local-level-file-as");
   const exportLevelsButton = document.querySelector("#export-levels");
-  const importLevelsButton = document.querySelector("#import-levels");
-  const importLevelsFile = document.querySelector("#import-levels-file");
   const savedLevelList = document.querySelector("#saved-level-list");
   const savedLibraryControls = document.querySelector("#saved-library-controls");
   const savedLibrarySelect = document.querySelector("#saved-library-select");
@@ -74,6 +74,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   const pathCheckResults = new Map();
   let allLevelsCheckState = null, allLevelsCheckSignature = null, allLevelsCheckNotice = "";
   let pathRepairRunning = false, pathRepairRunner = null, pathRepairState = null;
+  const repairButton = document.querySelector("#repair-problem-levels");
   const repairConfigImport = document.querySelector("#repair-config-import");
   const repairConfigFile = document.querySelector("#repair-config-file");
   let needsRepairConfig = false, readingRepairConfig = false;
@@ -125,11 +126,22 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   let configuredInitialForwardProbability = readInitialForwardProbability();
   let configuredDesiredTargetCount = 0;
   let configuredFilters = readFilters();
-  let configuredFixedWords = readFixedWords();
-  let configuredFixedWordExemptions = readFixedWordExemptions();
-  let configuredFixedLayout = readFixedLayout();
+  let configuredFixedWords = [];
+  let configuredFixedWordExemptions = [];
+  let configuredFixedLayout = null;
   let configuredDuplicateRanges = Object.fromEntries(Object.entries(DUPLICATE_RANGE_STORAGE_KEYS)
     .map(([kind, key]) => [kind, readDuplicateRange(key)]));
+  let newLevelDefaults = { ...defaultGenerationConfig(), ...size,
+    initialForwardProbability: configuredInitialForwardProbability, filters: structuredClone(configuredFilters),
+    targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra };
+  try {
+    const saved = JSON.parse(localStorage.getItem("fangge.new-level-defaults.v1"));
+    if (saved) { validateLevelConfig(saved); newLevelDefaults = { ...defaultGenerationConfig(), ...saved, fixedWords: [], fixedLayout: null, fixedWordExemptions: [], desiredTargetCount: 0 }; }
+  } catch {}
+  size = { rows: newLevelDefaults.rows, columns: newLevelDefaults.columns, disabledCells: newLevelDefaults.disabledCells };
+  configuredInitialForwardProbability = newLevelDefaults.initialForwardProbability;
+  configuredFilters = structuredClone(newLevelDefaults.filters);
+  configuredDuplicateRanges = { target: newLevelDefaults.targetDuplicateRange, extra: newLevelDefaults.extraDuplicateRange };
   let level = null;
   let selectedWord = null;
   let generationClient = null;
@@ -150,6 +162,8 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   let editorBeforePreset = null;
   let activeSavedLevelId = null;
   let savedLevelEdited = false;
+  let parametersChanged = false, editingShape = false;
+  let activeConfigSource = null, activeConfigRecords = [];
   let savedLevelsLoading = true;
   let levelLibraryReady = false;
   let savingLevel = false;
@@ -161,6 +175,16 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   let displayedSavedLevelId;
   let displayedLevelListBusy;
   let levelStorePromise;
+  const playtest = setupPlaytest({
+    getLevel: () => level,
+    getLevelKey: () => [presetView?.id ?? fileView?.id ?? activeBrowserListId, activeSavedLevelId],
+    getLabel: () => {
+      const index = currentListView().records.findIndex(record => record.id === activeSavedLevelId);
+      return level?.name || (index >= 0 ? `第 ${String(index + 1).padStart(3, "0")} 关` : "当前关卡");
+    },
+    isBusy: () => generating || savingLevel || updatingLevelList || batchRunning || pathRepairRunning || readingSingleLevel,
+    onError: message => showError(message),
+  });
 
   function isValidSize(size) {
     return size !== null && typeof size === "object" &&
@@ -182,19 +206,10 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   }
 
   function saveSize() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, ...size }));
-      localStorage.setItem(FORWARD_STORAGE_KEY, String(configuredInitialForwardProbability));
-      localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(configuredFilters));
-      localStorage.setItem(FIXED_WORDS_STORAGE_KEY, JSON.stringify(configuredFixedWords));
-      localStorage.setItem(FIXED_LAYOUT_STORAGE_KEY, JSON.stringify(configuredFixedLayout));
-      localStorage.setItem(FIXED_EXEMPTIONS_STORAGE_KEY, JSON.stringify(configuredFixedWordExemptions));
-      for (const [kind, key] of Object.entries(DUPLICATE_RANGE_STORAGE_KEYS)) {
-        localStorage.setItem(key, String(configuredDuplicateRanges[kind]));
-      }
-    } catch {
-      // Keep editing available when browser storage is disabled.
-    }
+    newLevelDefaults = { ...defaultGenerationConfig(), ...size,
+      initialForwardProbability: configuredInitialForwardProbability, filters: structuredClone(configuredFilters),
+      targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra };
+    try { localStorage.setItem("fangge.new-level-defaults.v1", JSON.stringify(newLevelDefaults)); } catch {}
   }
 
   function getLevelStore() {
@@ -225,7 +240,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   }
 
   async function changeSavedLibrary(operation, deletedId = null) {
-    if (generating || savingLevel || updatingLevelList || batchRunning || presetView || fileView || !levelLibraryReady) return false;
+    if (generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning) || presetView || fileView || !levelLibraryReady) return false;
     const previousId = activeBrowserListId;
     savedLibraryDrafts.set(previousId, structuredClone(editorSnapshot()));
     updatingLevelList = true;
@@ -261,24 +276,25 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   }
 
   function openSavedLibraryDialog(kind) {
-    if (generating || savingLevel || updatingLevelList || batchRunning || presetView || fileView || !levelLibraryReady) return;
+    if (generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning) || presetView || fileView || !levelLibraryReady) return;
     const list = savedLibraries.find(list => list.id === activeBrowserListId);
     if (kind === "delete" && savedLibraries.length < 2) return;
     savedLibraryAction = { kind, id: activeBrowserListId };
-    document.querySelector("#saved-library-dialog-title").textContent = kind === "create" ? "新建关卡列表" : "删除关卡列表";
+    document.querySelector("#saved-library-dialog-title").textContent = kind === "create" ? "新建关卡列表" : kind === "rename" ? "重命名关卡列表" : "删除关卡列表";
     savedLibraryName.hidden = document.querySelector("#saved-library-name-label").hidden = kind === "delete";
-    savedLibraryName.required = kind === "create";
-    savedLibraryMessage.hidden = kind === "create";
+    savedLibraryName.required = kind !== "delete";
+    savedLibraryMessage.hidden = kind !== "delete";
     savedLibraryMessage.textContent = kind === "delete" ? `确定删除“${list.name}”及其中的 ${savedLevels.length} 个关卡？` : "";
     let name = "新关卡列表", suffix = 2;
     while (savedLibraries.some(list => list.name === name)) name = `新关卡列表 ${suffix++}`;
-    savedLibraryName.value = name;
+    savedLibraryName.value = kind === "rename" ? list.name : name;
     savedLibraryError.hidden = true;
-    submitSavedLibrary.textContent = kind === "create" ? "创建" : "删除整个列表";
+    submitSavedLibrary.textContent = kind === "create" ? "创建" : kind === "rename" ? "保存名称" : "删除整个列表";
     savedLibraryDialog.showModal();
-    if (kind === "create") { savedLibraryName.focus(); savedLibraryName.select(); }
+    if (kind !== "delete") { savedLibraryName.focus(); savedLibraryName.select(); }
   }
   newSavedLibrary.addEventListener("click", () => openSavedLibraryDialog("create"));
+  document.querySelector("#rename-saved-library").addEventListener("click", () => openSavedLibraryDialog("rename"));
   deleteSavedLibrary.addEventListener("click", () => openSavedLibraryDialog("delete"));
   savedLibrarySelect.addEventListener("change", () => {
     const id = savedLibrarySelect.value;
@@ -295,7 +311,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     submitSavedLibrary.disabled = true;
     try {
       const success = await changeSavedLibrary(store => kind === "create"
-        ? store.createSavedLevelList(savedLibraryName.value) : store.deleteSavedLevelList(id), kind === "delete" ? id : null);
+        ? store.createSavedLevelList(savedLibraryName.value) : kind === "rename" ? store.renameSavedLevelList(id, savedLibraryName.value) : store.deleteSavedLevelList(id), kind === "delete" ? id : null);
       if (success) savedLibraryDialog.close();
     } finally { submitSavedLibrary.disabled = false; }
   });
@@ -330,13 +346,17 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   function renderPathCheckControls() {
     const running = allLevelsCheckState?.phase === "running";
     const view = currentListView();
-    const source = view.kind === "browser" ? "浏览器列表" : view.kind === "file" ? "本地文件" : "参考预设";
+    const source = view.kind === "browser" ? "浏览器关卡列表" : view.kind === "file" ? "本地文件" : "参考预设";
     checkAllLevelsButton.textContent = pathRepairRunning ? "停止重跑" : running ? "停止检测" : `全部检测（${view.records.length}关）`;
-    checkAllLevelsButton.title = "检测当前列表；可编辑列表检测完成后自动重跑问题关卡，通过无解检测后才替换。";
+    checkAllLevelsButton.title = "仅检测当前列表；问题关卡需点击修复后确认替换。";
     allLevelsCheckSource.textContent = `检测范围：${source} · ${view.label} · ${view.records.length}关`;
-    checkAllLevelsButton.disabled = readingRepairConfig || (!running && !pathRepairRunning && (generating || savingLevel || updatingLevelList || batchRunning || !view.records.length));
+    checkAllLevelsButton.disabled = readingRepairConfig || (!running && !pathRepairRunning && (generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning) || !view.records.length));
+    const problems = view.records.filter(record => pathCheckResults.get(targetPathKey(pathCheckLevel(record)))?.status === "unsafe").length;
+    repairButton.hidden = view.kind === "preset" || !problems;
+    repairButton.textContent = `修复问题关卡（${problems} 关）`;
+    repairButton.disabled = running || pathRepairRunning || generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning);
     repairConfigImport.hidden = !needsRepairConfig;
-    repairConfigImport.disabled = readingRepairConfig || running || pathRepairRunning || batchRunning;
+    repairConfigImport.disabled = readingRepairConfig || running || pathRepairRunning || (batchRunning || pathRepairRunning);
     const state = allLevelsCheckState;
     allLevelsCheckStatus.hidden = !state && !allLevelsCheckNotice;
     allLevelsCheckStatus.textContent = allLevelsCheckNotice || (state ?
@@ -356,8 +376,8 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       renderPathCheckControls(); return;
     }
     let configs;
-    const candidates = importedConfigs ? [importedConfigs] : [readConfigList() ?? [],
-      ...(readConfigLists()?.lists.map(list => list.records) ?? [])];
+    const candidates = importedConfigs ? [importedConfigs] :
+      (readConfigLists()?.lists.map(list => list.records.map(record => ({ ...record, listId: list.id }))) ?? [[]]);
     for (const candidate of candidates) {
       try {
         configs = repairConfigurations(records, candidate, configuredDuplicateRanges,
@@ -371,8 +391,11 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       renderPathCheckControls(); return;
     }
     needsRepairConfig = false; allLevelsCheckNotice = "";
+    const names = (readConfigLists()?.lists ?? []).filter(list => configs.some(config => list.records.some(record => record.id === config.id))).map(list => list.name);
+    const positions = records.flatMap((record, index) => problemIds.includes(record.id) ? [index + 1] : []);
+    if (!window.confirm(`将替换问题关卡：${positions.join("、")}。\n配置来源：${names.join("、") || "关卡内嵌配置 / 本次读取的配置表"}。\n确认开始修复？`)) return;
     const generator = createGenerationClient(), checker = createTargetPathCheckClient();
-    pathRepairRunning = true; batchRunning = true; batchRunBar.hidden = true;
+    pathRepairRunning = true; batchRunBar.hidden = false;
     stopGeneration();
     pathRepairRunner = createTargetPathRepairRunner({
       generate: (...args) => generator.generate(...args),
@@ -403,6 +426,9 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       onUpdate(state) {
         const previousId = pathRepairState?.id;
         pathRepairState = state;
+        batchRunStatus.textContent = `修复问题关卡 ${state.completed}/${state.total} · 第 ${state.position} 关 · 尝试 ${state.attempts}`;
+        batchRunProgress.max = state.total; batchRunProgress.value = state.completed;
+        stopBatchButton.disabled = state.phase === "stopping";
         renderPathCheckControls();
         if (previousId !== null && previousId !== undefined) refreshPathCheckBadge(previousId);
         if (state.id !== null) refreshPathCheckBadge(state.id);
@@ -412,18 +438,23 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     try { await pathRepairRunner.run(records, configs, problemIds); }
     finally {
       generator.close(); checker.close(); pathRepairRunner = null;
-      pathRepairRunning = false; batchRunning = false;
+      pathRepairRunning = false; batchRunBar.hidden = true;
       allLevelsCheckSignature = pathCheckListSignature();
       savedLevelListDirty = true; render(); fileManager?.refresh();
     }
   }
+  repairButton.addEventListener("click", () => {
+    if (!repairButton.disabled) repairProblemLevels().catch(error => {
+      allLevelsCheckNotice = error.message; renderPathCheckControls();
+    });
+  });
   repairConfigImport.addEventListener("click", () => {
     if (!repairConfigImport.disabled) repairConfigFile.click();
   });
   repairConfigFile.addEventListener("change", async () => {
     const file = repairConfigFile.files[0]; repairConfigFile.value = "";
     if (!file || readingRepairConfig || !needsRepairConfig) return;
-    const signature = pathCheckListSignature(), defaults = currentGenerationConfig();
+    const signature = pathCheckListSignature(), defaults = defaultGenerationConfig();
     readingRepairConfig = true; renderPathCheckControls();
     try {
       let configs;
@@ -449,9 +480,9 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     allLevelsCheckSignature = pathCheckListSignature();
     try {
       const result = await allLevelsChecker.run(pathCheckRecords());
-      if (result.phase === "complete" && result.issues > 0) await repairProblemLevels();
+      renderPathCheckControls();
     } catch (error) {
-      allLevelsCheckNotice = `检测或自动重跑未完成：${error.message}`;
+      allLevelsCheckNotice = `检测未完成：${error.message}`;
       renderPathCheckControls();
     }
   });
@@ -459,7 +490,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   function renderSavedLevels() {
     renderPathCheckControls();
     const displayedLevels = presetView?.records ?? fileView?.records ?? savedLevels;
-    const busy = generating || savingLevel || updatingLevelList || batchRunning;
+    const busy = generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning);
     const view = currentListView();
     savedLibraryControls.hidden = Boolean(presetView || fileView);
     savedLibrarySelect.replaceChildren(...savedLibraries.map(list => new Option(
@@ -469,15 +500,12 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     deleteSavedLibrary.disabled = busy || !levelLibraryReady || savedLibraries.length < 2;
     deleteSavedLibrary.title = savedLibraries.length < 2 ? "至少保留一个关卡列表，可先新建另一份列表" : "删除当前列表及其中的关卡";
     document.querySelector("#viewed-level-list-name").hidden = !presetView && !fileView;
-    importLevelsButton.hidden = true;
-    importLevelsButton.disabled = true;
-    importLevelsButton.textContent = updatingLevelList ? "处理中…" : "追加导入到浏览器";
     savedLevelCount.textContent = String(displayedLevels.length);
     document.querySelector("#viewed-level-list-name").textContent = view.label;
     const status = document.querySelector("#level-source-status");
     status.textContent = view.status; status.classList.toggle("is-dirty", Boolean(view.dirty));
     document.querySelector("#return-to-edited-levels").hidden = !presetView && !fileView;
-    form.inert = Boolean(presetView) || savingLevel || updatingLevelList || batchRunning || readingSingleLevel;
+    form.inert = Boolean(presetView) || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning) || readingSingleLevel;
     saveFileButton.hidden = saveFileAsButton.hidden = !fileView;
     saveFileButton.textContent = savingLevel ? "保存中…" : view.saveLabel ?? "保存文件";
     saveFileButton.disabled = busy || (Boolean(fileView?.handle) && !view.dirty) || view.pending;
@@ -485,11 +513,11 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     saveFileAsButton.hidden ||= !view.canSaveAs;
     exportLevelsButton.hidden = Boolean(fileView);
     exportLevelsButton.disabled = exportingLevels || busy || !displayedLevels.length;
-    exportLevelsButton.textContent = exportingLevels ? "导出中…" : "导出列表";
+    exportLevelsButton.textContent = exportingLevels ? "导出中…" : "导出游戏文件";
     addLevelButton.hidden = Boolean(fileView);
     addLevelButton.disabled = Boolean(presetView) || !level || busy || !levelLibraryReady || (activeSavedLevelId !== null && !savedLevelEdited);
     addLevelButton.textContent = presetView ? "自带预设 · 只读" : savingLevel ? "保存中…" : activeSavedLevelId !== null
-      ? (savedLevelEdited ? "保存关卡" : "关卡已保存") : "保存关卡";
+      ? (savedLevelEdited ? `更新关卡 ${String(displayedLevels.findIndex(record => record.id === activeSavedLevelId) + 1).padStart(3, "0")}` : "关卡已保存") : "保存关卡";
     if (!savedLevelListDirty && displayedSavedLevelId === activeSavedLevelId && displayedLevelListBusy === busy) return;
     savedLevelListDirty = false;
     displayedSavedLevelId = activeSavedLevelId;
@@ -511,7 +539,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       button.type = "button";
       button.className = "saved-level-item";
       button.dataset.savedLevelId = String(record.id);
-      button.disabled = savingLevel || updatingLevelList || batchRunning;
+      button.disabled = savingLevel || updatingLevelList || (batchRunning || pathRepairRunning);
       if (saved.sourceConfig) button.title = `来自配置 ${String(saved.sourceConfig.position).padStart(3, "0")}`;
       button.setAttribute("aria-pressed", String(record.id === activeSavedLevelId));
       const heading = document.createElement("span");
@@ -564,11 +592,15 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   }
 
   function openSavedLevel(id) {
-    if (batchRunning || savingLevel) return;
+    if ((batchRunning || pathRepairRunning) || savingLevel) return;
     const record = (presetView?.records ?? fileView?.records ?? savedLevels).find(entry => entry.id === id);
     if (!record) return;
     stopGeneration();
     level = structuredClone(record.level);
+    parametersChanged = false; editingShape = false;
+    const linkedConfig = resolveConfigSource(level.sourceConfig, readConfigLists()?.lists ?? []);
+    activeConfigSource = linkedConfig?.source ?? (level.sourceConfig?.listId ? structuredClone(level.sourceConfig) : null);
+    activeConfigRecords = linkedConfig?.records ?? [];
     activeSavedLevelId = record.id;
     savedLevelEdited = false;
     selectedWord = null;
@@ -840,9 +872,9 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
         checkbox.dataset.targetWord = entry.word;
         checkbox.checked = membership.target.has(entry.word);
         const locked = level.fixedWords?.includes(entry.word);
-        checkbox.disabled = Boolean(presetView) || locked || generating || savingLevel || updatingLevelList || batchRunning;
+        checkbox.disabled = Boolean(presetView) || locked || generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning);
         checkbox.setAttribute("aria-label", `${entry.word} 设为目标词`);
-        selection.title = locked ? "固定单词不能移除" : checkbox.checked ? "移出目标词" : "加入目标词";
+        selection.title = locked ? "固定词不能移除" : checkbox.checked ? "移出目标词" : "加入目标词";
         selection.append(checkbox);
       } else {
         selection.textContent = "—";
@@ -862,8 +894,8 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
 
   function renderStatistics() {
     const stats = level?.statistics;
-    const busy = generating || savingLevel || updatingLevelList || batchRunning || exportingLevels;
-    levelDataButton.disabled = batchRunning;
+    const busy = generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning) || exportingLevels;
+    levelDataButton.disabled = (batchRunning || pathRepairRunning);
     copySingleLevelButton.disabled = !level || busy || copyingSingleLevel;
     readSingleLevelButton.disabled = busy || copyingSingleLevel;
     readSingleLevelButton.textContent = readingSingleLevel ? "读取中…" : "读取数据";
@@ -986,7 +1018,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   }
 
   function renderGenerationButton() {
-    generateButton.disabled = Boolean(presetView) || batchRunning || (!generating && (savingLevel || updatingLevelList || (!fileView && Object.values(configuredDuplicateRanges).some(range => range > 0) && !levelLibraryReady)));
+    generateButton.disabled = Boolean(presetView) || (batchRunning || pathRepairRunning) || (!generating && (savingLevel || updatingLevelList || (!fileView && Object.values(configuredDuplicateRanges).some(range => range > 0) && !levelLibraryReady)));
     generateButton.setAttribute("aria-busy", String(generating));
     generateButton.textContent = generating ? "停止生成" : level ? "重新生成" : "生成关卡";
     generateButton.title = generating
@@ -995,6 +1027,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   }
 
   function render() {
+    playtest.refresh();
     if (!pathRepairRunning && allLevelsCheckSignature && allLevelsCheckSignature !== pathCheckListSignature()) {
       const wasRunning = allLevelsCheckState?.phase === "running";
       allLevelsChecker.stop();
@@ -1008,7 +1041,11 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     emotionWarning.textContent = !level ? "" : Number.isFinite(warningEmotionTotal)
       ? `情绪提示：当前情绪总分为 ${warningEmotionTotal}，低于 0；仅作警告，不影响生成、保存或导出。`
       : "情绪提示：部分单词缺少情绪数据，暂无法计算总分；仅作警告，不影响生成、保存或导出。";
-    const { rows, columns } = size;
+    const displayBoard = level && !editingShape ? level : size;
+    const { rows, columns } = displayBoard;
+    document.querySelector("#pending-parameters").hidden = !parametersChanged;
+    document.querySelector("#edit-board-shape").disabled = Boolean(presetView) || savingLevel || updatingLevelList || batchRunning || pathRepairRunning;
+    document.querySelector("#edit-board-shape").setAttribute("aria-pressed", String(editingShape));
     layout.style.setProperty("--rows", rows);
     layout.style.setProperty("--columns", columns);
     rowLabels.replaceChildren(makeLabels(rows));
@@ -1024,17 +1061,17 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       row.setAttribute("role", "row");
       for (let columnIndex = 0; columnIndex < columns; columnIndex += 1) {
         const index = rowIndex * columns + columnIndex;
-        const value = level?.cells[index] ?? { letter: "", count: 0 };
+        const value = (!editingShape && level?.cells[index]) || { letter: "", count: 0 };
         const cell = document.createElement("button");
         cell.type = "button";
         cell.dataset.cell = String(index);
-        const disabled = size.disabledCells?.includes(index) ?? false;
+        const disabled = displayBoard.disabledCells?.includes(index) ?? false;
         cell.setAttribute("aria-pressed", String(!disabled));
-        cell.disabled = Boolean(presetView) || batchRunning || savingLevel || updatingLevelList;
+        cell.disabled = Boolean(presetView) || (batchRunning || pathRepairRunning) || savingLevel || updatingLevelList;
         cell.className = "board-cell";
         cell.classList.toggle("path-selected", steps.has(index));
         cell.classList.toggle("is-disabled", disabled);
-        cell.title = disabled ? "点击启用格子" : "点击禁用格子";
+        cell.title = editingShape ? (disabled ? "点击启用格子" : "点击禁用格子") : "点击高亮格子；修改造型请开启编辑造型";
         cell.setAttribute("aria-label", `第 ${rowIndex + 1} 行，第 ${columnIndex + 1} 列，${disabled ? "已禁用" : value.letter || "空白"}，${value.count} 个目标词使用${steps.has(index) ? `，路径第 ${steps.get(index)} 步` : ""}`);
         cell.dataset.row = String(rowIndex + 1);
         cell.dataset.column = String(columnIndex + 1);
@@ -1060,8 +1097,8 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     board.setAttribute("aria-colcount", String(columns));
     board.setAttribute("aria-label", `${level ? "关卡棋盘" : "空白棋盘"}，${rows} 行 ${columns} 列`);
 
-    form.elements.namedItem("rows").value = String(rows);
-    form.elements.namedItem("columns").value = String(columns);
+    form.elements.namedItem("rows").value = String(size.rows);
+    form.elements.namedItem("columns").value = String(size.columns);
     summary.textContent = `${rows} 行 × ${columns} 列`;
     count.textContent = String(rows * columns - (size.disabledCells?.length ?? 0));
     emotionScore.textContent = formatEmotionScore();
@@ -1070,20 +1107,24 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     const emotionTotal = level?.statistics.emotion.total;
     emotionScore.classList.toggle("is-positive", Number.isFinite(emotionTotal) && emotionTotal > 0);
     emotionScore.classList.toggle("is-negative", Number.isFinite(emotionTotal) && emotionTotal < 0);
-    resetButton.disabled = rows === DEFAULT_SIZE.rows && columns === DEFAULT_SIZE.columns && !size.disabledCells?.length;
+    resetButton.disabled = Boolean(presetView) || savingLevel || updatingLevelList || batchRunning || pathRepairRunning;
+    document.querySelector("#desired-target-count").value = String(configuredDesiredTargetCount);
     renderGenerationButton();
+    const currentPosition = activeConfigSource?.position ?? generationContext(fileView?.records ?? savedLevels, activeSavedLevelId).position;
+    const shortWords = filterInputs.find(input => input.dataset.wordFilter === "scope" && input.value === "0");
+    shortWords.disabled = currentPosition !== 1; shortWords.parentElement.title = "2词库仅第 1 关可用";
     const activeFilters = Object.keys(configuredFilters).length;
     filterSummary.textContent = activeFilters ? `${activeFilters}项` : "全部";
     filterButton.classList.toggle("is-active", activeFilters > 0);
     activeFixedWords.hidden = configuredFixedWords.length === 0;
-    fixedWordsSummary.textContent = configuredFixedWords.join(" · ");
+    fixedWordsSummary.textContent = configuredFixedWords.map(word => word + (configuredFixedWordExemptions.includes(word) ? "（豁免）" : "")).join(" · ");
     const pinnedCount = configuredFixedLayout?.placements.length ?? 0;
-    activeFixedWords.title = configuredFixedWords.join(", ") + `（固定位置 ${pinnedCount} 词，自动摆放 ${configuredFixedWords.length - pinnedCount} 词）`;
+    activeFixedWords.title = configuredFixedWords.join(", ") + `（固定位置 ${pinnedCount} 词，自动摆放 ${configuredFixedWords.length - pinnedCount} 词；豁免仅用于明确标记的固定目标词查重）`;
     renderWords();
     renderStatistics();
     renderSavedLevels();
-    form.inert = batchRunning || Boolean(presetView) || readingSingleLevel || savingLevel || updatingLevelList;
-    if (!presetView && !fileView) saveSize();
+    form.inert = (batchRunning || pathRepairRunning) || Boolean(presetView) || readingSingleLevel || savingLevel || updatingLevelList;
+
     fitBoard();
   }
 
@@ -1099,6 +1140,8 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   function clearLevel() {
     stopGeneration();
     level = null;
+    activeConfigSource = null; activeConfigRecords = [];
+    parametersChanged = false;
     if (!fileView) activeSavedLevelId = null;
     savedLevelEdited = false;
     selectedWord = null;
@@ -1128,7 +1171,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   }
 
   generateButton.addEventListener("click", async () => {
-    if (batchRunning) return;
+    if ((batchRunning || pathRepairRunning)) return;
     batchRunBar.hidden = true;
     if (generating) {
       stopGeneration();
@@ -1156,9 +1199,6 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     }
     const filters = filtersFromInputs();
     const generationRecords = fileView ? fileView.records : savedLevels;
-    const generationIndex = generationRecords.findIndex(record => record.id === activeSavedLevelId);
-    const generationPosition = generationIndex >= 0 ? generationIndex + 1 : generationRecords.length + 1;
-    if (configuredInitialForwardProbability !== initialForwardProbability || JSON.stringify(configuredFilters) !== JSON.stringify(filters)) clearLevel();
     configuredInitialForwardProbability = initialForwardProbability;
     configuredDuplicateRanges = duplicateRanges;
     configuredFilters = filters;
@@ -1176,12 +1216,8 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     generationController = controller;
     render();
     try {
-      const fileIndex = fileView?.records.findIndex(record => record.id === activeSavedLevelId) ?? -1;
-      const history = fileView ? fileView.records.slice(0, fileIndex < 0 ? fileView.records.length : fileIndex) : savedLevels;
-      const duplicateCheck = createDuplicateCheck(history, configuredDuplicateRanges);
-      const generated = await getGenerationClient().generate({ ...size, initialForwardProbability, filters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
-        desiredTargetCount: configuredDesiredTargetCount,
-        fixedWordExemptions: configuredFixedWordExemptions, minimumWordLength: generationPosition === 1 ? 2 : 3 }, duplicateCheck, {
+      const prepared = prepareGeneration(generationRecords, activeSavedLevelId, currentGenerationConfig(), activeConfigSource, activeConfigRecords);
+      const generated = await getGenerationClient().generate(prepared.config, prepared.duplicateCheck, {
         signal: controller.signal,
         onProgress: ({ attempts, workers }) => {
           if (currentRequestId !== requestId || controller.signal.aborted) return;
@@ -1194,12 +1230,13 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       generating = false;
       if (fileView) generated.name = fileView.records.find(record => record.id === activeSavedLevelId)?.level.name ?? generated.name;
       const previousLevel = level;
+      if (activeConfigSource) generated.sourceConfig = structuredClone(activeConfigSource);
       level = generated;
+      parametersChanged = false; editingShape = false;
       if (fileView) {
         try { stageFileLevel(); } catch (error) { level = previousLevel; throw error; }
       }
-      else activeSavedLevelId = null;
-      savedLevelEdited = false;
+      else savedLevelEdited = activeSavedLevelId !== null;
       selectedWord = null;
       for (const scroller of document.querySelectorAll(".word-scroll")) scroller.scrollTop = 0;
       render();
@@ -1211,14 +1248,18 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   });
 
   addLevelButton.addEventListener("click", async () => {
-    if (fileView || presetView || !level || generating || savingLevel || updatingLevelList || batchRunning || !levelLibraryReady || (activeSavedLevelId !== null && !savedLevelEdited)) return;
+    if (fileView || presetView || !level || generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning) || !levelLibraryReady || (activeSavedLevelId !== null && !savedLevelEdited)) return;
     const source = level;
     const existingRecord = savedLevels.find(record => record.id === activeSavedLevelId) ?? null;
-    if (!existingRecord) {
-      const duplicates = findDuplicateWords(source, createDuplicateCheck(savedLevels, configuredDuplicateRanges));
+    {
+      const history = activeConfigSource ? savedLevels.slice(0, configDestination(savedLevels, activeConfigSource).index) : generationContext(savedLevels, activeSavedLevelId).history;
+      const savedRanges = Object.fromEntries(["target", "extra"].map(kind => [kind, source.duplicateCheck?.[kind]?.range ?? source.duplicateCheck?.range ?? configuredDuplicateRanges[kind]]));
+      const duplicates = findDuplicateWords(source, createDuplicateCheck(history, savedRanges));
+      const fallback = source.extraDuplicateFallback;
+      if (!source.targetsEdited && fallback && fallback.attempts > 100_000 && duplicates.extra.every(word => fallback.words.includes(word))) duplicates.extra = [];
       if (duplicates.target.length || duplicates.extra.length) {
         savedLevelError.textContent = Object.entries(duplicates).filter(([, words]) => words.length)
-          .map(([kind, words]) => `${kind === "target" ? "目标词" : "额外词"}与最近 ${configuredDuplicateRanges[kind]} 关重复：${words.join("、")}`)
+          .map(([kind, words]) => `${kind === "target" ? "目标词" : "额外词"}与最近 ${savedRanges[kind]} 关重复：${words.join("、")}`)
           .join("；") + "。请重新生成。";
         savedLevelError.hidden = false;
         return;
@@ -1233,8 +1274,8 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     renderWords();
     try {
       const store = await getLevelStore();
-      const record = await store.saveLevel(snapshot, existingRecord);
-      savedLevels = existingRecord ? savedLevels.map(entry => entry.id === record.id ? record : entry) : [...savedLevels, record];
+      const record = activeConfigSource ? await store.saveLevelFromConfig(snapshot) : await store.saveLevel(snapshot, existingRecord);
+      savedLevels = activeConfigSource ? await store.getSavedLevels() : existingRecord ? savedLevels.map(entry => entry.id === record.id ? record : entry) : [...savedLevels, record];
       savedLevelListDirty = true;
       if (level === source) {
         activeSavedLevelId = record.id;
@@ -1292,6 +1333,10 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
 
   levelDataPanel.addEventListener("beforetoggle", event => {
     if (event.newState !== "open") return;
+    renderStatistics();
+  });
+  document.querySelector("#preset-level-dialog").addEventListener("toggle", () => {
+    if (!document.querySelector("#preset-level-dialog").open) return;
     setSingleLevelStatus("");
     if (level) {
       try { singleLevelJson.value = currentSingleLevelText(); }
@@ -1350,7 +1395,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       level = imported;
       if (fileView) stageFileLevel();
       singleLevelJson.value = currentSingleLevelText();
-      setSingleLevelStatus(fileView ? "已更新当前关卡，点击“保存文件”写回本地文件。" : "已读取到编辑区，可加入浏览器关卡保存。");
+      setSingleLevelStatus(fileView ? "已更新当前关卡，点击“保存文件”写回本地文件。" : "已读取到编辑区，可加入浏览器关卡列表保存。");
     } catch (error) {
       setSingleLevelStatus(`读取失败：${error.message || "数据无效。"}`, true);
     } finally {
@@ -1361,43 +1406,10 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     }
   });
 
-  importLevelsButton.addEventListener("click", () => {
-    if (!importLevelsButton.disabled) importLevelsFile.click();
-  });
-  importLevelsFile.addEventListener("change", async () => {
-    const file = importLevelsFile.files[0];
-    importLevelsFile.value = "";
-    if (!file || importLevelsButton.disabled) return;
-    updatingLevelList = true;
-    savedLevelError.hidden = true;
-    render();
-    let worker;
-    try {
-      const text = await file.text();
-      const levels = await new Promise((resolve, reject) => {
-        worker = new Worker("./import-worker.js", { type: "module" });
-        worker.onmessage = ({ data }) => data.error ? reject(new Error(data.error)) : resolve(data.levels);
-        worker.onerror = () => reject(new Error("关卡读取失败，请刷新重试。"));
-        worker.postMessage(text);
-      });
-      const previousCount = savedLevels.length;
-      savedLevels = await (await getLevelStore()).importSavedLevels(levels);
-      savedLevelListDirty = true;
-      openSavedLevel(savedLevels[previousCount].id);
-    } catch (error) {
-      savedLevelError.textContent = `导入失败：${error.message || "无法保存关卡。"}`;
-      savedLevelError.hidden = false;
-    } finally {
-      worker?.terminate();
-      updatingLevelList = false;
-      render();
-    }
-  });
-
   savedLevelList.addEventListener("click", async event => {
     const control = event.target.closest("button[data-level-action]");
     if (control) {
-      if (generating || savingLevel || updatingLevelList || batchRunning || control.disabled || (!fileView && !levelLibraryReady)) return;
+      if (generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning) || control.disabled || (!fileView && !levelLibraryReady)) return;
       const id = Number(control.dataset.levelId);
       const action = control.dataset.levelAction;
       if (fileView) {
@@ -1442,7 +1454,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       }
       return;
     }
-    if (updatingLevelList || batchRunning) return;
+    if (updatingLevelList || (batchRunning || pathRepairRunning)) return;
     const button = event.target.closest("button[data-saved-level-id]");
     if (button) openSavedLevel(Number(button.dataset.savedLevelId));
   });
@@ -1450,7 +1462,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   savedLevelList.addEventListener("keydown", event => {
     if (!["ArrowUp", "ArrowDown"].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing || event.defaultPrevented) return;
     if (event.target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
-    if (generating || savingLevel || updatingLevelList || batchRunning || readingSingleLevel) return;
+    if (generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning) || readingSingleLevel) return;
     const records = currentListView().records;
     if (!records.length) return;
     const focusedId = event.target.closest("[data-saved-level-id]")?.dataset.savedLevelId;
@@ -1466,7 +1478,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
 
   wordList.addEventListener("change", event => {
     const checkbox = event.target.closest("input[data-target-word]");
-    if (!checkbox || !level || generating || savingLevel || updatingLevelList || batchRunning) return;
+    if (!checkbox || !level || generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning)) return;
     const previous = level;
     try {
       level = setTargetWord(level, checkbox.dataset.targetWord, checkbox.checked);
@@ -1489,33 +1501,45 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     [...wordList.querySelectorAll("button")].find(item => item.dataset.word === button.dataset.word)?.focus({ preventScroll: true });
   });
 
+  document.querySelector("#edit-board-shape").addEventListener("click", () => {
+    stopGeneration(); editingShape = !editingShape; render();
+  });
+
   form.addEventListener("submit", (event) => event.preventDefault());
   form.addEventListener("change", (event) => {
+    if (event.target.id === "desired-target-count") {
+      if (!Number.isSafeInteger(event.target.valueAsNumber) || event.target.valueAsNumber < 0) { showError("目标数量需为 0 及以上整数。"); return; }
+      configuredDesiredTargetCount = event.target.valueAsNumber;
+      stopGeneration(); parametersChanged = Boolean(level); render(); return;
+    }
     const duplicateKind = Object.keys(duplicateRangeInputs).find(kind => event.target === duplicateRangeInputs[kind]);
     if (duplicateKind) {
-      clearLevel();
+      stopGeneration(); parametersChanged = Boolean(level);
       if (!isValidDuplicateRange(event.target.valueAsNumber)) {
         showError(`${duplicateKind === "target" ? "目标词" : "额外词"}查重范围需为大于或等于 0 的整数。`);
         return;
       }
       configuredDuplicateRanges[duplicateKind] = event.target.valueAsNumber;
+      if (activeSavedLevelId === null && !fileView && !activeConfigSource) saveSize();
       render();
       return;
     }
     if (filterInputs.includes(event.target)) {
-      clearLevel();
+      stopGeneration(); parametersChanged = Boolean(level);
       configuredFilters = filtersFromInputs();
+      if (activeSavedLevelId === null && !fileView && !activeConfigSource) saveSize();
       render();
       return;
     }
     if (event.target === initialForwardInput) {
-      clearLevel();
+      stopGeneration(); parametersChanged = Boolean(level);
       const initialForwardProbability = initialForwardInput.valueAsNumber;
       if (!isValidInitialForwardProbability(initialForwardProbability)) {
         showError("初始正向概率需为 0–100 的整数。");
         return;
       }
       configuredInitialForwardProbability = initialForwardProbability;
+      if (activeSavedLevelId === null && !fileView && !activeConfigSource) saveSize();
       render();
       return;
     }
@@ -1523,14 +1547,19 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     const nextSize = { ...size, [event.target.name]: Number(event.target.value) };
     if (!isValidSize(nextSize)) return;
     nextSize.disabledCells = resizeDisabledCells(size, nextSize);
+    const resized = resizeFixedLayout(configuredFixedLayout, nextSize);
+    configuredFixedLayout = resized.layout;
+    if (resized.released.length) window.alert(`固定位置超出新棋盘，已改为自动摆放：${resized.released.join("、")}`);
     size = nextSize;
-    clearLevel();
+    if (activeSavedLevelId === null && !fileView && !activeConfigSource) saveSize();
+    stopGeneration(); parametersChanged = Boolean(level);
     render();
   });
 
   board.addEventListener("click", event => {
     const cell = event.target.closest("[data-cell]");
     if (!cell || cell.disabled) return;
+    if (!editingShape) { cell.classList.toggle("path-selected"); return; }
     const index = Number(cell.dataset.cell);
     const disabled = new Set(size.disabledCells ?? []);
     if (disabled.has(index)) disabled.delete(index); else disabled.add(index);
@@ -1540,23 +1569,48 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     }
     size = { ...size, disabledCells: [...disabled].sort((a, b) => a - b) };
     if (configuredFixedLayout?.placements.some(entry => entry.path.some(position => disabled.has(position)))) {
-      configuredFixedLayout = null;
+      configuredFixedLayout = resizeFixedLayout(configuredFixedLayout, size).layout;
     }
-    clearLevel();
+    stopGeneration(); parametersChanged = Boolean(level);
+    if (activeSavedLevelId === null && !fileView && !activeConfigSource) saveSize();
     render();
     board.querySelector(`[data-cell="${index}"]`)?.focus({ preventScroll: true });
   });
 
   resetButton.addEventListener("click", () => {
-    size = { ...DEFAULT_SIZE };
-    clearLevel();
-    render();
+    clearLevel(); activeSavedLevelId = null; editingShape = false; activeConfigSource = null; activeConfigRecords = [];
+    applyEditorConfig(structuredClone(newLevelDefaults)); render();
   });
+
+  const fixedDialog = document.querySelector("#main-fixed-dialog");
+  let mainFixedEditor = null;
+  document.querySelector("#edit-main-fixed").addEventListener("click", () => {
+    mainFixedEditor = mountFixedBoardEditor(document.querySelector("#main-fixed-content"), currentGenerationConfig());
+    document.querySelector("#main-fixed-error").hidden = true;
+    fixedDialog.showModal();
+  });
+  document.querySelector("#clear-main-fixed").addEventListener("click", () => {
+    configuredFixedWords = []; configuredFixedLayout = null; configuredFixedWordExemptions = [];
+    stopGeneration(); parametersChanged = Boolean(level); render();
+  });
+  document.querySelector("#apply-main-fixed").addEventListener("click", () => {
+    try {
+      const { filters, ...patch } = mainFixedEditor.getValue();
+      applyEditorConfig({ ...currentGenerationConfig(), ...patch,
+        fixedWordExemptions: configuredFixedWordExemptions.filter(word => patch.fixedWords.includes(word)) });
+      stopGeneration(); parametersChanged = Boolean(level); fixedDialog.close(); render();
+    } catch (error) {
+      const message = document.querySelector("#main-fixed-error"); message.hidden = false; message.textContent = error.message;
+    }
+  });
+  document.querySelector("#close-main-fixed").addEventListener("click", () => fixedDialog.close());
+  fixedDialog.addEventListener("close", () => { mainFixedEditor?.destroy(); mainFixedEditor = null; });
 
   document.querySelector("#reset-filters").addEventListener("click", () => {
     configuredFilters = {};
+    if (activeSavedLevelId === null && !fileView && !activeConfigSource) saveSize();
     restoreFilterInputs();
-    clearLevel();
+    stopGeneration(); parametersChanged = Boolean(level);
     render();
   });
 
@@ -1574,10 +1628,17 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     restoreFilterInputs();
   }
 
-  async function runConfigList(jobs, onUpdate, allConfigs = jobs) {
-    if (batchRunning || savingLevel || updatingLevelList) throw new Error("请等待当前保存或运行完成。");
+  async function runConfigList(jobs, onUpdate, allConfigs = jobs, targetListId = activeBrowserListId) {
+    if ((batchRunning || pathRepairRunning) || savingLevel || updatingLevelList) throw new Error("请等待当前保存或运行完成。");
     if (!levelLibraryReady) throw new Error("关卡列表尚未加载完成，暂时不能批量生成。");
+    const store = await getLevelStore();
+    const targetRecords = await store.getSavedLevelsForList(targetListId);
+    let replacements = 0;
+    for (const job of jobs) if (configDestination(targetRecords, { listId: job.listId, configId: job.id, position: job.position, levelId: job.levelId }).existing) replacements++;
+    const name = savedLibraries.find(list => list.id === targetListId)?.name ?? targetListId;
+    if (!window.confirm(`写入浏览器关卡列表「${name}」：替换 ${replacements} 关，新增 ${jobs.length - replacements} 关。确认开始？`)) return;
     returnToEditedLevels();
+    if (targetListId !== activeBrowserListId && !await changeSavedLibrary(store => store.switchSavedLevelList(targetListId))) throw new Error("切换目标列表失败。");
     stopGeneration();
     generationClient?.close();
     generationClient = null;
@@ -1597,17 +1658,21 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
       },
       generate: (...args) => client.generate(...args),
       save: async (generated, position) => {
-        try { return await (await getLevelStore()).saveLevelAtPosition(generated, position); }
+        try { const store = await getLevelStore(); const saved = await store.saveLevelFromConfig(generated); savedLevels = await store.getSavedLevels(); return saved; }
         catch (error) { throw new Error(error.name === "QuotaExceededError" ? "本地存储空间不足，本关未保存。" : "关卡保存失败，请重试。"); }
       },
       onSaved: (record, job) => {
         const existing = savedLevels.some(saved => saved.id === record.id);
         savedLevels = existing ? savedLevels.map(saved => saved.id === record.id ? record : saved) : [...savedLevels, record];
+        savedLevels.sort((a, b) => (a.position ?? a.id) - (b.position ?? b.id));
         savedLevelListDirty = true;
         level = structuredClone(record.level);
         activeSavedLevelId = record.id;
         savedLevelEdited = false;
         selectedWord = null;
+        activeConfigSource = structuredClone(record.level.sourceConfig);
+        activeConfigRecords = structuredClone(allConfigs);
+        parametersChanged = false; editingShape = false;
         applyEditorConfig(job.config);
         wordList.parentElement.scrollTop = 0;
         render();
@@ -1633,10 +1698,10 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     }
   }
 
-  stopBatchButton.addEventListener("click", () => batchRunner?.stop());
+  stopBatchButton.addEventListener("click", () => { batchRunner?.stop(); pathRepairRunner?.stop(); });
 
   function editorSnapshot() {
-    return { level, activeSavedLevelId, savedLevelEdited, selectedWord,
+    return { level, activeSavedLevelId, savedLevelEdited, selectedWord, parametersChanged, editingShape, activeConfigSource, activeConfigRecords,
       config: { ...size, initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters,
         desiredTargetCount: configuredDesiredTargetCount,
         fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout, fixedWordExemptions: configuredFixedWordExemptions,
@@ -1647,14 +1712,14 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     else if (!presetView) editorBeforePreset = editorSnapshot();
   }
   function restoreEditor(snapshot) {
-    ({ level, activeSavedLevelId, savedLevelEdited, selectedWord } = snapshot);
+    ({ level, activeSavedLevelId, savedLevelEdited, selectedWord, parametersChanged = false, editingShape = false, activeConfigSource = null, activeConfigRecords = [] } = snapshot);
     applyEditorConfig(snapshot.config);
   }
   function canSwitchSource() {
-    if (savingLevel || updatingLevelList || batchRunning) throw new Error("请等待当前保存或运行完成后再切换关卡来源。");
+    if (savingLevel || updatingLevelList || (batchRunning || pathRepairRunning)) throw new Error("请等待当前保存或运行完成后再切换关卡来源。");
   }
   function currentListView() {
-    const busy = generating || savingLevel || updatingLevelList || batchRunning;
+    const busy = generating || savingLevel || updatingLevelList || (batchRunning || pathRepairRunning);
     if (fileView) {
       const pending = !level && activeSavedLevelId !== null;
       const saveLabel = fileView.handle ? "保存文件" : window.showSaveFilePicker ? "另存为文件" : "下载文件副本";
@@ -1664,10 +1729,16 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
           `本地文件 · ${fileView.dirty ? "未保存修改" : "已保存"}${fileView.handle ? "" : " · 保存将生成副本"}` };
     }
     if (presetView) return { ...presetView, kind: "preset", activeId: activeSavedLevelId, busy, status: "自带预设 · 只读" };
-    return { id: "browser", label: savedLibraries.find(list => list.id === activeBrowserListId)?.name ?? "浏览器关卡", kind: "browser", records: savedLevels, activeId: activeSavedLevelId,
-      busy, status: levelLibraryReady ? "保存在当前浏览器；导出文件后可在本地编辑" : savedLevelsLoading ? "正在读取浏览器关卡…" : "浏览器存储不可用，可打开本地文件" };
+    return { id: "browser", label: savedLibraries.find(list => list.id === activeBrowserListId)?.name ?? "浏览器关卡列表", kind: "browser", records: savedLevels, activeId: activeSavedLevelId,
+      busy, status: levelLibraryReady ? "保存在当前浏览器；导出文件后可在本地编辑" : savedLevelsLoading ? "正在读取浏览器关卡列表…" : "浏览器存储不可用，可打开本地文件" };
   }
   function stageFileLevel() {
+    const history = generationContext(fileView.records, activeSavedLevelId).history;
+    const savedRanges = Object.fromEntries(["target", "extra"].map(kind => [kind, level.duplicateCheck?.[kind]?.range ?? level.duplicateCheck?.range ?? configuredDuplicateRanges[kind]]));
+    const duplicates = findDuplicateWords(level, createDuplicateCheck(history, savedRanges));
+    const fallback = level.extraDuplicateFallback;
+    if (!level.targetsEdited && fallback && fallback.attempts > 100_000 && duplicates.extra.every(word => fallback.words.includes(word))) duplicates.extra = [];
+    if (duplicates.target.length || duplicates.extra.length) throw new Error(`关卡未保存，目标词或额外词与前面的关卡重复：${[...duplicates.target, ...duplicates.extra].join("、")}`);
     activeSavedLevelId = updateFileLevel(fileView, activeSavedLevelId, level);
     fileView.downloaded = false;
     savedLevelEdited = false;
@@ -1783,7 +1854,7 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
     onSelect: async ({ preset, data, isCurrent }) => {
       canSwitchSource();
       let dictionary = [];
-      if (preset.format === "word-tiles") {
+      if (preset.format === "word-tiles" || preset.format === "game") {
         presetDictionaryPromise ??= Promise.all(["required-words.json", "extra-words.json", "guide-words.json"].map(async (file, index) => {
           const response = await fetch(new URL(`./data/${file}`, import.meta.url));
           if (!response.ok) throw new Error("词库读取失败，请重试。");
@@ -1813,11 +1884,21 @@ import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } 
   }
   setupConfigList({
     getConfig: currentGenerationConfig,
-    loadConfig: config => {
+    getTargets: () => ({ activeId: activeBrowserListId, lists: savedLibraries }),
+    getGeneratedRecords: async id => (await getLevelStore()).getSavedLevelsForList(id),
+    openGenerated: async (listId, id) => {
+      returnToEditedLevels();
+      if (listId !== activeBrowserListId) await changeSavedLibrary(store => store.switchSavedLevelList(listId));
+      openSavedLevel(id);
+    },
+    loadConfig: (config, source, configs) => {
       canSwitchSource();
       if (!fileView) returnToEditedLevels();
       clearLevel();
       applyEditorConfig(config);
+      activeConfigSource = source; activeConfigRecords = configs;
+      const linked = configDestination(fileView?.records ?? savedLevels, source).existing;
+      activeSavedLevelId = linked?.id ?? null;
       render();
     },
     runConfigs: runConfigList,

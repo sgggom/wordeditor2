@@ -1,3 +1,4 @@
+import { futureFixedTargetWords } from "./level-config.js";
 import { calculateLevelStatistics } from "./level-statistics.js";
 
 export const EXTRA_DUPLICATE_ATTEMPT_LIMIT = 100_000;
@@ -54,7 +55,7 @@ export function setTargetWord(level, word, selected) {
   const candidate = level.candidateWords.find(entry => entry.word === word);
   const wasSelected = level.targetWords.some(entry => entry.word === word);
   if ((!candidate || candidate.onlyExtra) && (selected || !wasSelected)) throw new Error("只能从候选词中选择目标词。");
-  if (!selected && level.fixedWords?.includes(word)) throw new Error("固定单词不能移出关卡目标。");
+  if (!selected && level.fixedWords?.includes(word)) throw new Error("固定词不能移出关卡目标。");
   if (wasSelected === selected) return level;
   const allWords = [...level.targetWords, ...level.extraWords];
   const targetNames = new Set(level.targetWords.map(entry => entry.word));
@@ -72,4 +73,87 @@ export function setTargetWord(level, word, selected) {
   // Counts and statistics always describe the current target selection.
   const edited = { ...level, cells, targetWords, extraWords, targetCount: targetWords.length, targetLimitsEnabled: false, targetsEdited: true };
   return { ...edited, statistics: calculateLevelStatistics(edited) };
+}
+
+// Visible list order is authoritative, regardless of legacy source annotations.
+export function generationContext(records, activeId) {
+  const index = records.findIndex(record => record.id === activeId);
+  return { position: index < 0 ? records.length + 1 : index + 1,
+    history: index < 0 ? records : records.slice(0, index) };
+}
+
+export function resizeFixedLayout(layout, next) {
+  if (!layout) return { layout: null, released: [] };
+  const released = [];
+  const placements = layout.placements.flatMap(entry => {
+    const coordinates = entry.path.map(cell => [Math.floor(cell / layout.columns), cell % layout.columns]);
+    if (coordinates.some(([row, col]) => row >= next.rows || col >= next.columns || next.disabledCells?.includes(row * next.columns + col))) {
+      released.push(entry.word); return [];
+    }
+    return [{ ...entry, path: coordinates.map(([row, col]) => row * next.columns + col) }];
+  });
+  return { layout: placements.length ? { rows: next.rows, columns: next.columns, placements } : null, released };
+}
+
+export function configDestination(records, source) {
+  const id = source.configId ?? source.id;
+  const index = records.findIndex(({ level }) => {
+    const saved = level.sourceConfig;
+    return saved && (!saved.listId || saved.listId === source.listId) &&
+      ((saved.configId ?? saved.id) === id || (saved.listId === source.listId && source.levelId && saved.levelId === source.levelId));
+  });
+  if (index >= 0) return { index, existing: records[index] };
+  const next = records.findIndex(({ level }) => level.sourceConfig?.listId === source.listId && level.sourceConfig.position > source.position);
+  return { index: next < 0 ? records.length : next, existing: null };
+}
+
+// Project only saved levels and jobs that are actually queued. Missing config
+// rows are not placeholder levels and cannot increase a duplicate distance.
+export function reserveFutureTargets(records, source, configs, plannedConfigs = []) {
+  const projected = [...records];
+  const destination = value => source.listId ? configDestination(projected, value) : {
+    index: Math.min(value.position - 1, projected.length),
+    existing: projected[value.position - 1] ?? null,
+  };
+  const current = { level: { sourceConfig: source } };
+  const insert = (record, value) => {
+    const { index, existing } = destination(value);
+    projected.splice(index, existing ? 1 : 0, record);
+  };
+  insert(current, source);
+  for (const job of plannedConfigs) {
+    if (job.id === (source.configId ?? source.id) || (job.listId && job.listId !== source.listId)) continue;
+    const value = { listId: source.listId, id: job.id, configId: job.id, position: job.position, levelId: job.levelId };
+    insert({ level: { sourceConfig: value } }, value);
+  }
+  return futureFixedTargetWords(configs, source.position, [], (record, position) => {
+    if (record.id === (source.configId ?? source.id) || (record.listId && record.listId !== source.listId)) return 0;
+    const value = { listId: source.listId, id: record.id, configId: record.id, position, levelId: record.levelId };
+    return destination(value).index - projected.indexOf(current);
+  });
+}
+
+export function prepareGeneration(records, activeId, config, source = null, configs = [], plannedConfigs = []) {
+  const context = source ? configDestination(records, source) : null;
+  const { position, history } = context
+    ? { position: source.position, history: records.slice(0, context.index) }
+    : generationContext(records, activeId);
+  const duplicateCheck = createDuplicateCheck(history, { target: config.targetDuplicateRange, extra: config.extraDuplicateRange });
+  const reservedTargetWords = source ? reserveFutureTargets(records, source, configs, plannedConfigs)
+    .filter(word => !(config.fixedWords ?? []).includes(word)) : [];
+  return { config: { ...config, reservedTargetWords, minimumWordLength: position === 1 ? 2 : 3 }, duplicateCheck };
+}
+
+export function resolveConfigSource(source, lists) {
+  if (!source) return null;
+  const matches = lists.flatMap(list => {
+    if (source.listId && list.id !== source.listId) return [];
+    const index = list.records.findIndex(record => record.id === (source.configId ?? source.id) ||
+      (source.listId === list.id && source.levelId && record.levelId === source.levelId));
+    return index < 0 ? [] : [{ list, index }];
+  });
+  if (matches.length !== 1) return null;
+  const { list, index } = matches[0], record = list.records[index];
+  return { source: { ...source, listId: list.id, id: record.id, configId: record.id, position: index + 1 },
+    records: list.records.map((record, index) => ({ ...record, position: index + 1 })) };
 }

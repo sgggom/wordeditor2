@@ -58,7 +58,7 @@ export function parseLevelFile(text, dictionary = []) {
   if ((Array.isArray(original?.records) && (original.records.some(record => record?.config && !record.level) ||
       (!original.records.length && original.version !== undefined && original.schemaVersion === undefined))) ||
       (original?.version === 2 && Array.isArray(original.lists))) {
-    throw new Error("这是生成配置列表，不是关卡文件。请在“关卡配置列表”中使用生成配置。");
+    throw new Error("这是生成配置列表，不是关卡文件。请在“关卡配置列表”中点击“读取配置 JSON”。");
   }
   let format, records;
   if (Array.isArray(original?.records)) {

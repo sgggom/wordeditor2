@@ -12,5 +12,19 @@
         "sha256": "8d9939fc85f212011ee9a1cecfb3f1388aa1e0b8d65242bcc64ecd622ef369d3"
       }
     }
+  ],
+  "presets": [
+    {
+      "id": "our-levels-2026-11-02",
+      "label": "新版关卡 · 2026-11-02",
+      "levelCount": 1500,
+      "format": "game",
+      "file": "./presets/our-levels-2026-11-02.json",
+      "gameFile": "./presets/our-levels-2026-11-02.json",
+      "source": {
+        "file": "word-tiles-levels.json",
+        "sha256": "e5d70fc34c0fca50f472063252daddf3de432574de19033e4ebf0c36cdef84d7"
+      }
+    }
   ]
 }

@@ -17,6 +17,7 @@
 
         <button type="button" id="open-config-list" class="reset-button" aria-haspopup="dialog">关卡配置列表</button>
         <button type="button" id="open-preset-levels" class="reset-button" aria-haspopup="dialog">关卡文件与预设</button>
+        <button type="button" id="open-playtest" class="generate-button" aria-haspopup="dialog" aria-controls="playtest-dialog" disabled><span aria-hidden="true">▶</span> 试玩</button>
       </div>
     </header>
 
@@ -86,19 +87,18 @@
               </div>
             </div>
 
+            <div class="target-setting"><label for="desired-target-count">目标数量</label><input id="desired-target-count" type="number" min="0" step="1" value="0" title="0 为不自动补选" /></div>
             <div class="capacity">
               <span class="capacity-label">格子数</span>
               <div class="capacity-value"><output id="cell-count">12</output><span>格</span></div>
             </div>
 
             <div class="form-actions">
+              <button type="button" id="edit-main-fixed" class="reset-button">编辑固定词</button><button type="button" id="clear-main-fixed" class="reset-button">清除固定词</button>
               <span id="active-fixed-words" class="active-fixed-words" hidden>固定词 <output id="fixed-words-summary"></output></span>
               <button type="button" id="filter-toggle" class="reset-button filter-toggle" popovertarget="word-filter-panel">本关词库筛选 <span id="filter-summary" class="filter-summary">全部</span></button>
               <button type="button" id="generate-level" class="generate-button">生成关卡</button>
-              <button type="button" id="reset-size" class="reset-button" disabled>
-                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 8A6.5 6.5 0 1 1 4.8 14M3.5 3.5V8H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                恢复默认
-              </button>
+
             </div>
             <div id="word-filter-panel" class="filter-panel" popover aria-labelledby="filter-title">
               <div class="filter-panel-heading">
@@ -191,7 +191,7 @@
           <header class="preview-header">
             <div class="preview-title-group">
               <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.4" /><path d="M3 8h14M3 12h14M8 3v14M12 3v14" stroke="currentColor" stroke-width="1.2" /></svg>
-              <h2 id="preview-title">棋盘预览</h2><span class="board-shape-hint">点击格子启用 / 禁用；修改后需重新生成</span>
+              <h2 id="preview-title">棋盘预览</h2><span class="board-shape-hint">开启编辑造型后可启用 / 禁用格子</span>
             </div>
             <div class="emotion-summary">
               <span id="emotion-score-label">情绪总分</span>
@@ -202,11 +202,13 @@
               <output id="rarity-score" aria-labelledby="rarity-score-label" aria-live="polite">—</output>
             </div>
             <div class="preview-actions">
+              <button type="button" id="edit-board-shape" class="reset-button" aria-pressed="false">编辑造型</button>
               <output id="size-summary" class="size-summary" aria-live="polite" aria-atomic="true">3 行 × 4 列</output>
               <button type="button" id="level-data-toggle" class="reset-button" popovertarget="level-data-panel">关卡数据</button>
             </div>
           </header>
 
+          <p id="pending-parameters" role="status" hidden>参数已修改，重新生成后生效；保存关卡仍保存当前棋盘。</p>
           <div class="board-stage">
             <div class="board-layout" id="board-layout" style="--rows: 3; --columns: 4">
               <span class="axis-origin" aria-hidden="true">↘</span>
@@ -217,61 +219,89 @@
           </div>
         </section>
 
-        <section class="saved-level-panel" aria-labelledby="saved-levels-title">
-          <header class="saved-level-heading">
-            <h2 id="saved-levels-title">关卡列表</h2>
-            <output id="saved-level-count" aria-label="已加入的关卡数量">0</output>
-          </header>
-          <div id="saved-library-controls" class="saved-library-controls">
-            <label for="saved-library-select">当前关卡列表</label>
-            <select id="saved-library-select" aria-label="切换关卡列表" disabled></select>
-            <div class="saved-library-buttons">
-              <button type="button" id="new-saved-library" class="reset-button" disabled>新建列表</button>
-              <button type="button" id="delete-saved-library" class="reset-button" disabled>删除列表</button>
-            </div>
-          </div>
-          <p id="viewed-level-list-name" class="preset-level-metadata">浏览器关卡</p>
-          <p id="level-source-status" class="level-source-status" aria-live="polite">保存在当前浏览器</p>
-          <div class="saved-level-actions">
-            <button type="button" id="return-to-edited-levels" class="reset-button" hidden>返回浏览器关卡</button>
-            <button type="button" id="save-local-level-file" class="generate-button" hidden>保存文件</button>
-            <button type="button" id="save-local-level-file-as" class="reset-button" hidden>另存为</button>
-            <button type="button" id="add-level-to-list" class="generate-button" disabled>保存关卡</button>
-            <button type="button" id="export-levels" class="reset-button" title="将当前关卡列表下载为游戏文件" disabled>导出列表</button>
-            <button type="button" id="import-levels" class="reset-button" title="读取游戏 JSON 并追加到浏览器关卡；编辑原文件请使用“关卡文件与预设”" hidden disabled>追加导入到浏览器</button>
-            <input type="file" id="import-levels-file" accept=".json,application/json" hidden>
-          </div>
-          <p id="saved-level-error" class="saved-level-error" role="alert" hidden></p>
-          <div class="saved-level-actions target-check-actions">
-            <span id="all-levels-check-source" class="target-check-source"></span>
-            <button type="button" id="check-all-levels" class="reset-button" disabled>全部检测</button>
-            <button type="button" id="repair-config-import" class="reset-button" hidden>读取配置表并继续重跑</button>
-            <input type="file" id="repair-config-file" accept=".xlsx,.csv" hidden>
-            <output id="all-levels-check-status" class="target-check-summary" role="status" aria-live="polite" hidden></output>
-          </div>
-          <div id="saved-level-list" class="saved-level-list" tabindex="0" aria-label="已保存的关卡，可用上下方向键切换" aria-keyshortcuts="ArrowUp ArrowDown" title="点击关卡后，可用 ↑ / ↓ 切换上一关和下一关"></div>
-        </section>
       </div>
+
+      <section class="saved-level-panel" aria-labelledby="saved-levels-title">
+        <header class="saved-level-heading">
+          <h2 id="saved-levels-title">关卡列表</h2>
+          <output id="saved-level-count" aria-label="已加入的关卡数量">0</output>
+        </header>
+        <div id="saved-library-controls" class="saved-library-controls">
+          <label for="saved-library-select">当前关卡列表</label>
+          <select id="saved-library-select" aria-label="切换关卡列表" disabled></select>
+          <div class="saved-library-buttons">
+            <button type="button" id="new-saved-library" class="reset-button" disabled>新建列表</button>
+            <button type="button" id="rename-saved-library" class="reset-button">重命名列表</button>
+            <button type="button" id="delete-saved-library" class="reset-button" disabled>删除列表</button>
+          </div>
+        </div>
+        <p id="viewed-level-list-name" class="preset-level-metadata">浏览器关卡</p>
+        <p id="level-source-status" class="level-source-status" aria-live="polite">保存在当前浏览器</p>
+        <div class="saved-level-actions">
+          <button type="button" id="return-to-edited-levels" class="reset-button" hidden>返回浏览器关卡列表</button>
+          <button type="button" id="save-local-level-file" class="generate-button" hidden>保存文件</button>
+          <button type="button" id="save-local-level-file-as" class="reset-button" hidden>另存为</button>
+          <button type="button" id="reset-size" class="reset-button">新建空白关卡</button>
+          <button type="button" id="add-level-to-list" class="generate-button" disabled>保存关卡</button>
+          <button type="button" id="export-levels" class="reset-button" title="将当前关卡列表下载为游戏文件" disabled>导出游戏文件</button>
+        </div>
+        <p id="saved-level-error" class="saved-level-error" role="alert" hidden></p>
+        <div class="saved-level-actions target-check-actions">
+          <span id="all-levels-check-source" class="target-check-source"></span>
+          <button type="button" id="check-all-levels" class="reset-button" disabled>全部检测</button>
+          <button type="button" id="repair-problem-levels" class="reset-button" hidden>修复问题关卡</button>
+          <button type="button" id="repair-config-import" class="reset-button" hidden>读取配置表并继续重跑</button>
+          <input type="file" id="repair-config-file" accept=".xlsx,.csv" hidden>
+          <output id="all-levels-check-status" class="target-check-summary" role="status" aria-live="polite" hidden></output>
+        </div>
+        <div id="saved-level-list" class="saved-level-list" tabindex="0" aria-label="已保存的关卡，可用上下方向键切换" aria-keyshortcuts="ArrowUp ArrowDown" title="点击关卡后，可用 ↑ / ↓ 切换上一关和下一关"></div>
+      </section>
 
       <section id="level-data-panel" class="filter-panel level-data-panel" popover aria-labelledby="level-data-title">
         <div class="filter-panel-heading">
           <h2 id="level-data-title">关卡数据</h2>
           <button type="button" class="filter-close" popovertarget="level-data-panel" popovertargetaction="hide" aria-label="关闭关卡数据">×</button>
         </div>
-        <div class="single-level-data">
-          <label for="single-level-json">单关 JSON 数据</label>
-          <textarea id="single-level-json" rows="6" spellcheck="false" placeholder="粘贴单关 JSON 数据，然后点击读取数据"></textarea>
-          <div class="single-level-data-actions">
-            <button type="button" id="copy-single-level" class="reset-button" disabled>复制本关</button>
-            <button type="button" id="read-single-level" class="generate-button">读取数据</button>
-            <span class="single-level-data-hint">本地文件模式下更新当前关卡；浏览器模式下可加入关卡列表。</span>
-          </div>
-          <p id="single-level-status" role="status" aria-live="polite" hidden></p>
-        </div>
         <div id="level-data-content" class="level-data-content" tabindex="0" aria-label="关卡统计数据"></div>
       </section>
 
     </main>
+
+    <div id="playtest-backdrop" class="playtest-backdrop" aria-hidden="true" hidden></div>
+    <dialog id="playtest-dialog" class="playtest-dialog" aria-modal="false" aria-labelledby="playtest-title" aria-describedby="playtest-instructions">
+      <header class="playtest-heading">
+        <div><h2 id="playtest-title">关卡试玩</h2><p id="playtest-level-name"></p></div>
+        <div class="playtest-heading-actions">
+          <button type="button" id="playtest-restart" class="reset-button">重玩</button>
+          <button type="button" id="playtest-close" class="reset-button" aria-label="关闭试玩">关闭</button>
+        </div>
+      </header>
+      <div class="playtest-content">
+        <section class="playtest-game" aria-label="连词试玩">
+          <p id="playtest-instructions">沿上下左右拖动字母，松手提交。也可依次点击字母后提交。</p>
+          <div class="playtest-stage">
+            <div id="playtest-board" class="playtest-board" role="group" aria-label="试玩棋盘">
+              <svg id="playtest-trail" class="playtest-trail" aria-hidden="true"><polyline points="" /></svg>
+            </div>
+          </div>
+          <div class="playtest-input">
+            <output id="playtest-selection" aria-label="当前连词">连出一个单词</output>
+            <button type="button" id="playtest-clear" class="reset-button" disabled>清空</button>
+            <button type="button" id="playtest-submit" class="generate-button" disabled>提交</button>
+          </div>
+          <p id="playtest-feedback" class="playtest-feedback" role="status" aria-live="polite"></p>
+          <div id="playtest-complete" class="playtest-complete" hidden><strong>本关完成！</strong><span>所有目标词和格子次数已清空。</span></div>
+        </section>
+        <aside class="playtest-sidebar" aria-label="找词进度">
+          <div class="playtest-progress-heading"><h3>目标词</h3><output id="playtest-progress-text" aria-label="已找到的目标词">0 / 0</output></div>
+          <progress id="playtest-progress" value="0" max="1" aria-label="目标词完成进度"></progress>
+          <label class="playtest-reveal"><input type="checkbox" id="playtest-reveal" />显示答案</label>
+          <ul id="playtest-targets" class="playtest-targets"></ul>
+          <div class="playtest-extra-heading"><h3>额外词</h3><output id="playtest-extra-count" aria-label="已找到的额外词">0</output></div>
+          <p id="playtest-extras" class="playtest-extras">试着找出更多单词</p>
+        </aside>
+      </div>
+    </dialog>
 
     <dialog id="saved-library-dialog" class="config-detail-dialog saved-library-dialog" aria-labelledby="saved-library-dialog-title">
       <form id="saved-library-form">
@@ -307,7 +337,7 @@
         <label for="config-add-count">新增</label>
         <input id="config-add-count" type="number" min="1" max="1500" step="1" value="10" aria-label="新增关数" />
         <span>关</span>
-        <button type="button" id="add-config-rows" class="reset-button" title="新增 3×3 空白关卡，继承上一关词库筛选，不带固定单词">添加</button>
+        <button type="button" id="add-config-rows" class="reset-button" title="新增 3×3 空白关卡，继承上一关词库筛选，不带固定词">添加</button>
         <button type="button" id="delete-config-rows" class="reset-button" disabled>删除所选</button>
         <span id="config-worker-info" class="config-worker-info" aria-live="polite"></span>
         <span class="config-selection-count">已选 <output id="config-selected-count">0</output> 关</span>
@@ -320,19 +350,20 @@
       </div>
       <div class="config-list-toolbar config-table-toolbar">
         <button type="button" id="download-config-table-template" class="reset-button">下载配置表模板</button>
+        <button type="button" id="import-config-json" class="reset-button">读取配置 JSON</button><input type="file" id="config-json-file" accept=".json,application/json" hidden />
         <button type="button" id="import-config-table" class="reset-button">读取配置表</button>
         <button type="button" id="export-config-table" class="reset-button">导出配置表</button>
         <input id="config-table-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.csv,text/csv" hidden />
         <span class="config-library-hint">Excel .xlsx，读取为新列表；运行按表格顺序</span>
       </div>
-      <p class="config-table-help">棋盘造型填写宽x高，如 3x3、4x3、5x3，生成时随机选择对应造型，失败后回退同尺寸完整棋盘。范围库 [0,1,2,3,4]，情绪 [-2,-1,0,1,2]，生僻程度 [1,2,3,4,5]。可选列「目标数量」尽量补选到指定数量，留空或 0 不补选；「目标重复检测」指定查重关数。未列参数沿用当前设置。</p>
+      <p class="config-table-help">棋盘造型填写宽x高，如 3x3、4x3、5x3，生成时随机选择对应造型，失败后回退同尺寸完整棋盘。范围库 [0,1,2,3,4]，情绪 [-2,-1,0,1,2]，生僻程度 [1,2,3,4,5]。可选列「目标数量」尽量补选到指定数量，留空或 0 不补选；「目标重复检测」指定查重关数。未列参数使用固定默认值：正向 50%、查重 20/20、筛选不限。</p>
       <div class="config-list-content">
         <section class="config-word-pool" aria-labelledby="config-word-pool-title">
           <header class="config-word-pool-heading">
-            <h3 id="config-word-pool-title">已用单词池</h3>
+            <h3 id="config-word-pool-title">固定词使用情况</h3>
             <output id="config-word-pool-count" aria-live="polite"></output>
           </header>
-          <p class="config-word-pool-note">当前列表已配置的固定单词，按字母排序。</p>
+          <p class="config-word-pool-note">当前列表已配置的固定词，按字母排序。</p>
           <div id="config-word-pool-items" class="config-word-pool-items" tabindex="0" aria-label="已用单词及所在关卡"></div>
         </section>
         <div class="config-table-scroll" tabindex="0" aria-label="多关配置列表">
@@ -355,6 +386,7 @@
         <progress id="config-run-meter" value="0" max="1" aria-label="配置列表运行进度"></progress>
       </div>
       <footer class="config-dialog-footer">
+        <label>写入关卡列表 <select id="config-target-list"></select></label>
         <button type="button" id="run-selected-configs" class="generate-button" disabled>运行所选</button>
         <button type="button" id="run-all-configs" class="generate-button">批量生成</button>
         <button type="button" id="stop-config-run" class="reset-button" hidden>停止运行</button>
@@ -363,19 +395,25 @@
       </footer>
     </dialog>
 
+    <dialog id="main-fixed-dialog" class="config-detail-dialog fixed-board-dialog">
+      <header class="filter-panel-heading"><h2>固定词与棋盘</h2><button type="button" id="close-main-fixed">关闭</button></header>
+      <div id="main-fixed-content"></div><p id="main-fixed-error" role="alert" hidden></p>
+      <footer class="filter-footer"><button type="button" id="apply-main-fixed" class="generate-button">应用</button></footer>
+    </dialog>
+    <dialog id="config-unsaved-dialog" class="config-detail-dialog">
+      <p>配置有未保存的修改，是否保存？</p>
+      <footer class="filter-footer">
+        <button type="button" data-config-unsaved="cancel">取消</button>
+        <button type="button" data-config-unsaved="discard">不保存</button>
+        <button type="button" data-config-unsaved="save">保存</button>
+      </footer>
+    </dialog>
     <dialog id="config-list-manager" class="config-detail-dialog config-list-manager" aria-labelledby="config-list-manager-title">
       <header class="filter-panel-heading">
         <h2 id="config-list-manager-title">列表管理</h2>
         <button type="button" class="filter-close" data-close-list-manager aria-label="关闭列表管理">×</button>
       </header>
       <div id="config-list-manager-items" class="config-list-manager-items"></div>
-      <div id="config-list-delete-confirm" class="config-list-delete-confirm" hidden>
-        <p id="config-list-delete-message"></p>
-        <div class="config-list-manager-actions">
-          <button type="button" id="cancel-delete-config-list" class="reset-button">取消</button>
-          <button type="button" id="confirm-delete-config-list" class="reset-button config-list-delete-button">确认删除</button>
-        </div>
-      </div>
       <p id="config-list-manager-error" class="config-list-error" role="alert" hidden></p>
       <footer class="filter-footer">
         <button type="button" id="manager-new-config-list" class="generate-button">新建列表</button>
@@ -391,6 +429,7 @@
       <form id="config-list-name-form">
         <label for="config-list-name">列表名称</label>
         <input id="config-list-name" type="text" maxlength="40" required autocomplete="off" />
+        <p id="config-list-action-message" hidden></p>
         <p id="config-list-name-error" class="config-list-error" role="alert" hidden></p>
         <footer class="filter-footer">
           <button type="button" class="reset-button" data-close-list-name>取消</button>
@@ -405,6 +444,7 @@
         <button type="button" class="filter-close" data-close-run-range aria-label="关闭生成范围">×</button>
       </header>
       <form id="config-run-range-form" novalidate>
+        <label>写入关卡列表 <select id="config-range-target"></select></label>
         <div class="config-run-range-fields">
           <label for="config-run-from">起始关<input id="config-run-from" type="number" min="1" step="1" required /></label>
           <span aria-hidden="true">—</span>
@@ -441,10 +481,18 @@
       <div class="level-file-toolbar">
         <button type="button" id="open-local-level-file" class="generate-button">打开本地关卡文件</button>
         <input type="file" id="local-level-file-input" accept=".json,application/json" hidden />
-        <button type="button" id="save-selected-level-file" class="generate-button" hidden>保存文件</button>
-        <button type="button" id="save-selected-level-file-as" class="reset-button" hidden>另存为</button>
         <span>选中后在主编辑器中查看或编辑</span>
       </div>
+        <div class="single-level-data">
+          <label for="single-level-json">单关 JSON 数据</label>
+          <textarea id="single-level-json" rows="6" spellcheck="false" placeholder="粘贴单关 JSON 数据，然后点击读取数据"></textarea>
+          <div class="single-level-data-actions">
+            <button type="button" id="copy-single-level" class="reset-button" disabled>复制本关</button>
+            <button type="button" id="read-single-level" class="generate-button">读取数据</button>
+            <span class="single-level-data-hint">本地文件模式下更新当前关卡；浏览器模式下可保存关卡。</span>
+          </div>
+          <p id="single-level-status" role="status" aria-live="polite" hidden></p>
+        </div>
       <p id="preset-level-summary" class="preset-level-metadata" aria-live="polite">选择关卡列表</p>
       <p id="preset-level-error" class="config-list-error" role="alert" hidden></p>
       <div class="preset-level-content">

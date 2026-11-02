@@ -1,7 +1,8 @@
+import { configDestination } from "./level-rules.js";
 import { renderWordLetters } from "./word-letters.js";
 import { resizeDisabledCells } from "./board-shape.js";
 import { CONFIG_NUMBER_FIELDS, CONFIG_FILTER_OPTIONS, MAX_CONFIG_ROWS, readConfigLists, migrateConfigLists, changeConfigLists, saveConfigList,
-  patchLevelConfigs, validateConfigNumber, validateLevelConfig, installConfigPreset, configJobsInRange, previousConfigWordUsage, createEmptyLevelConfig } from "./level-config.js";
+  patchLevelConfigs, validateConfigNumber, validateLevelConfig, installConfigPreset, configJobsInRange, previousConfigWordUsage, createEmptyLevelConfig, defaultGenerationConfig, validateConfigList } from "./level-config.js";
 import { REFERENCE_CONFIG_ID } from "./reference-config.js";
 import { formatBatchState } from "./batch-runner.js";
 import { defaultGenerationWorkers, detectedProcessorCount } from "./generation-client.js";
@@ -10,7 +11,7 @@ import { configureOpeningWords, OPENING_WORDS_PRESET_ID } from "./opening-words-
 import { bindWordTooltip } from "./word-tooltip.js";
 import { parseConfigTable } from "./config-table.js";
 
-export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) {
+export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, getTargets, getGeneratedRecords, openGenerated }) {
   function newLevelConfig() {
     const current = getConfig();
     return createEmptyLevelConfig(current, records.at(-1)?.config ?? current);
@@ -36,6 +37,16 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   const detailError = document.querySelector("#config-detail-error");
   const runSelectedButton = document.querySelector("#run-selected-configs");
   const runAllButton = document.querySelector("#run-all-configs");
+  const targetList = document.querySelector("#config-target-list");
+  const rangeTarget = document.querySelector("#config-range-target");
+  let generatedRecords = [];
+  async function refreshGenerated() {
+    const id = targetList.value;
+    try { const records = await getGeneratedRecords(id); if (id === targetList.value) { generatedRecords = records; renderRows(); } }
+    catch (failure) { showError(failure.message); }
+  }
+  targetList.addEventListener("change", () => { rangeTarget.value = targetList.value; refreshGenerated(); });
+  rangeTarget.addEventListener("change", () => { targetList.value = rangeTarget.value; refreshGenerated(); });
   const rangeDialog = document.querySelector("#config-run-range-dialog");
   const rangeForm = document.querySelector("#config-run-range-form");
   const rangeFrom = document.querySelector("#config-run-from");
@@ -53,8 +64,6 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   const listManager = document.querySelector("#config-list-manager");
   const managerItems = document.querySelector("#config-list-manager-items");
   const managerError = document.querySelector("#config-list-manager-error");
-  const deleteConfirm = document.querySelector("#config-list-delete-confirm");
-  const deleteMessage = document.querySelector("#config-list-delete-message");
   const nameDialog = document.querySelector("#config-list-name-dialog");
   const nameForm = document.querySelector("#config-list-name-form");
   const nameInput = document.querySelector("#config-list-name");
@@ -62,7 +71,6 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   let library = null;
   let activeListId = null;
   let nameAction = null;
-  let pendingDeleteId = null;
   const columns = ["fixedWords",
     "desiredTargetCount", "initialForwardProbability", "targetDuplicateRange", "extraDuplicateRange", "filters"];
   let records = [];
@@ -128,7 +136,9 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     updateRunState({ phase: "loading", total: jobs.length, completed: 0, position: jobs[0].position,
       configId: jobs[0].id, attempts: 0, error: "" });
     try {
-      await runConfigs(jobs, updateRunState, records.map((record, index) => ({ ...record, position: index + 1 })));
+      await runConfigs(jobs.map(job => ({ ...job, listId: activeListId })), updateRunState,
+        records.map((record, index) => ({ ...record, position: index + 1, listId: activeListId })), targetList.value);
+      await refreshGenerated();
     } catch (failure) {
       updateRunState({ ...runState, phase: "error", error: failure.message || "运行失败，请重试。" });
     } finally {
@@ -209,7 +219,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     const preview = row.querySelector("[data-config-action='fixedWords']");
     preview.replaceChildren(createConfigBoardPreview(config));
     preview.title = `${config.rows} 行 × ${config.columns} 列 · ${config.rows * config.columns - (config.disabledCells?.length ?? 0)} 格` +
-      (config.fixedWords?.length ? `；固定词：${config.fixedWords.join("、")}` : "；点击编辑棋盘与固定单词");
+      (config.fixedWords?.length ? `；固定词：${config.fixedWords.join("、")}` : "；点击编辑棋盘与固定词");
   }
 
   function renderWordPool() {
@@ -245,7 +255,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     if (!usage.size) {
       const empty = document.createElement("p");
       empty.className = "config-word-pool-empty";
-      empty.textContent = "当前列表还没有配置固定单词";
+      empty.textContent = "当前列表还没有配置固定词";
       fragment.append(empty);
     }
     wordPool.replaceChildren(fragment);
@@ -309,6 +319,15 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
       useButton.title = "保存配置列表并载入此关配置";
       useButton.setAttribute("aria-label", `载入第 ${index + 1} 关配置`);
       useCell.append(useButton);
+      const linked = configDestination(generatedRecords, { listId: activeListId, configId: record.id, position: index + 1, levelId: record.levelId }).existing;
+      const status = document.createElement(linked ? "button" : "span");
+      status.className = "config-generation-status";
+      status.textContent = linked ? `已生成 · 关卡 ${String(generatedRecords.indexOf(linked) + 1).padStart(3, "0")}` : "未生成";
+      if (linked) { status.type = "button"; status.addEventListener("click", async () => {
+        if (!saveButton.disabled && !persist()) return;
+        dialog.close(); await openGenerated(targetList.value, linked.id);
+      }); }
+      useCell.append(status);
       row.append(useCell);
       renderRowValidity(row, record.config);
       fragment.append(row);
@@ -393,6 +412,8 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
       const fields = document.querySelector("#word-filter-panel .filter-fields").cloneNode(true);
       for (const input of fields.querySelectorAll("input[data-word-filter]")) {
         input.checked = source.config.filters?.[input.dataset.wordFilter]?.includes(Number(input.value)) ?? true;
+        input.disabled = input.dataset.wordFilter === "scope" && input.value === "0" && ids.every(id => records.findIndex(record => record.id === id) > 0);
+        if (input.disabled) input.parentElement.title = "2词库仅第 1 关可用";
       }
       detailContent.replaceChildren(fields);
     }
@@ -472,11 +493,18 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     const list = library.lists.find(entry => entry.id === id);
     if (type !== "create" && !list) return;
     nameAction = { type, ...(id ? { id } : {}) };
-    document.querySelector("#config-list-name-title").textContent = { create: "新建列表", rename: "重命名列表", copy: "复制列表" }[type];
-    document.querySelector("#submit-config-list-name").textContent = type === "rename" ? "保存名称" : "创建";
+    document.querySelector("#config-list-name-title").textContent = { create: "新建列表", rename: "重命名列表", copy: "复制列表", delete: "删除列表" }[type];
+    document.querySelector("#submit-config-list-name").textContent = type === "rename" ? "保存名称" : type === "delete" ? "删除整个列表" : "创建";
     nameInput.value = type === "rename" ? list.name : suggestedListName(type === "copy" ? `${list.name.slice(0, 36)} 副本` : "新列表");
-    nameError.hidden = true; deleteConfirm.hidden = true; pendingDeleteId = null;
-    nameDialog.showModal(); nameInput.focus(); nameInput.select();
+    nameInput.hidden = type === "delete";
+    nameInput.required = type !== "delete";
+    nameInput.previousElementSibling.hidden = type === "delete";
+    const message = document.querySelector("#config-list-action-message");
+    message.hidden = type !== "delete";
+    message.textContent = type === "delete" ? `确定删除“${list.name}”及其中的 ${id === activeListId ? records.length : list.records.length} 关配置？` : "";
+    nameError.hidden = true;
+    nameDialog.showModal();
+    if (type !== "delete") { nameInput.focus(); nameInput.select(); }
   }
 
   newListButton.addEventListener("click", () => openListName("create"));
@@ -486,7 +514,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
   });
   manageListsButton.addEventListener("click", () => {
     if (running || !library) return;
-    managerError.hidden = true; deleteConfirm.hidden = true; pendingDeleteId = null;
+    managerError.hidden = true;
     renderListManager(); listManager.showModal();
   });
   for (const button of listManager.querySelectorAll("[data-close-list-manager]")) button.addEventListener("click", () => listManager.close());
@@ -502,22 +530,10 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     if (!button || button.disabled || running) return;
     const id = button.closest("[data-list-id]").dataset.listId;
     const type = button.dataset.listAction;
-    managerError.hidden = true; deleteConfirm.hidden = true; pendingDeleteId = null;
+    managerError.hidden = true;
     if (type === "rename" || type === "copy") openListName(type, id);
     else if (type === "switch") performListAction({ type, id }, managerError);
-    else if (type === "delete") {
-      const list = library.lists.find(entry => entry.id === id);
-      pendingDeleteId = id;
-      deleteMessage.textContent = `确定删除“${list.name}”（${id === activeListId ? records.length : list.records.length} 关配置）？`;
-      deleteConfirm.hidden = false;
-      document.querySelector("#cancel-delete-config-list").focus();
-    }
-  });
-  document.querySelector("#cancel-delete-config-list").addEventListener("click", () => { deleteConfirm.hidden = true; pendingDeleteId = null; });
-  document.querySelector("#confirm-delete-config-list").addEventListener("click", () => {
-    if (pendingDeleteId && performListAction({ type: "delete", id: pendingDeleteId }, managerError)) {
-      deleteConfirm.hidden = true; pendingDeleteId = null;
-    }
+    else if (type === "delete") openListName("delete", id);
   });
 
   for (const [value, label] of [...Object.entries(CONFIG_NUMBER_FIELDS).map(([key, rule]) => [key, rule.label]),
@@ -550,9 +566,26 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     renderBatchField();
     if (running) lockRunControls(true);
     if (presetLoadError) showError(presetLoadError);
+    const targets = getTargets();
+    targetList.replaceChildren(...targets.lists.map(list => new Option(list.name, list.id)));
+    rangeTarget.replaceChildren(...targets.lists.map(list => new Option(list.name, list.id)));
+    targetList.value = rangeTarget.value = targets.activeId;
+    refreshGenerated();
     dialog.showModal();
   });
-  for (const button of dialog.querySelectorAll("[data-close-config-list]")) button.addEventListener("click", () => dialog.close());
+  const unsavedDialog = document.querySelector("#config-unsaved-dialog");
+  function requestClose() {
+    if (saveButton.disabled || running) dialog.close();
+    else unsavedDialog.showModal();
+  }
+  for (const button of dialog.querySelectorAll("[data-close-config-list]")) button.addEventListener("click", requestClose);
+  dialog.addEventListener("cancel", event => { event.preventDefault(); requestClose(); });
+  for (const button of unsavedDialog.querySelectorAll("[data-config-unsaved]")) button.addEventListener("click", () => {
+    const action = button.dataset.configUnsaved;
+    if (action === "save" && !persist()) { unsavedDialog.close(); return; }
+    unsavedDialog.close();
+    if (action !== "cancel") dialog.close();
+  });
   document.querySelector("#close-config-detail").addEventListener("click", () => detail.close());
   detail.addEventListener("close", () => { fixedBoardEditor?.destroy(); fixedBoardEditor = null; detailState = null; });
   saveButton.addEventListener("click", persist);
@@ -564,6 +597,18 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   const tableInput = document.querySelector("#config-table-file");
+  const configJsonFile = document.querySelector("#config-json-file");
+  document.querySelector("#import-config-json").addEventListener("click", () => configJsonFile.click());
+  configJsonFile.addEventListener("change", async () => {
+    const file = configJsonFile.files[0]; configJsonFile.value = "";
+    if (!file || running) return;
+    try {
+      const data = JSON.parse((await file.text()).replace(/^\uFEFF/, ""));
+      const imported = Array.isArray(data) ? data : data.records ?? data.lists?.find(list => list.id === data.activeListId)?.records;
+      validateConfigList(imported);
+      performListAction({ type: "create", name: suggestedListName(file.name.replace(/\.json$/i, "") || "配置 JSON"), records: imported });
+    } catch (failure) { showError(`配置 JSON 读取失败：${failure.message}`); }
+  });
   document.querySelector("#import-config-table").addEventListener("click", () => {
     if (!running) tableInput.click();
   });
@@ -573,7 +618,7 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     if (!file || running || !library) return;
     // Capture the destination and defaults before reading the local file.
     const destination = activeListId;
-    const defaults = getConfig();
+    const defaults = defaultGenerationConfig();
     try {
       let imported;
       if (/\.xlsx$/i.test(file.name)) {
@@ -693,7 +738,10 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun }) 
     const id = button.closest("tr").dataset.configId;
     if (button.dataset.configAction === "load") {
       if (!persist()) return;
-      loadConfig(structuredClone(records.find(record => record.id === id).config));
+      const record = records.find(record => record.id === id);
+      loadConfig(structuredClone(record.config), { listId: activeListId, id, configId: id,
+        position: records.indexOf(record) + 1, ...(record.levelId ? { levelId: record.levelId } : {}) },
+        records.map((record, index) => ({ ...record, position: index + 1 })));
       dialog.close();
     } else openDetails(button.dataset.configAction, [id]);
   });

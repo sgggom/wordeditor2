@@ -1,3 +1,4 @@
+import { configDestination } from "./level-rules.js";
 const DATABASE_NAME = "fangge.level-library.v1";
 const STORE_NAME = "levels";
 const LISTS_STORE = "levelLists";
@@ -216,4 +217,39 @@ export function deleteSavedLevelList(id) {
       });
     });
   }, { scoped: false });
+}
+
+export function getSavedLevelsForList(listId) {
+  return transact("readonly", (store, request, done) => {
+    request(store.getAll(), records => done(ordered(records.filter(record => listOf(record) === listId))));
+  }, { scoped: false });
+}
+
+export function saveLevelFromConfig(level) {
+  const snapshot = structuredClone(level);
+  return transact("readwrite", (store, request, done, listId) => {
+    request(store.getAll(), records => {
+      records = ordered(records);
+      const { index, existing } = configDestination(records, snapshot.sourceConfig);
+      const record = existing ? { ...existing, level: snapshot } : { listId, createdAt: Date.now(), level: snapshot };
+      records.splice(index, existing ? 1 : 0, record);
+      records.forEach((entry, position) => { entry.position = position + 1; });
+      for (const entry of records) if (entry !== record) request(store.put(entry));
+      if (existing) request(store.put(record), () => done(record));
+      else request(store.add(record), id => done({ ...record, id }));
+    });
+  });
+}
+
+export function renameSavedLevelList(id, name) {
+  if (typeof name !== "string" || !name.trim() || name.trim().length > 40) throw new Error("列表名称需为 1～40 个字符。");
+  name = name.trim();
+  return transact("readwrite", (store, request, done, activeListId, { lists }) => {
+    request(lists.getAll(), catalog => {
+      const current = catalog.find(list => list.id === id);
+      if (!current) throw new Error("关卡列表不存在。");
+      if (catalog.some(list => list.id !== id && list.name.toLowerCase() === name.toLowerCase())) throw new Error("已有同名关卡列表。");
+      request(lists.put({ ...current, name }), () => done({ ...current, name }));
+    });
+  });
 }

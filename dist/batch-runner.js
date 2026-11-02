@@ -1,5 +1,5 @@
-import { validateConfigList, futureFixedTargetWords } from "./level-config.js";
-import { createDuplicateCheck } from "./level-rules.js";
+import { validateConfigList } from "./level-config.js";
+import { createDuplicateCheck, prepareGeneration, configDestination, reserveFutureTargets } from "./level-rules.js";
 
 export function createBatchRunner({ getHistory, generate, save, onSaved = () => {}, onUpdate = () => {} }) {
   let controller = null;
@@ -30,7 +30,7 @@ export function createBatchRunner({ getHistory, generate, save, onSaved = () => 
       publish({});
       try {
         const history = [...await getHistory()];
-        for (const job of queue) {
+        for (const [jobIndex, job] of queue.entries()) {
           if (signal.aborted) break;
           publish({ phase: "generating", position: job.position, configId: job.id, attempts: 0, workers: 0 });
           // Replacement follows the visible list order, including imported or
@@ -40,8 +40,14 @@ export function createBatchRunner({ getHistory, generate, save, onSaved = () => 
           const duplicateCheck = createDuplicateCheck(precedingHistory, {
             target: job.config.targetDuplicateRange, extra: job.config.extraDuplicateRange,
           }, job.position);
-          const reservedTargetWords = futureFixedTargetWords(configurations, job.position, job.config.fixedWords);
-          const level = await generate({ ...job.config, reservedTargetWords, minimumWordLength: job.position === 1 ? 2 : 3 }, duplicateCheck, {
+          const planned = queue.slice(jobIndex + 1);
+          const source = job.listId ? { listId: job.listId, id: job.id, configId: job.id, position: job.position, ...(job.levelId ? { levelId: job.levelId } : {}) } : null;
+          const prepared = source ? prepareGeneration(history, null, job.config, source, configurations, planned) :
+            { config: { ...job.config,
+              reservedTargetWords: reserveFutureTargets(history, { id: job.id, position: job.position }, configurations, planned)
+                .filter(word => !(job.config.fixedWords ?? []).includes(word)),
+              minimumWordLength: job.position === 1 ? 2 : 3 }, duplicateCheck };
+          const level = await generate(prepared.config, prepared.duplicateCheck, {
             signal,
             onProgress: ({ attempts, workers }) => {
               if (!signal.aborted) publish({ attempts, ...(Number.isInteger(workers) ? { workers } : {}) });
@@ -50,13 +56,18 @@ export function createBatchRunner({ getHistory, generate, save, onSaved = () => 
           if (signal.aborted) break;
           if (!level) throw new Error("生成器没有返回关卡。");
           publish({ phase: "saving" });
-          const record = await save({ ...level, sourceConfig: { id: job.id, position: job.position } }, job.position);
+          const record = await save({ ...level, sourceConfig: source ?? { id: job.id, position: job.position } }, job.position);
           // A save already in progress is allowed to commit when stopping. Only
           // committed results enter history and advance the completed count.
+          if (source) {
+            const { index, existing } = configDestination(history, source);
+            history.splice(index, existing ? 1 : 0, record);
+          } else {
           const replaceIndex = job.position <= history.length ? job.position - 1
             : history.findLastIndex(previous => previous.level.sourceConfig?.position === job.position);
           if (replaceIndex >= 0) history[replaceIndex] = record;
           else history.push(record);
+          }
           state.completed += 1;
           onSaved(record, job);
           publish({ phase: "saved" });

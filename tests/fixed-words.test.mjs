@@ -18,7 +18,7 @@ function verify(level, expected) {
     assert.ok(level.initialWords.some(entry => entry.word === word));
     assert.ok(level.targetWords.some(entry => entry.word === word));
     assert.ok(!level.extraWords.some(entry => entry.word === word));
-    assert.throws(() => setTargetWord(level, word, false), /固定单词不能移出/);
+    assert.throws(() => setTargetWord(level, word, false), /固定词不能移出/);
   }
   for (const entry of level.targetWords) {
     assert.equal(new Set(entry.path).size, entry.word.length);
@@ -68,7 +68,7 @@ test("fixed words ignore retired limits but must fit the enabled board", () => {
     { fixedWords: ["ABCDEFGHIJ"] },
     { fixedWords: ["CAT", "DOG", "HEN"], rows: 2 },
     { fixedWords: ["ABCDEFG"], disabledCells: [0, 1, 2] },
-  ]) assert.throws(() => validateFixedWords({ ...config(), ...patch }), /固定单词/);
+  ]) assert.throws(() => validateFixedWords({ ...config(), ...patch }), /固定词/);
   const generator = createGenerator(entries(["ABC", "ABCDEF"]));
   const level = generator.generate({ rows: 2, columns: 3, targetCount: 1, fixedWords: ["ABC"], random: randomFrom(42) });
   verify(level, ["ABC"]);
@@ -110,7 +110,7 @@ test("preset bulk editing and storage are atomic, independent, clearable and com
   assert.deepEqual(readConfigList(storage), updated);
   assert.equal(original[0].config.fixedWords, undefined);
   const before = structuredClone(updated);
-  assert.throws(() => patchLevelConfigs(updated, ["a", "c"], { rows: 2, columns: 2 }), /固定单词/);
+  assert.throws(() => patchLevelConfigs(updated, ["a", "c"], { rows: 2, columns: 2 }), /固定词/);
   assert.deepEqual(updated, before);
   const cleared = patchLevelConfigs(updated, ["a"], { fixedWords: "" });
   assert.deepEqual(cleared[0].config.fixedWords, []);

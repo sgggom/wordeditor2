@@ -5,12 +5,13 @@ export function repairConfigurations(records, savedConfigs = [], ranges = { targ
   const byId = new Map(savedConfigs.map(record => [record.id, record]));
   const aligned = savedConfigs.length === records.length && records.every((record, index) => {
     const config = savedConfigs[index].config, level = record.level;
-    return config.rows === level.rows && config.columns === level.columns &&
+    return (!level.sourceConfig?.listId || savedConfigs[index].listId === level.sourceConfig.listId) && config.rows === level.rows && config.columns === level.columns &&
       (config.fixedWords ?? []).every(word => level.targetWords.some(entry => entry.word === word));
   });
   return records.map((record, index) => {
     const level = record.level;
-    const linked = byId.get(level.sourceConfig?.id) ?? (aligned ? savedConfigs[index] : null);
+    const candidate = byId.get(level.sourceConfig?.configId ?? level.sourceConfig?.id);
+    const linked = (candidate && (!level.sourceConfig?.listId || candidate.listId === level.sourceConfig.listId) ? candidate : null) ?? (aligned ? savedConfigs[index] : null);
     if (!linked && requireLinked) {
       const error = new Error('当前游戏文件未包含完整生成配置。请读取对应配置表后继续重跑；原关卡已保留。');
       error.code = 'MISSING_REPAIR_CONFIG';
@@ -94,7 +95,7 @@ export function createTargetPathRepairRunner({ generate, check, save, onSaved = 
           let attempt = 0;
           while (!signal.aborted) {
             publish({ phase: 'generating', position: index + 1, id: record.id, attempts: ++attempt });
-            const generated = await generate({ ...config, reservedTargetWords: [...reserved], minimumWordLength: index === 0 ? 2 : 3 }, duplicateCheck, { signal });
+            const generated = await generate({ ...config, reservedTargetWords: [...reserved], minimumWordLength: (record.level.sourceConfig?.listId ? record.level.sourceConfig.position === 1 : index === 0) ? 2 : 3 }, duplicateCheck, { signal });
             if (signal.aborted) break;
             if (!generated) throw new Error('生成器没有返回关卡。');
             if (findDuplicateWords(generated, duplicateCheck).target.length) throw new Error('新关卡未通过目标词查重，原关卡已保留。');
@@ -105,7 +106,7 @@ export function createTargetPathRepairRunner({ generate, check, save, onSaved = 
             if (!result.allChoicesComplete || !result.solvable) continue;
             publish({ phase: 'saving' });
             const level = { ...generated, name: record.level.name ?? generated.name,
-              sourceConfig: { ...record.level.sourceConfig, id: job.id, position: index + 1 } };
+              sourceConfig: { ...record.level.sourceConfig, id: job.id, position: record.level.sourceConfig?.listId ? record.level.sourceConfig.position : index + 1 } };
             const saved = await save(level, record, index + 1);
             history[index] = saved;
             onSaved(saved, result, index + 1);

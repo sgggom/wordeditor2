@@ -32,12 +32,12 @@ export function previousConfigWordUsage(records, currentIndex, range = 50) {
   return usage;
 }
 
-export function futureFixedTargetWords(records, position, fixedWords = []) {
+export function futureFixedTargetWords(records, position, fixedWords = [], distanceFor = null) {
   const current = new Set(normalizeFixedWords(fixedWords));
   const reserved = new Set();
   records.forEach((record, index) => {
     const futurePosition = record.position ?? index + 1;
-    const distance = futurePosition - position;
+    const distance = distanceFor ? distanceFor(record, futurePosition) : futurePosition - position;
     // The later level's window determines whether this level could block it.
     if (distance <= 0 || distance > record.config.targetDuplicateRange) return;
     const exempt = new Set(normalizeFixedWordExemptions(record.config));
@@ -60,7 +60,7 @@ export function validateLevelConfig(config) {
   if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("关卡配置无效。");
   for (const key of Object.keys(CONFIG_NUMBER_FIELDS)) validateConfigNumber(key, config[key]);
   normalizeDisabledCells(config);
-  if (config.fixedWords !== undefined && !Array.isArray(config.fixedWords)) throw new Error("固定单词需为单词列表。");
+  if (config.fixedWords !== undefined && !Array.isArray(config.fixedWords)) throw new Error("固定词需为单词列表。");
   validateFixedWords(config);
   normalizeFixedWordExemptions(config);
   normalizeFixedLayout(config);
@@ -230,4 +230,10 @@ export function changeConfigLists(action, storage = localStorage) {
     if (library.activeListId === target.id) library.activeListId = library.lists[Math.min(index, library.lists.length - 1)].id;
   }
   return writeConfigLists(library, storage);
+}
+
+export function defaultGenerationConfig() {
+  return { rows: 3, columns: 4, disabledCells: [], initialForwardProbability: 50,
+    targetDuplicateRange: 20, extraDuplicateRange: 20, filters: {},
+    fixedWords: [], fixedLayout: null, fixedWordExemptions: [], desiredTargetCount: 0 };
 }

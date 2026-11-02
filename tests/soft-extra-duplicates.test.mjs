@@ -23,7 +23,7 @@ test('real generation retains only target-valid candidates for soft extra-word f
   });
   const blocked=createDuplicateCheck([{id:1,level:{targetWords:[{word:'ABCDEF'}],extraWords:[]}}],{target:50,extra:20});
   assert.throws(()=>generator.generate({...options,duplicateCheck:blocked}),error=>{
-    assert.equal(error.code,'GENERATION_RETRY');assert.equal(error.bestLevel,undefined);return true;
+    assert.notEqual(error.code,'GENERATION_RETRY');assert.match(error.message,/查重下没有可用/);assert.equal(error.bestLevel,undefined);return true;
   });
   assert.throws(()=>generator.generate({...options,fixedWords:['ABCDEF'],duplicateCheck:blocked}),/目标词重复/);
 });

@@ -9,7 +9,7 @@ export const OPENING_FIXED_WORDS = [
 ];
 
 export function configureOpeningWords(records) {
-  if (!Array.isArray(records) || records.length < OPENING_FIXED_WORDS.length) throw new Error("配置列表不足 20 关，无法应用前 20 关指定词。");
+  if (!Array.isArray(records) || records.length < OPENING_FIXED_WORDS.length) throw new Error("配置列表不足 20 关，无法应用前 20 关固定词。");
   const updated = records.map((record, index) => {
     if (index >= OPENING_FIXED_WORDS.length) return record;
     const words = OPENING_FIXED_WORDS[index];

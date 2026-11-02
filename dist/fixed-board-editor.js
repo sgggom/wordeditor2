@@ -63,7 +63,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
   const selectedLengths = new Set();
   const initialFilters = config.filters ?? {};
   const searchFilters = Object.fromEntries(Object.entries(CONFIG_FILTER_OPTIONS).map(([key, values]) => [key, new Set(initialFilters[key] ?? values)]));
-  container.innerHTML = '<div class="fixed-board-editor"><section class="fixed-board-side"><div class="fixed-board-heading"><strong id="fixed-board-size"></strong><button type="button" class="reset-button" data-fixed-action="clear">清空单词</button></div><div class="board-edit-controls"><label>行 <select data-board-dimension="rows" aria-label="棋盘行数"></select></label><label>列 <select data-board-dimension="columns" aria-label="棋盘列数"></select></label><button type="button" class="reset-button" data-board-mode="shape">调整棋盘</button><button type="button" class="reset-button" data-board-mode="words">固定单词</button></div><div class="fixed-board-stage"><div class="fixed-board-grid" role="group" aria-label="固定单词棋盘"></div></div><div class="fixed-placement-status" aria-live="polite"></div><div class="fixed-placement-actions"><button type="button" class="reset-button" data-fixed-action="undo">撤销一格</button><button type="button" class="reset-button" data-fixed-action="cancel">取消摆放</button></div><div class="fixed-preset-list" aria-label="已添加的固定单词"></div></section><section class="fixed-search-side"><label for="fixed-word-search">搜索单词</label><input id="fixed-word-search" type="search" placeholder="输入英文单词，空格表示空位" lang="en" inputmode="url" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" /><div class="fixed-search-count" aria-live="polite"></div><div class="fixed-search-results"></div><button type="button" class="reset-button" data-fixed-action="retry" hidden>重新加载词库</button></section></div>';
+  container.innerHTML = '<div class="fixed-board-editor"><section class="fixed-board-side"><div class="fixed-board-heading"><strong id="fixed-board-size"></strong><button type="button" class="reset-button" data-fixed-action="clear">清空单词</button></div><div class="board-edit-controls"><label>行 <select data-board-dimension="rows" aria-label="棋盘行数"></select></label><label>列 <select data-board-dimension="columns" aria-label="棋盘列数"></select></label><button type="button" class="reset-button" data-board-mode="shape">调整棋盘</button><button type="button" class="reset-button" data-board-mode="words">固定词</button></div><div class="fixed-board-stage"><div class="fixed-board-grid" role="group" aria-label="固定词棋盘"></div></div><div class="fixed-placement-status" aria-live="polite"></div><div class="fixed-placement-actions"><button type="button" class="reset-button" data-fixed-action="undo">撤销一格</button><button type="button" class="reset-button" data-fixed-action="cancel">取消摆放</button></div><div class="fixed-preset-list" aria-label="已添加的固定词"></div></section><section class="fixed-search-side"><label for="fixed-word-search">搜索单词</label><input id="fixed-word-search" type="search" placeholder="输入英文单词，空格表示空位" lang="en" inputmode="url" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" /><div class="fixed-search-count" aria-live="polite"></div><div class="fixed-search-results"></div><button type="button" class="reset-button" data-fixed-action="retry" hidden>重新加载词库</button></section></div>';
   const grid = container.querySelector(".fixed-board-grid");
   const status = container.querySelector(".fixed-placement-status");
   const list = container.querySelector(".fixed-preset-list");
@@ -79,7 +79,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
   lengthFilter.append(lengthOptions);
   search.previousElementSibling.before(lengthFilter);
   const vocabularyFilter = element("details", "fixed-vocabulary-filter");
-  const vocabularySummary = element("summary", "", "本关词库筛选 · 全部");
+  const vocabularySummary = element("summary", "", "搜索筛选 · 全部");
   const vocabularyFields = element("div", "fixed-vocabulary-fields");
   const filterLabels = { scope: "范围库", emotion: "情绪类型", abbreviation: "是否缩写", rarityLevel: "生僻档位" };
   for (const [key, values] of Object.entries(CONFIG_FILTER_OPTIONS)) {
@@ -97,7 +97,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
     }
     field.append(options); vocabularyFields.append(field);
   }
-  const resetFilters = element("button", "reset-button", "重置词库筛选");
+  const resetFilters = element("button", "reset-button", "重置搜索筛选");
   resetFilters.type = "button"; resetFilters.dataset.fixedFilterReset = "true";
   vocabularyFields.append(resetFilters);
   vocabularyFilter.append(vocabularySummary, vocabularyFields);
@@ -124,7 +124,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
   extraSection.setAttribute("aria-label", "额外词检测");
   const extraCount = element("strong", "fixed-extra-heading", "额外词检测");
   extraCount.setAttribute("aria-live", "polite");
-  const extraNote = element("p", "fixed-extra-note", "根据当前已摆放的字母实时检测，不含已添加的固定单词；空白格不参与。");
+  const extraNote = element("p", "fixed-extra-note", "根据当前已摆放的字母实时检测，不含已添加的固定词；空白格不参与。");
   const extraResults = element("div", "fixed-extra-results");
   const ambiguityNote = element("p", "fixed-extra-note ambiguity-warning");
   ambiguityNote.setAttribute("role", "status");
@@ -179,8 +179,8 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
       try {
         validateFixedWords({ ...settings, fixedWords: [...new Set([...words, word])] });
       } catch (error) { return error.message; }
+      if (Object.entries(settings.filters ?? {}).some(([key, selected]) => !selected.includes(entry[key]))) return "不符合关卡词库筛选";
     }
-    if (Object.entries(searchFilters).some(([key, selected]) => selected.size !== CONFIG_FILTER_OPTIONS[key].length && !selected.has(entry[key]))) return "不符合当前手动筛选";
     return "";
   }
 
@@ -259,7 +259,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
       button.disabled = editMode === "words" && disabled;
       button.classList.toggle("is-disabled", disabled);
       button.setAttribute("aria-pressed", String(!disabled));
-      button.title = editMode === "shape" ? (disabled ? "点击启用格子" : "点击禁用格子") : "点击摆放固定单词";
+      button.title = editMode === "shape" ? (disabled ? "点击启用格子" : "点击禁用格子") : "点击摆放固定词";
       button.setAttribute("aria-label", `第 ${Math.floor(cell / columns) + 1} 行，第 ${cell % columns + 1} 列，${disabled ? "已禁用" : letters[cell] || "空白"}`);
       button.append(element("span", "fixed-cell-letter", letters[cell]));
       if (path.includes(cell)) button.append(element("span", "fixed-cell-step", String(path.indexOf(cell) + 1)));
@@ -293,7 +293,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
       row.append(edit, remove); items.append(row);
     }
     list.replaceChildren(items);
-    if (!words.length) list.append(element("span", "fixed-list-empty", "暂无固定单词"));
+    if (!words.length) list.append(element("span", "fixed-list-empty", "暂无固定词"));
   }
 
   function renderLengthFilter() {
@@ -505,7 +505,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
     vocabularyFields.querySelectorAll("input").forEach(input => {
       input.checked = searchFilters[input.dataset.fixedFilter].has(Number(input.value));
     });
-    vocabularySummary.textContent = `本关词库筛选 · ${Object.keys(filters).length ? "已筛选" : "全部"}`;
+    vocabularySummary.textContent = `搜索筛选 · ${Object.keys(filters).length ? "已筛选" : "全部"}`;
     if (vocabulary) { renderBoard(); renderSearch(); }
   }
   syncFilters(initialFilters);
@@ -521,7 +521,7 @@ export function mountFixedBoardEditor(container, config, { configs = [config], r
       if (placements.length && !canPin) throw new Error("所选棋盘不同，请先调整棋盘以统一布局，或将固定词改为自动摆放后应用。");
       for (const word of words) { const issue = wordIssue(word); if (issue) throw new Error(`${word}：${issue}`); }
       const fixedLayout = placements.length ? { rows, columns, placements: structuredClone(placements) } : null;
-      return { ...(boardChanged || configs.length === 1 ? { rows, columns, disabledCells: [...disabledCells] } : {}), filters: manualFilters(), fixedWords: [...words], fixedLayout: normalizeFixedLayout({ ...config, rows, columns, fixedWords: words, fixedLayout }) };
+      return { ...(boardChanged || configs.length === 1 ? { rows, columns, disabledCells: [...disabledCells] } : {}), fixedWords: [...words], fixedLayout: normalizeFixedLayout({ ...config, rows, columns, fixedWords: words, fixedLayout }) };
     },
     destroy() { disposed = true; virtualResults.destroy(); targetPathMonitor.destroy(); container.removeEventListener("click", click); container.removeEventListener("change", changeDimension); vocabularyFilter.removeEventListener("change", changeSearchFilter); unbindSearchInput(); },
   };

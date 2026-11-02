@@ -72,3 +72,24 @@ test("reference levels can open in the main editor without changing the original
   assert.equal(JSON.stringify(snapshot), before);
   assert.equal(local.length, 20);
 });
+
+test("the new 1500-level game preset preserves board orientation, counts, words and source IDs", () => {
+  const preset = read("preset-level-lists.json").presets.find(item => item.id === "our-levels-2026-11-02");
+  const bytes = readFileSync(new URL(`../dist/data/${preset.file}`, import.meta.url));
+  assert.equal(createHash("sha256").update(bytes).digest("hex"), preset.source.sha256);
+  const data = JSON.parse(bytes);
+  const original = JSON.stringify(data);
+  const sources = [...data.books.flatMap(book => book.levels), ...data.daily];
+  const records = createPresetRecords(data, preset.format);
+  assert.equal(records.length, 1500);
+  assert.equal(records.length, preset.levelCount);
+  const exported = createGameExport(records).books[0].levels;
+  for (const [index, source] of sources.entries()) {
+    assert.equal(records[index].id, -index - 1);
+    assert.equal(records[index].sourceId, source.id);
+    for (const key of ["g", "t", "e", "n"]) assert.equal(exported[index][key], source[key], `Level ${index + 1}: ${key}`);
+  }
+  const preview = normalizePresetLevels(data, preset.format);
+  assert.deepEqual(preview[0].letters, records[0].level.cells.map(cell => cell.letter));
+  assert.equal(JSON.stringify(data), original);
+});

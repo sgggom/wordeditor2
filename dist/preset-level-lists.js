@@ -2,6 +2,10 @@ import { importGameLevels } from "./level-import.js";
 import { bindWordTooltip } from "./word-tooltip.js";
 
 export function createPresetRecords(data, format, dictionary = []) {
+  if (format === "game") {
+    const sources = [...data.books.flatMap(book => book.levels), ...data.daily];
+    return importGameLevels(data, dictionary).map((level, index) => ({ id: -index - 1, sourceId: sources[index].id, level }));
+  }
   if (format !== "word-tiles") return structuredClone(data.records).map((record, index) => ({ ...record, id: -index - 1 }));
   const sources = normalizePresetLevels(data, format).map(level => {
     const counts = Array(level.letters.length).fill(0);
@@ -18,6 +22,7 @@ export function createPresetRecords(data, format, dictionary = []) {
 }
 
 export function normalizePresetLevels(data, format) {
+  if (format === "game") return normalizePresetLevels({ records: createPresetRecords(data, format) }, "editor");
   const levels = format === "word-tiles" ? data : data?.records?.map(record => record.level);
   if (!Array.isArray(levels) || (!levels.length && format === "word-tiles")) throw new Error("预设关卡列表为空。");
   return levels.map((level, index) => {
@@ -73,8 +78,6 @@ export function setupPresetLevelLists({ getView, getFiles, onSelect, onBrowser, 
   const download = document.querySelector('#preset-level-download');
   const openFile = document.querySelector('#open-local-level-file');
   const input = document.querySelector('#local-level-file-input');
-  const save = document.querySelector('#save-selected-level-file');
-  const saveAs = document.querySelector('#save-selected-level-file-as');
   let presets = [];
   let levels = [];
   let activeIndex = 0;
@@ -95,11 +98,11 @@ export function setupPresetLevelLists({ getView, getFiles, onSelect, onBrowser, 
     error.hidden = false;
   }
   function renderOptions() {
-    source.replaceChildren(new Option('浏览器关卡', 'browser'));
+    source.replaceChildren(new Option('浏览器关卡列表', 'browser'));
     const groups = [
       ['本次打开的本地文件', getFiles().map(file => ({ ...file, label: file.label + (file.dirty ? ' · 未保存' : ''), levelCount: file.records.length }))],
-      ['自带预设 · 本地版本', presets.filter(preset => preset.format === 'editor')],
-      ['自带预设 · 参考竞品', presets.filter(preset => preset.format !== 'editor')],
+      ['自带预设 · 我们的关卡', presets.filter(preset => preset.format !== 'word-tiles')],
+      ['自带预设 · 参考竞品', presets.filter(preset => preset.format === 'word-tiles')],
     ];
     for (const [label, entries] of groups) {
       if (!entries.length) continue;
@@ -151,11 +154,6 @@ export function setupPresetLevelLists({ getView, getFiles, onSelect, onBrowser, 
     activeIndex = Math.max(0, view.records.findIndex(record => record.id === view.activeId));
     selectedWord = null;
     summary.textContent = `${view.label} · ${levels.length} 关 · ${view.status}`;
-    save.hidden = saveAs.hidden = view.kind !== 'file';
-    save.textContent = view.saveLabel ?? '保存文件';
-    save.disabled = busy || view.busy || (Boolean(view.handle) && !view.dirty) || view.pending;
-    saveAs.disabled = busy || view.busy || view.pending;
-    saveAs.hidden ||= !view.canSaveAs;
     jump.max = String(levels.length); jump.disabled = busy || !levels.length;
     download.hidden = true;
     const preset = presets.find(item => item.id === view.id);
@@ -206,7 +204,7 @@ export function setupPresetLevelLists({ getView, getFiles, onSelect, onBrowser, 
     if (presets.length) return;
     try {
       const [reference, history] = await Promise.all([read('preset-level-lists.json'), read('local-versions.json')]);
-      presets = [...history.versions.map(version => ({ ...version, file: version.levels, format: 'editor' })), ...reference.referenceLists];
+      presets = [...history.versions.map(version => ({ ...version, file: version.levels, format: 'editor' })), ...(reference.presets ?? []), ...reference.referenceLists];
       refresh();
     } catch (problem) { failure(problem); }
   });
@@ -223,8 +221,6 @@ export function setupPresetLevelLists({ getView, getFiles, onSelect, onBrowser, 
     const file = input.files[0]; input.value = '';
     if (file) perform(() => onOpenFile(file, null));
   });
-  save.addEventListener('click', () => perform(() => onSaveFile(false)));
-  saveAs.addEventListener('click', () => perform(() => onSaveFile(true)));
   source.addEventListener('change', selectSource);
   document.querySelector('#close-preset-levels').addEventListener('click', () => dialog.close());
   list.addEventListener('click', event => { const button = event.target.closest('[data-preset-index]'); if (button) selectLevel(Number(button.dataset.presetIndex)); });
