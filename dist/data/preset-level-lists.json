@@ -69,14 +69,37 @@
       "file": "./presets/our-levels-direction-aligned-2026-11-03.json",
       "gameFile": "./presets/our-levels-direction-aligned-2026-11-03-game.json",
       "source": {
-        "file": "outputs/20261103-direction-aligned/levels.json",
-        "sha256": "3790ffbada57308e1c082a1e65122087f748c0cb1fc76c4b72a1dbc79bd68f84"
+        "file": "outputs/20261103-opening-4-8-10/levels.json",
+        "sha256": "f80cea29deca2c90270a8032537d6714c57d56751770a0f4d5341697b7bd5101"
       },
       "notes": [
         "按单词全路径右/下与左/上步数比较正逆序，逐关贴近Word Tiles占比；相等为混合。",
         "前3关保持不变；每关目标数量、各词长数量、固定词和筛选保留。",
         "统一导入后正序占比70.70%，逆序占比18.18%；1350关正序词数量与竞品折算目标相差不超过1个。",
-        "1500关全部通过路径安全、查重、覆盖及导出重新读取校验。"
+        "1500关全部通过路径安全、查重、覆盖及导出重新读取校验。",
+        "仅优化第4、8、10关：固定词、目标词数、词长构成与筛选保留，其余1497关完全不变。",
+        "第4关FLOWER降为2拐、CAR/COW为逆向直线；第8关改为3×3且目标词均无同轴折返；第10关SUMMER降为1拐，其余3词为直线。"
+      ]
+    },
+    {
+      "id": "our-levels-competitor-rhythm-2026-11-03",
+      "label": "竞品节奏版 · 2026-11-03",
+      "levelCount": 1500,
+      "format": "editor",
+      "file": "./presets/our-levels-competitor-rhythm-2026-11-03.json",
+      "gameFile": "./presets/our-levels-competitor-rhythm-2026-11-03-game.json",
+      "source": {
+        "file": "outputs/20261103-competitor-rhythm/levels.json",
+        "sha256": "d4a914d96ed72e8b0bfc972d6eab57c3973f18ef792224dadcb10a7055b1cddf"
+      },
+      "notes": [
+        "前10关完整保留；第11～1500关按参考词量、词长、生僻分布与复现节奏重新生成。",
+        "选词采用本地普通词库与参考目标词表的交集；已有固定词按新分段约束重新选择。",
+        "取消固定七关生僻循环；每关目标词与前10关查重，允许更早的词按参考比例复现，后期前50关复现率26.8%。",
+        "第11关起使用完整矩形，移除直接加S的同关目标词对。",
+        "1500关全部通过所有合法消词选择、查重、覆盖与游戏导出重新读取校验。",
+        "重跑1490关中1489关目标数量匹配；第704关21词，参考23词。",
+        "101关后4～5档目标占2.6%（参考3.8%），平均拐弯1.18（参考1.30）。"
       ]
     }
   ]
