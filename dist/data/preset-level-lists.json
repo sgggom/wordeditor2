@@ -25,6 +25,41 @@
         "file": "word-tiles-levels.json",
         "sha256": "e5d70fc34c0fca50f472063252daddf3de432574de19033e4ebf0c36cdef84d7"
       }
+    },
+    {
+      "id": "our-levels-reduced-three-2026-11-03",
+      "label": "减少3字母目标词 · 2026-11-03",
+      "levelCount": 1500,
+      "format": "editor",
+      "file": "./presets/our-levels-reduced-three-2026-11-03.json",
+      "gameFile": "./presets/our-levels-reduced-three-2026-11-03-game.json",
+      "source": {
+        "file": "outputs/20261103-reduced-three/levels.json",
+        "sha256": "bdfdc5e6cd684869417e8c91209e8786f05462e2c64cd6f97f26c03862f8d2cc"
+      },
+      "notes": [
+        "每关目标词数量及固定词保留；3字母占比42.29%，4字母占比37.83%。",
+        "1500关全部通过目标路径安全、查重、覆盖及导出重新读取校验。"
+      ]
+    },
+    {
+      "id": "our-levels-aligned-targets-2026-11-03",
+      "label": "目标词数量调整 · 2026-11-03",
+      "levelCount": 1500,
+      "format": "editor",
+      "file": "./presets/our-levels-aligned-targets-2026-11-03.json",
+      "gameFile": "./presets/our-levels-aligned-targets-2026-11-03-game.json",
+      "source": {
+        "file": "outputs/20261103-aligned-target-counts/levels.json",
+        "sha256": "061cedd1213e4ec47523cb5906bf1535892e1a1453ca7f12d9357ddb92d3e242"
+      },
+      "notes": [
+        "按Word Tiles对应关卡数量补选和重新生成；当前1300关数量一致。",
+        "保留固定词、棋盘尺寸、筛选及查重规则；部分造型重选或回退同尺寸完整棋盘。",
+        "1500关全部通过路径安全、查重、覆盖及导出重新读取校验。",
+        "第2、3关已交换；第1关GO、UP均从左到右横排，GO在上、UP在下。",
+        "第2关目标为FIVE/ZOO/SEE，共3个（4、3、3字母），额外词为0。"
+      ]
     }
   ]
 }

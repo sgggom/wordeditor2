@@ -178,6 +178,7 @@
               <span data-column="rarity">生僻档位</span>
               <span data-column="path">路径</span>
               <span data-column="path-score" title="首向：上1、下0、左1、右0；每个拐点和折返各加1分。0分绿、1分蓝、2分黄、3分及以上红。">路径分</span>
+              <span data-column="difficulty" title="目标词难度 = 实际路径分 + 生僻档位 ×（1 + 长度 × 0.1）">难度分</span>
               <span data-column="initial">初始词</span>
               <span data-column="candidate">候选词</span>
               <span data-column="only-extra">仅额外</span>
@@ -200,6 +201,10 @@
             <div class="emotion-summary" title="所有目标词的生僻档位之和">
               <span id="rarity-score-label">生僻总分</span>
               <output id="rarity-score" aria-labelledby="rarity-score-label" aria-live="polite">—</output>
+            </div>
+            <div class="emotion-summary" title="所有目标词难度之和；目标词难度 = 实际路径分 + 生僻档位 ×（1 + 长度 × 0.1）（5字母为1.5，10字母为2.0）">
+              <span id="difficulty-score-label">关卡难度</span>
+              <output id="difficulty-score" aria-labelledby="difficulty-score-label" aria-live="polite">—</output>
             </div>
             <div class="preview-actions">
               <button type="button" id="edit-board-shape" class="reset-button" aria-pressed="false">编辑造型</button>

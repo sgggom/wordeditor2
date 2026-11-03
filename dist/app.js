@@ -7,7 +7,7 @@ import { readConfigList, readConfigLists, defaultGenerationConfig, validateLevel
 import { normalizeDisabledCells, resizeDisabledCells } from "./board-shape.js";
 import { createDuplicateCheck, findDuplicateWords, setTargetWord, generationContext, resizeFixedLayout, prepareGeneration, configDestination, resolveConfigSource } from "./level-rules.js";
 import { setupConfigList } from "./config-list.js";
-import { calculateRarityTotal } from "./level-statistics.js";
+import { calculateRarityTotal, calculateWordDifficulty, calculateLevelDifficulty } from "./level-statistics.js";
 import { createBatchRunner, formatBatchState } from "./batch-runner.js";
 import { createGenerationClient, defaultGenerationWorkers } from "./generation-client.js";
 import { gameExportText, createGameExport } from "./level-export.js";
@@ -43,6 +43,7 @@ import { setupPlaytest } from "./playtest-dialog.js";
   const count = document.querySelector("#cell-count");
   const emotionScore = document.querySelector("#emotion-score");
   const rarityScore = document.querySelector("#rarity-score");
+  const difficultyScore = document.querySelector("#difficulty-score");
   const levelDataButton = document.querySelector("#level-data-toggle");
   const levelDataPanel = document.querySelector("#level-data-panel");
   const levelDataContent = document.querySelector("#level-data-content");
@@ -847,7 +848,17 @@ import { setupPlaytest } from "./playtest-dialog.js";
       pathScore.dataset.column = "path-score";
       pathScore.textContent = String(assigned.difficultyScore);
       pathScore.title = `首向 ${assigned.directionScore} 分 + 拐点 ${assigned.turns} 分 + 折返 ${assigned.reversals} 分`;
-      button.append(text, rarity, createPathPreview(entry), pathScore);
+      const difficulty = document.createElement("span");
+      difficulty.className = "word-value-cell";
+      difficulty.dataset.column = "difficulty";
+      const wordDifficulty = calculateWordDifficulty(entry);
+      difficulty.textContent = membership.target.has(entry.word) && Number.isFinite(wordDifficulty) ? String(wordDifficulty) : "—";
+      difficulty.title = membership.target.has(entry.word)
+        ? Number.isFinite(wordDifficulty)
+          ? `${assigned.difficultyScore} + ${entry.rarityLevel} ×（1 + ${entry.word.length} × 0.1） = ${wordDifficulty}`
+          : "缺少生僻档位或路径分，无法计算难度"
+        : "仅目标词计入关卡难度";
+      button.append(text, rarity, createPathPreview(entry), pathScore, difficulty);
       const tags = roles.filter(role => role.words.has(entry.word));
       if (entry.onlyExtra) tags.push({ key: "only-extra", label: "仅额外" });
       for (const { key, label } of tagColumns) {
@@ -863,7 +874,7 @@ import { setupPlaytest } from "./playtest-dialog.js";
         }
         button.append(cell);
       }
-      button.setAttribute("aria-label", `${entry.word}，生僻档位 ${rarity.textContent}，路径难度 ${assigned.difficultyScore} 分，${tags.map(tag => tag.label).join("、")}`);
+      button.setAttribute("aria-label", `${entry.word}，生僻档位 ${rarity.textContent}，路径难度 ${assigned.difficultyScore} 分，目标词难度 ${difficulty.textContent}，${tags.map(tag => tag.label).join("、")}`);
       const selection = document.createElement("label");
       selection.className = "target-selection";
       if ((membership.candidate.has(entry.word) || membership.target.has(entry.word)) && !entry.onlyExtra) {
@@ -916,6 +927,9 @@ import { setupPlaytest } from "./playtest-dialog.js";
     const { vocabulary, workload, lengths, paths, board: boardStats, usage, words, emotion } = stats;
     const directions = { R: "右", D: "下", L: "左", U: "上", none: "无" };
     const sections = [
+      ["关卡难度（目标词）", [
+        ["难度总分", number(calculateLevelDifficulty(level.targetWords), 2)],
+      ], "所有目标词难度之和；目标词难度 = 实际路径分 + 生僻档位 ×（1 + 长度 × 0.1）（5字母为1.5，10字母为2.0）"],
       ["词量与词长（目标词）", [
         ["目标词数", workload.targetCount], ["目标字母总数", workload.totalLetters],
         ["最长词", `${lengths.longest} 字母`], ["词长分布", distribution(lengths.distribution, "字母")],
@@ -1104,6 +1118,8 @@ import { setupPlaytest } from "./playtest-dialog.js";
     emotionScore.textContent = formatEmotionScore();
     const rarityTotal = level ? calculateRarityTotal(level.targetWords) : null;
     rarityScore.textContent = Number.isFinite(rarityTotal) ? String(rarityTotal) : "—";
+    const difficultyTotal = level ? calculateLevelDifficulty(level.targetWords) : null;
+    difficultyScore.textContent = Number.isFinite(difficultyTotal) ? String(difficultyTotal) : "—";
     const emotionTotal = level?.statistics.emotion.total;
     emotionScore.classList.toggle("is-positive", Number.isFinite(emotionTotal) && emotionTotal > 0);
     emotionScore.classList.toggle("is-negative", Number.isFinite(emotionTotal) && emotionTotal < 0);

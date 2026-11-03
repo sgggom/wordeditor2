@@ -53,6 +53,19 @@ export function calculateRarityTotal(words) {
     ? sum(words.map(entry => entry.rarityLevel)) : null;
 }
 
+export function calculateWordDifficulty(entry) {
+  const pathScore = entry.pathAnalysis?.assigned?.difficultyScore;
+  if (!entry.word?.length || !Number.isFinite(pathScore) || pathScore < 0 ||
+      !Number.isInteger(entry.rarityLevel) || entry.rarityLevel < 1 || entry.rarityLevel > 5) return null;
+  // Length weighting grows linearly: 5 → 1.5, 10 → 2.0.
+  return Number((pathScore + entry.rarityLevel * (1 + entry.word.length * 0.1)).toFixed(2));
+}
+
+export function calculateLevelDifficulty(words) {
+  const scores = words.map(calculateWordDifficulty);
+  return scores.every(Number.isFinite) ? Number(sum(scores).toFixed(2)) : null;
+}
+
 export function calculateLevelStatistics(level) {
   const { rows, columns, targetWords, extraWords, candidateWords } = level;
   const cells = level.cells.filter((cell, index) => !cell.disabled && !level.disabledCells?.includes(index));
@@ -77,6 +90,7 @@ export function calculateLevelStatistics(level) {
   return {
     version: 1,
     wordBasis: "targetWords",
+    difficulty: { basis: "assignedPaths", total: calculateLevelDifficulty(targetWords) },
     vocabulary: {
       rarityDistribution: histogram(knownRarities, [1, 2, 3, 4, 5]),
       unknownRarityCount: targetCount - knownRarities.length,

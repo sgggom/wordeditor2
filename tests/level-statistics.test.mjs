@@ -2,7 +2,36 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createGenerator } from "../dist/level-generator.js";
 import { setTargetWord } from "../dist/level-rules.js";
-import { compareRepresentativePaths, describePath } from "../dist/level-statistics.js";
+import { calculateWordDifficulty, calculateLevelDifficulty, compareRepresentativePaths, describePath } from "../dist/level-statistics.js";
+
+test("difficulty uses assigned paths and linear length weighting, including double-digit lengths", () => {
+  const entry = (word, rarityLevel, score) => ({ word, rarityLevel,
+    pathAnalysis: { assigned: { difficultyScore: score }, representative: { difficultyScore: 99 } } });
+  assert.equal(calculateWordDifficulty(entry("APPLE", 4, 10)), 16);
+  assert.equal(calculateWordDifficulty(entry("ABCDEFGHIJ", 3, 2)), 8);
+  assert.equal(calculateWordDifficulty(entry("ABCDEFGHIJK", 3, 2)), 8.3);
+  assert.equal(calculateLevelDifficulty([entry("CAT", 1, 0), entry("DOG", 2, 1)]), 4.9);
+  assert.equal(calculateLevelDifficulty([]), 0);
+  for (const invalid of [entry("CAT", null, 0), entry("CAT", 0, 0), entry("CAT", 6, 0),
+    entry("CAT", 1, undefined), { word: "CAT", rarityLevel: 1 }]) {
+    assert.equal(calculateWordDifficulty(invalid), null);
+    assert.equal(calculateLevelDifficulty([entry("DOG", 1, 0), invalid]), null);
+  }
+});
+
+test("difficulty follows target membership and excludes extra and candidate words", () => {
+  const generator = createGenerator([
+    { word: "ABCDEF", rarityLevel: 1 }, { word: "ABC", rarityLevel: 3 },
+  ], [{ word: "FED", rarityLevel: 5 }]);
+  const options = { rows: 2, columns: 3, letters: ["A", "B", "C", "F", "E", "D"],
+    initialWords: [{ word: "ABCDEF", path: [0, 1, 2, 5, 4, 3] }], targetCount: 1 };
+  const level = generator.selectTargets({ ...options, foundWords: generator.findWords(options) });
+  assert.equal(level.statistics.difficulty.total, 4.6);
+  const promoted = setTargetWord(level, "ABC", true);
+  assert.equal(promoted.statistics.difficulty.total, 8.5);
+  assert.equal(setTargetWord(promoted, "ABC", false).statistics.difficulty.total, 4.6);
+  assert.equal(JSON.parse(JSON.stringify(promoted)).statistics.difficulty.total, 8.5);
+});
 
 test("turns and same-axis reversals are independent, including multiple reversals", () => {
   assert.deepEqual(describePath([0, 1, 4, 5], 3), { path: [0, 1, 4, 5], firstDirection: "R", turns: 2, reversals: 0, directionScore: 0, difficultyScore: 2 });
