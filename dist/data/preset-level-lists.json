@@ -60,6 +60,24 @@
         "第2、3关已交换；第1关GO、UP均从左到右横排，GO在上、UP在下。",
         "第2关目标为FIVE/ZOO/SEE，共3个（4、3、3字母），额外词为0。"
       ]
+    },
+    {
+      "id": "our-levels-direction-aligned-2026-11-03",
+      "label": "正逆序比例调整 · 2026-11-03",
+      "levelCount": 1500,
+      "format": "editor",
+      "file": "./presets/our-levels-direction-aligned-2026-11-03.json",
+      "gameFile": "./presets/our-levels-direction-aligned-2026-11-03-game.json",
+      "source": {
+        "file": "outputs/20261103-direction-aligned/levels.json",
+        "sha256": "3790ffbada57308e1c082a1e65122087f748c0cb1fc76c4b72a1dbc79bd68f84"
+      },
+      "notes": [
+        "按单词全路径右/下与左/上步数比较正逆序，逐关贴近Word Tiles占比；相等为混合。",
+        "前3关保持不变；每关目标数量、各词长数量、固定词和筛选保留。",
+        "统一导入后正序占比70.70%，逆序占比18.18%；1350关正序词数量与竞品折算目标相差不超过1个。",
+        "1500关全部通过路径安全、查重、覆盖及导出重新读取校验。"
+      ]
     }
   ]
 }
