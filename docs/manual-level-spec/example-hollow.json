@@ -1,0 +1,104 @@
+{
+  "id": "format-hollow",
+  "name": "10号台阶造型格式示例",
+  "g": "CAT-,-DOG,SUN-",
+  "t": "CAT DOG SUN",
+  "n": "111001111110",
+  "e": "GOD",
+  "lv": "",
+  "ty": "",
+  "curtains": [],
+  "manual": {
+    "purpose": "format_example",
+    "shapeId": 10,
+    "rows": 3,
+    "columns": 4,
+    "boardMask": [
+      "1110",
+      "0111",
+      "1110"
+    ],
+    "shapeDescription": "用户库10号台阶造型",
+    "coordinateSystem": "row_major_zero_based_top_left",
+    "targetPaths": [
+      {
+        "word": "CAT",
+        "path": [
+          0,
+          1,
+          2
+        ],
+        "rarityLevel": 1,
+        "turns": 0,
+        "reversals": 0,
+        "direction": "positive"
+      },
+      {
+        "word": "DOG",
+        "path": [
+          5,
+          6,
+          7
+        ],
+        "rarityLevel": 1,
+        "turns": 0,
+        "reversals": 0,
+        "direction": "positive"
+      },
+      {
+        "word": "SUN",
+        "path": [
+          8,
+          9,
+          10
+        ],
+        "rarityLevel": 1,
+        "turns": 0,
+        "reversals": 0,
+        "direction": "positive"
+      }
+    ],
+    "extraPaths": [
+      {
+        "word": "GOD",
+        "path": [
+          7,
+          6,
+          5
+        ]
+      }
+    ],
+    "cellCounts": [
+      [
+        1,
+        1,
+        1,
+        0
+      ],
+      [
+        0,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        0
+      ]
+    ],
+    "designNotes": [
+      "采用用户库10号造型，索引3、4、11停用，次数为0；3×3禁止镂空。",
+      "CAT、DOG、SUN各覆盖一段台阶，每个活动格恰好使用一次。",
+      "额外词GOD逆向经过DOG的三个格，不参与格子次数计算。"
+    ],
+    "validation": {
+      "status": "passed",
+      "wordBankVerified": true,
+      "allChoicesComplete": true,
+      "historyCheck": "not_applicable",
+      "extraEnumerationComplete": false
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "task": "handcraft_one_level",
+  "purpose": "isolated_trial",
+  "position": 12,
+  "shapeLibrary": "shape-library.json",
+  "shapeId": 9,
+  "rows": 3,
+  "columns": 3,
+  "boardMask": [
+    "111",
+    "111",
+    "111"
+  ],
+  "targetCount": 5,
+  "targetLengthCounts": {
+    "3": 3,
+    "4": 1,
+    "5": 1
+  },
+  "fixedWords": [],
+  "fixedPaths": [],
+  "targetWordBank": "candidate-words.json",
+  "allowedRarityLevels": [
+    1,
+    2
+  ],
+  "allowDirectSPairs": false,
+  "history": {
+    "mode": "isolated_trial",
+    "previous10Targets": [],
+    "targetsFrom11To50LevelsAgo": [],
+    "reservedFutureTargets": []
+  },
+  "softTargets": {
+    "easyStraightTargets": 1,
+    "sharedShortLongPairs": 1,
+    "averageTurnsPerWord": [
+      0.8,
+      1.3
+    ],
+    "preferMaximumTurnsForCoreWord": 2,
+    "preferMaximumTotalReversals": 1,
+    "designIntent": "用一个常见核心词带出短词，保留容易发现的直线入口。",
+    "shapeDescription": "完整 3×3；本尺寸禁止任何镂空。"
+  },
+  "toolPolicy": {
+    "manualSelectionAndPlacement": true,
+    "allowProgrammaticValidation": true,
+    "allowAutomaticBoardGenerationOrSearch": false
+  },
+  "output": {
+    "format": "single_game_json_with_manual_review",
+    "candidateCount": 1,
+    "validationStatusIfNotExecuted": "not_run"
+  },
+  "shapePolicy": {
+    "libraryOnly": true,
+    "previousShapeIds": [],
+    "shapeHistoryMode": "isolated_trial",
+    "shapeDuplicateRange": 10,
+    "referenceAlignment": "active_cells",
+    "referenceActiveCells": 9,
+    "maximumActiveCellDelta": 1,
+    "fullRectangleIsShape": true,
+    "anyDisabledCellIsHollow": true,
+    "edgeCutoutsCountAsHollow": true,
+    "threeByThreeMustBeFull": true,
+    "batchVariety": "仅从用户37种造型中选择并固定，每关不与前10关使用相同shapeId。优先对齐参考有效格数，必要时相差1格；固定造型与通关安全必须同时满足。",
+    "fixedMaskMustBeRespected": true,
+    "freezeShapeBeforeFinalPlacement": true,
+    "allowFallbackToFullRectangle": false,
+    "onFailure": "保持尺寸和掩码，只调整词组与路径；形状和通关安全必须同时满足。"
+  }
+}

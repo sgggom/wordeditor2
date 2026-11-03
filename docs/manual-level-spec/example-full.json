@@ -1,0 +1,92 @@
+{
+  "id": "format-full",
+  "name": "完整棋盘格式示例",
+  "g": "FSE,IVE,ZOO",
+  "t": "SEE ZOO FIVE",
+  "n": "111112111",
+  "e": "",
+  "lv": "",
+  "ty": "",
+  "curtains": [],
+  "manual": {
+    "purpose": "format_example",
+    "shapeId": 9,
+    "rows": 3,
+    "columns": 3,
+    "boardMask": [
+      "111",
+      "111",
+      "111"
+    ],
+    "shapeDescription": "用户库9号完整矩形",
+    "coordinateSystem": "row_major_zero_based_top_left",
+    "targetPaths": [
+      {
+        "word": "FIVE",
+        "path": [
+          0,
+          3,
+          4,
+          5
+        ],
+        "rarityLevel": 1,
+        "turns": 1,
+        "reversals": 0,
+        "direction": "positive"
+      },
+      {
+        "word": "SEE",
+        "path": [
+          1,
+          2,
+          5
+        ],
+        "rarityLevel": 1,
+        "turns": 1,
+        "reversals": 0,
+        "direction": "positive"
+      },
+      {
+        "word": "ZOO",
+        "path": [
+          6,
+          7,
+          8
+        ],
+        "rarityLevel": 1,
+        "turns": 0,
+        "reversals": 0,
+        "direction": "positive"
+      }
+    ],
+    "extraPaths": [],
+    "cellCounts": [
+      [
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        2
+      ],
+      [
+        1,
+        1,
+        1
+      ]
+    ],
+    "designNotes": [
+      "ZOO 提供横向直线入口。",
+      "FIVE 与 SEE 共享索引 5 的 E，因此该格使用两次。"
+    ],
+    "validation": {
+      "status": "passed",
+      "wordBankVerified": true,
+      "allChoicesComplete": true,
+      "historyCheck": "not_applicable",
+      "extraEnumerationComplete": false
+    }
+  }
+}

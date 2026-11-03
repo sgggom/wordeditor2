@@ -101,6 +101,46 @@
         "重跑1490关中1489关目标数量匹配；第704关21词，参考23词。",
         "101关后4～5档目标占2.6%（参考3.8%），平均拐弯1.18（参考1.30）。"
       ]
+    },
+    {
+      "id": "our-levels-manual-shapes-2026-11-03",
+      "label": "手工造型试拼 · 50关 · 2026-11-03",
+      "levelCount": 50,
+      "format": "editor",
+      "file": "./presets/our-levels-manual-shapes-2026-11-03.json",
+      "gameFile": "./presets/our-levels-manual-shapes-2026-11-03-game.json",
+      "source": {
+        "file": "outputs/20261103-manual-shaped-trial/levels.json",
+        "sha256": "afde00e49e9a88495a01eb8533c5971abae2461a093d12a19cafb23da2128195"
+      },
+      "notes": [
+        "GPT-6.1-sol（medium）手工选择词组、安排字母和路径；程序用于复核。",
+        "按预定掩码拼关：17种尺寸与掩码、46关镂空、4关完整矩形。",
+        "3×3只使用完整棋盘；指定镂空的关卡没有填平缺口回退为完整矩形。",
+        "50关均通过词库、活动格覆盖、使用次数、前10关目标禁重、所有合法消词选择、导入导出检查。",
+        "独立手工试拼，原有关卡保留；目标数量和路径节奏的具体差异见本批审查报告。"
+      ]
+    },
+    {
+      "id": "our-levels-manual-library-shapes-2026-11-03",
+      "label": "造型库手拼 · 第二批50关 · 2026-11-03",
+      "levelCount": 50,
+      "format": "editor",
+      "file": "./presets/our-levels-manual-library-shapes-2026-11-03.json",
+      "gameFile": "./presets/our-levels-manual-library-shapes-2026-11-03-game.json",
+      "source": {
+        "file": "outputs/20261103-manual-shaped-library-50/levels.json",
+        "sha256": "d955a48253732f7c56b53cf874f7a3b3b8af5d1937c0f1c19ab86cdf2dcd823a"
+      },
+      "notes": [
+        "GPT-6.1-sol（medium）子代理手拼，主代理补充部分布局并独立复核；未调用自动字母搜盘或选词器。",
+        "仅采用用户37种造型库：本批19种造型、38关镂空、12关完整矩形，前10关造型不重复。",
+        "优先对齐竞品有效格子数，允许宽高按造型变化；49关格数相同，第38关11格、参考12格。",
+        "3×3只使用完整棋盘；指定镂空的关卡没有填平缺口回退为完整矩形。",
+        "50关均通过词库、活动格覆盖、使用次数、前10关目标禁重、所有合法消词选择、导入导出检查。",
+        "31–50关平均8.65词、参考10词；11关含7–8字母词、参考5关；全批近50关熟词复现18.8%、参考5.4%。",
+        "第二批独立手工试拼，第一批50关及原有关卡全部保留；目标数量和路径节奏的具体差异见本批审查报告。"
+      ]
     }
   ]
 }
