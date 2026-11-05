@@ -6,7 +6,7 @@ import { createGenerationClient } from '../dist/generation-client.js';
 import { parseConfigTableRows, CONFIG_TABLE_HEADERS } from '../dist/config-table.js';
 
 test('all supplied pools have the correct size, unique masks and full base boards', () => {
-  for (const [key, count] of [['3x3',5],['4x3',8],['5x3',19]]) {
+  for (const [key, count] of [['2x2',1],['4x2',1],['5x2',7],['3x3',1],['4x3',8],['5x3',19]]) {
     const [columns, rows] = key.split('x').map(Number);
     const shapes = RANDOM_BOARD_SHAPES[key];
     assert.equal(shapes.length, count);
@@ -23,7 +23,7 @@ test('all supplied pools have the correct size, unique masks and full base board
   assert.equal(randomizeBoardShape(pinned), pinned);
 });
 
-test('size imports use width then height; unsupported pools remain full rectangles', () => {
+test('size imports use width then height and the supplied 37-shape library', () => {
   const defaults = {initialForwardProbability:50,targetDuplicateRange:0,extraDuplicateRange:0,filters:{}};
   for(const size of ['2x2','3x3','4x2','4x3','5x2','5x3','4×3']) {
     const [record] = parseConfigTableRows([CONFIG_TABLE_HEADERS,['001',size,'','','[0]','[0]','[1]']],defaults);
@@ -31,21 +31,18 @@ test('size imports use width then height; unsupported pools remain full rectangl
     assert.equal(record.config.rows, Number(size[2]));
     assert.equal(record.config.randomBoardShape, true);
     assert.deepEqual(record.config.disabledCells, []);
-    if(record.config.rows===2) assert.equal(randomizeBoardShape(record.config),record.config);
+    assert.ok(RANDOM_BOARD_SHAPES[`${record.config.columns}x${record.config.rows}`]);
   }
 });
 
-test('random impossible shape falls back to an actual complete rectangular level', async () => {
+test('an impossible random shape fails without filling its holes', async () => {
   const options = {rows:3,columns:3,disabledCells:[1,2,3,5,6,7,8],randomBoardShape:true,
     fixedWords:['CAT','DOG','BEE'],filters:{}};
-  const level = await generateUntilComplete(createGenerator(['CAT','DOG','BEE'].map(word=>({word}))),options);
-  assert.deepEqual(level.disabledCells, []);
-  assert.equal(level.cells.length,9);
-  assert.ok(level.cells.every(cell=>cell.letter && !cell.disabled));
+  await assert.rejects(generateUntilComplete(createGenerator(['CAT','DOG','BEE'].map(word=>({word}))),options));
   assert.deepEqual(options.disabledCells,[1,2,3,5,6,7,8]);
 });
 
-test('exhausted shaped batch falls back once, preserving all level constraints and cancellation', async () => {
+test('exhausted shaped batches retain the exact mask and remain cancellable', async () => {
   const options={rows:3,columns:4,disabledCells:[0],randomBoardShape:true,fixedWords:['CAT'],filters:{scope:[1]},duplicateCheck:{target:{range:1}}};
   const seen=[], progress=[];
   const level = await generateUntilComplete({generate(config) {
@@ -53,9 +50,8 @@ test('exhausted shaped batch falls back once, preserving all level constraints a
     if(seen.length<3) throw Object.assign(new Error('retry'),{code:'GENERATION_RETRY',attempts:80});
     return {disabledCells:config.disabledCells};
   }}, options,{onProgress:p=>progress.push(p)});
-  assert.deepEqual(level.disabledCells,[]);
-  assert.deepEqual(seen[1],{...options,disabledCells:[],randomBoardShape:false});
-  assert.equal(seen[2],seen[1]);
+  assert.deepEqual(level.disabledCells,[0]);
+  assert.ok(seen.every(value=>value===options));
   assert.deepEqual(progress,[{attempts:80},{attempts:160}]);
   let current=true,calls=0;
   assert.equal(await generateUntilComplete({generate(){calls++;throw Object.assign(new Error('retry'),{code:'GENERATION_RETRY',attempts:80});}},options,

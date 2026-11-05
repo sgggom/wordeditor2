@@ -42,11 +42,11 @@ export function createBatchRunner({ getHistory, generate, save, onSaved = () => 
           }, job.position);
           const planned = queue.slice(jobIndex + 1);
           const source = job.listId ? { listId: job.listId, id: job.id, configId: job.id, position: job.position, ...(job.levelId ? { levelId: job.levelId } : {}) } : null;
-          const prepared = source ? prepareGeneration(history, null, job.config, source, configurations, planned) :
+          const prepared = source || job.config.generationRules ? prepareGeneration(history, null, job.config, source, configurations, planned) :
             { config: { ...job.config,
               reservedTargetWords: reserveFutureTargets(history, { id: job.id, position: job.position }, configurations, planned)
                 .filter(word => !(job.config.fixedWords ?? []).includes(word)),
-              minimumWordLength: job.position === 1 ? 2 : 3 }, duplicateCheck };
+              minimumWordLength: Math.max(job.position === 1 ? 2 : 3, job.config.minimumWordLength ?? 2) }, duplicateCheck };
           const level = await generate(prepared.config, prepared.duplicateCheck, {
             signal,
             onProgress: ({ attempts, workers }) => {
@@ -63,8 +63,10 @@ export function createBatchRunner({ getHistory, generate, save, onSaved = () => 
             const { index, existing } = configDestination(history, source);
             history.splice(index, existing ? 1 : 0, record);
           } else {
-          const replaceIndex = job.position <= history.length ? job.position - 1
-            : history.findLastIndex(previous => previous.level.sourceConfig?.position === job.position);
+          const replaceIndex = job.config.generationRules
+            ? history.findLastIndex(previous => (previous.level.generationRules?.position ?? previous.level.sourceConfig?.position) === job.position)
+            : job.position <= history.length ? job.position - 1
+              : history.findLastIndex(previous => previous.level.sourceConfig?.position === job.position);
           if (replaceIndex >= 0) history[replaceIndex] = record;
           else history.push(record);
           }

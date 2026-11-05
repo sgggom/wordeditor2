@@ -1,8 +1,9 @@
 import { normalizeDisabledCells } from "./board-shape.js";
 import { normalizeFixedWords, validateFixedWords, normalizeFixedLayout, normalizeFixedWordExemptions } from "./fixed-words.js";
+import { validateGenerationPolicy, validateCurrentRuleConfigs } from './generation-policy.js';
 
 export const CONFIG_LIST_STORAGE_KEY = "fangge.level-config-list.v1";
-export const MAX_CONFIG_ROWS = 1500;
+export const MAX_CONFIG_ROWS = 2000;
 export const CONFIG_NUMBER_FIELDS = {
   rows: { label: "行数", min: 2, max: 5 },
   columns: { label: "列数", min: 2, max: 5 },
@@ -17,7 +18,7 @@ export const CONFIG_FILTER_OPTIONS = {
 
 export function createEmptyLevelConfig(current, previous = current) {
   return { ...structuredClone(current), rows: 3, columns: 3, disabledCells: [],
-    fixedWords: [], fixedWordExemptions: [], fixedLayout: null,
+    fixedWords: [], fixedWordExemptions: [], fixedLayout: null, generationRules: null,
     filters: structuredClone(previous.filters ?? {}) };
 }
 
@@ -69,6 +70,7 @@ export function validateLevelConfig(config) {
     const allowed = CONFIG_FILTER_OPTIONS[key];
     if (!allowed || !Array.isArray(values) || values.some(value => !allowed.includes(value))) throw new Error("词库筛选值无效。");
   }
+  validateGenerationPolicy(config);
   return config;
 }
 
@@ -101,6 +103,7 @@ export function validateConfigList(records) {
       throw new Error(`第 ${index + 1} 关：${error.message}`);
     }
   });
+  validateCurrentRuleConfigs(records);
   return records;
 }
 
@@ -182,13 +185,43 @@ export function saveConfigList(records, storage = localStorage, presetId) {
 export function installConfigPreset(preset, storage = localStorage) {
   if (!preset || typeof preset.id !== "string" || !preset.id) throw new Error("参考配置标识无效。");
   const library = readConfigLists(storage);
-  if (library?.lists.some(list => list.presetId === preset.id)) return false;
+  const installed = library?.lists.find(list => list.presetId === preset.id);
+  if (installed) {
+    if (!preset.initialWordsRevision || installed.initialWordsRevision === preset.initialWordsRevision) return false;
+    validateConfigList(preset.records);
+    const sourceById = new Map(preset.records.map(record => [record.id, record]));
+    const replacements = new Map((preset.initialWordReplacements ?? []).map(change => [change.position, change.previousWords]));
+    const wordsByPosition = new Map(installed.records.map((record, index) =>
+      [record.config.generationRules?.position ?? index + 1, normalizeFixedWords(record.config.fixedWords)]));
+    for (const record of installed.records) {
+      const source = sourceById.get(record.id);
+      if (!source || record.position !== source.position) continue;
+      const previousWords = record.config.fixedWords?.length ? replacements.get(source.position) : [];
+      if (!previousWords) continue;
+      // Only fill a stock, untouched row. A custom word in a nearby level also takes precedence.
+      if (JSON.stringify(record.config) !== JSON.stringify({ ...source.config, fixedWords: previousWords })) continue;
+      const words = source.config.fixedWords;
+      let conflict = false;
+      for (let pos = source.position - 10; pos <= source.position + 10; pos++) {
+        if (pos !== source.position && wordsByPosition.get(pos)?.some(word => words.includes(word))) {
+          conflict = true;
+          break;
+        }
+      }
+      if (!conflict) record.config.fixedWords = [...words];
+    }
+    installed.initialWordsRevision = preset.initialWordsRevision;
+    writeConfigLists(library, storage);
+    return true;
+  }
   validateConfigList(preset.records);
-  let name = "参考竞品配置", number = 2;
-  while (library?.lists.some(list => list.name === name)) name = `参考竞品配置 ${number++}`;
+  const baseName = typeof preset.label === 'string' ? validateConfigListName(preset.label) : '参考竞品配置';
+  let name = baseName, number = 2;
+  while (library?.lists.some(list => list.name === name)) name = `${baseName} ${number++}`;
   const list = { id: crypto.randomUUID(), name, records: structuredClone(preset.records), presetId: preset.id,
-    ...(typeof preset.openingWordsPresetId === "string" ? { openingWordsPresetId: preset.openingWordsPresetId } : {}) };
-  writeConfigLists({ version: 2, activeListId: list.id, lists: [...(library?.lists ?? []), list] }, storage);
+    ...(typeof preset.openingWordsPresetId === "string" ? { openingWordsPresetId: preset.openingWordsPresetId } : {}),
+    ...(preset.initialWordsRevision ? { initialWordsRevision: preset.initialWordsRevision } : {}) };
+  writeConfigLists({ version: 2, activeListId: preset.activate === false && library ? library.activeListId : list.id, lists: [...(library?.lists ?? []), list] }, storage);
   return true;
 }
 

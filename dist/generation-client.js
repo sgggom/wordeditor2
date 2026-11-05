@@ -1,5 +1,6 @@
 import { randomizeBoardShape } from './board-shape.js';
 import { EXTRA_DUPLICATE_ATTEMPT_LIMIT, acceptExtraDuplicateFallback, findDuplicateWords } from './level-rules.js';
+import { validateGenerationPolicy } from './generation-policy.js';
 
 export function detectedProcessorCount(cores = globalThis.navigator?.hardwareConcurrency) {
   return Number.isSafeInteger(cores) && cores > 0 ? cores : 1;
@@ -96,6 +97,8 @@ export function createGenerationClient({ workerCount = defaultGenerationWorkers(
     generate(config, duplicateCheck, { signal, onProgress = () => {} }) {
       if (pending) return Promise.reject(new Error("生成器正在处理上一关。"));
       if (signal.aborted) return Promise.resolve(null);
+      try { validateGenerationPolicy({...config,duplicateCheck}); }
+      catch(error) { return Promise.reject(error); }
       config = randomizeBoardShape(config);
       return new Promise((resolve, reject) => {
         const run = { id: ++requestId, signal, onProgress, resolve, reject, duplicateCheck,

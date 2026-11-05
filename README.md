@@ -17,6 +17,35 @@ npm run check
 npm test
 ```
 
+## 当前2000关规则生成
+
+打开“关卡配置列表”，选择“当前规则 · 2000关 · 三成造型 · 长词与路径节奏优化”，再选择生成范围。已有配置列表保留；新规则列表独立加入。每10关第1、3、7关镂空，其余7关完整矩形；首关固定CAT／ALL的T型计入第一组3关。镂空造型前10关去重，最后500关循环对应参考配置。
+
+生成器始终保留指定禁用格，失败不会改成完整盘。目标使用候选白名单、至少3字母、1～4档，禁止直接加S的目标词对；完整游戏词库用于额外词枚举。程序在有限候选中比较词量、词长、生僻度、转弯和入口分布；这些体验指标保留真实偏差，不保证每项与参考精确一致。
+
+路径按参考阶段匹配直线、1拐、2拐、3拐及以上的分布，避免每个词都向平均拐弯数靠拢。词长细分3～8+字母，优先为参考长词留出摆放空间；每加入一个目标词后重新评估剩余分布。最多比较32个安全候选盘，报告实际词量、词长与拐弯分布的偏差。
+
+也可直接生成独立文件：
+
+```sh
+node scripts/generate-current-rules.mjs --from 1 --to 20 --seed 20261104 --out ../outputs/current-rule-trial
+```
+
+中段续做可加 `--history 历史文件.json`，支持draft数组、编辑器records和游戏books/daily。输出游戏文件、可编辑数据、每20关的草稿检查点和质量报告；报告会标明前序历史是否完整。原50关预设保持不变。
+
+### 先摆核心词，再挑选成品
+
+模型先写出每关的核心词及其索引路径，示例见 `../outputs/20261105-anchor-pool-trial/anchors.json`。在本目录执行以下命令可生成候选和导出复选结果。
+
+```sh
+node scripts/generate-anchor-candidates.mjs pool ../outputs/20261105-anchor-pool-trial/anchors.json ../outputs/20261105-anchor-pool-trial/results
+node scripts/generate-anchor-candidates.mjs pick ../outputs/20261105-anchor-pool-trial/anchors.json ../outputs/20261105-anchor-pool-trial/results ../outputs/20261105-anchor-pool-trial/picks.json
+```
+
+每关默认收集100张不同且可通关的棋盘，核心词位置固定。先看 `word-options.txt` 里的补词，再从 `pool.json` 查看入围棋盘的路径和候选ID。将每关选中的ID与理由写入 `picks.json`，运行 `pick` 会合并实际选择，复查前后10关目标词、重复整盘、核心路径、额外词和通关安全，输出 `selected-game.json`。
+
+固定词占满有效格时收集一张棋盘。其余关受搜索次数与时间上限约束，候选池记录实际数量和停止原因。任务中的 `history` 路径相对于任务文件，接受带原始关号的游戏导出；已知历史参与查重，缺少的前序关号列在结果中。
+
 ## 界面组成
 
 左侧顶部表单显示当前关卡或已载入配置的生成参数：尺寸、正向概率、两项查重范围、目标数量、固定词和词库筛选，下方是单词表、棋盘和关卡统计。右侧关卡列表独占整列，从顶部导航下方延伸到底部，列表独立滚动。

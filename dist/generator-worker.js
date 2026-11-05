@@ -5,12 +5,15 @@ let activeRun;
 
 function loadGenerator() {
   if (!generatorPromise) {
-    generatorPromise = Promise.all(["required-words.json", "extra-words.json", "guide-words.json"].map(async file => {
+    generatorPromise = Promise.all(["required-words.json", "extra-words.json", "guide-words.json", "candidate-words.json"].map(async file => {
       const response = await fetch(new URL(`./data/${file}`, import.meta.url));
       if (!response.ok) throw new Error("词库加载失败，请重试。");
       return response.json();
     }))
-      .then(([normalRecords, onlyExtraRecords, guideRecords]) => createGenerator([...normalRecords, ...guideRecords], onlyExtraRecords))
+      .then(([normalRecords, onlyExtraRecords, guideRecords, candidates]) => ({
+        ordinary:createGenerator([...normalRecords,...guideRecords],onlyExtraRecords),
+        current:createGenerator([...normalRecords,...guideRecords],onlyExtraRecords,{targetWordWhitelist:candidates.words.map(([word])=>word)}),
+      }))
       .catch(error => {
         generatorPromise = null;
         throw error;
@@ -28,10 +31,13 @@ self.onmessage = async ({ data }) => {
   const run = { requestId };
   activeRun = run;
   try {
-    const generator = await loadGenerator();
+    const generators = await loadGenerator();
+    const generator = data.generationRules ? generators.current : generators.ordinary;
     const options = { rows, columns, disabledCells, randomBoardShape: data.randomBoardShape, initialForwardProbability,
       minimumEmotionScore: 0, minimumWordLength: data.minimumWordLength, reservedTargetWords: data.reservedTargetWords,
-      desiredTargetCount: data.desiredTargetCount,
+      desiredTargetCount: data.desiredTargetCount, generationRules: data.generationRules,
+      excludedBoards: data.excludedBoards,
+      targetDuplicateRange: data.targetDuplicateRange, extraDuplicateRange: data.extraDuplicateRange,
       filters, fixedWords, fixedLayout, fixedWordExemptions, duplicateCheck };
     const level = await generateUntilComplete(generator, options, {
       isCurrent: () => activeRun === run,

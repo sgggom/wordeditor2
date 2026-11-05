@@ -130,6 +130,8 @@ import { setupPlaytest } from "./playtest-dialog.js";
   let configuredFixedWords = [];
   let configuredFixedWordExemptions = [];
   let configuredFixedLayout = null;
+  let configuredGenerationRules = null;
+  let configuredMinimumWordLength;
   let configuredDuplicateRanges = Object.fromEntries(Object.entries(DUPLICATE_RANGE_STORAGE_KEYS)
     .map(([kind, key]) => [kind, readDuplicateRange(key)]));
   let newLevelDefaults = { ...defaultGenerationConfig(), ...size,
@@ -259,7 +261,7 @@ import { setupPlaytest } from "./playtest-dialog.js";
       if (draft) restoreEditor(draft);
       else if (savedLevels.length) openSavedLevel(savedLevels[0].id);
       else applyEditorConfig({ ...editorSnapshot().config, rows: 3, columns: 3, disabledCells: [],
-        fixedWords: [], fixedLayout: null, fixedWordExemptions: [] });
+        fixedWords: [], fixedLayout: null, fixedWordExemptions: [], generationRules: null });
       savedLevelListDirty = true;
       fileManager?.refresh();
       render();
@@ -612,6 +614,8 @@ import { setupPlaytest } from "./playtest-dialog.js";
     configuredFixedWords = normalizeFixedWords(level.fixedWords ?? []);
     configuredFixedWordExemptions = normalizeFixedWordExemptions(level);
     configuredFixedLayout = structuredClone(level.fixedLayout ?? null);
+    configuredGenerationRules = structuredClone(level.generationRules ?? null);
+    configuredMinimumWordLength = level.minimumWordLength;
     configuredDuplicateRanges = Object.fromEntries(Object.keys(duplicateRangeInputs).map(kind =>
       [kind, level.duplicateCheck?.[kind]?.range ?? level.duplicateCheck?.range ?? configuredDuplicateRanges[kind]]));
     initialForwardInput.value = String(configuredInitialForwardProbability);
@@ -1639,6 +1643,8 @@ import { setupPlaytest } from "./playtest-dialog.js";
     configuredFixedWords = normalizeFixedWords(config.fixedWords ?? []);
     configuredFixedWordExemptions = normalizeFixedWordExemptions(config);
     configuredFixedLayout = structuredClone(config.fixedLayout ?? null);
+    configuredGenerationRules = structuredClone(config.generationRules ?? null);
+    configuredMinimumWordLength = config.minimumWordLength;
     initialForwardInput.value = String(configuredInitialForwardProbability);
     for (const [kind, input] of Object.entries(duplicateRangeInputs)) input.value = String(configuredDuplicateRanges[kind]);
     restoreFilterInputs();
@@ -1721,6 +1727,7 @@ import { setupPlaytest } from "./playtest-dialog.js";
       config: { ...size, initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters,
         desiredTargetCount: configuredDesiredTargetCount,
         fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout, fixedWordExemptions: configuredFixedWordExemptions,
+        generationRules: configuredGenerationRules, minimumWordLength: configuredMinimumWordLength,
         targetDuplicateRange: configuredDuplicateRanges.target, extraDuplicateRange: configuredDuplicateRanges.extra } };
   }
   function rememberEditor() {
@@ -1892,6 +1899,7 @@ import { setupPlaytest } from "./playtest-dialog.js";
     return structuredClone({
       ...size,
       desiredTargetCount: configuredDesiredTargetCount,
+      generationRules: configuredGenerationRules, minimumWordLength: configuredMinimumWordLength,
       initialForwardProbability: configuredInitialForwardProbability, filters: configuredFilters, fixedWords: configuredFixedWords, fixedLayout: configuredFixedLayout,
       fixedWordExemptions: configuredFixedWordExemptions,
       minimumEmotionScore: 0,

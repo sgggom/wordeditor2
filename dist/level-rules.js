@@ -59,6 +59,9 @@ export function setTargetWord(level, word, selected) {
   if (wasSelected === selected) return level;
   const allWords = [...level.targetWords, ...level.extraWords];
   const targetNames = new Set(level.targetWords.map(entry => entry.word));
+  if (selected && (targetNames.has(word+'S') || (word.endsWith('S') && targetNames.has(word.slice(0,-1))))) {
+    throw new Error('同关目标不能同时包含直接加S的词对。');
+  }
   if (selected) targetNames.add(word);
   else targetNames.delete(word);
   const targetWords = selected ? [...level.targetWords, candidate] : level.targetWords.filter(entry => entry.word !== word);
@@ -134,6 +137,25 @@ export function reserveFutureTargets(records, source, configs, plannedConfigs = 
 }
 
 export function prepareGeneration(records, activeId, config, source = null, configs = [], plannedConfigs = []) {
+  if (config.generationRules) {
+    const position = config.generationRules.position;
+    if (source && source.position !== position) throw new Error('当前规则的配置关号与生成位置不一致。');
+    const indexed = records.map((record,index)=>({...record,level:{...record.level,sourceConfig:{...record.level.sourceConfig,
+      position:record.level.generationRules?.position ?? record.level.sourceConfig?.position ?? index+1}}}));
+    const preceding = indexed.filter(record=>record.level.sourceConfig.position>=position-10&&record.level.sourceConfig.position<position);
+    const duplicateCheck = createDuplicateCheck(preceding,{target:10,extra:0},position);
+    const future = indexed.filter(record=>record.level.sourceConfig.position>position&&record.level.sourceConfig.position<=position+10)
+      .flatMap(record=>(record.level.targetWords??[]).map(entry=>entry.word));
+    // A range can start in the middle of the list. Leave its earlier, ungenerated neighbors their core words too.
+    const nearbyFixed = futureFixedTargetWords(configs, position, [], (record, fallbackPosition) =>
+      Math.abs((record.config.generationRules?.position ?? fallbackPosition) - position));
+    const reservedTargetWords = [...new Set([...(config.reservedTargetWords??[]),...future,...nearbyFixed])];
+    const excludedBoards = indexed.filter(record=>record.level.sourceConfig.position!==position).flatMap(({level})=>{
+      if (!level.cells?.length) return [];
+      return [Array.from({length:level.rows},(_,row)=>level.cells.slice(row*level.columns,(row+1)*level.columns).map(cell=>cell.letter||'-').join('')).join(',')];
+    });
+    return {config:{...config,minimumWordLength:3,reservedTargetWords,excludedBoards},duplicateCheck};
+  }
   const context = source ? configDestination(records, source) : null;
   const { position, history } = context
     ? { position: source.position, history: records.slice(0, context.index) }
@@ -141,7 +163,7 @@ export function prepareGeneration(records, activeId, config, source = null, conf
   const duplicateCheck = createDuplicateCheck(history, { target: config.targetDuplicateRange, extra: config.extraDuplicateRange });
   const reservedTargetWords = source ? reserveFutureTargets(records, source, configs, plannedConfigs)
     .filter(word => !(config.fixedWords ?? []).includes(word)) : [];
-  return { config: { ...config, reservedTargetWords, minimumWordLength: position === 1 ? 2 : 3 }, duplicateCheck };
+  return { config: { ...config, reservedTargetWords, minimumWordLength: Math.max(position === 1 ? 2 : 3, config.minimumWordLength ?? 2) }, duplicateCheck };
 }
 
 export function resolveConfigSource(source, lists) {

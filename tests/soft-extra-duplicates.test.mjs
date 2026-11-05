@@ -58,16 +58,17 @@ test('zero-duplicate results win before the threshold; no valid target candidate
   }),null);
 });
 
-test('failed random shape does not supply a candidate after switching to the base rectangle', async () => {
+test('extra-word retry fallback preserves the original shape and best candidate', async () => {
   let calls=0;
   const options={randomBoardShape:true,disabledCells:[0]};
   const level=await generateUntilComplete({generate(config){
     if(++calls===1)throw retry(80,{...candidate('shape',['AAA']),disabledCells:[0]},['AAA']);
-    assert.deepEqual(config.disabledCells,[]);
-    throw retry(100001,{...candidate('rectangle',['AAA','BBB']),disabledCells:[]},['AAA','BBB']);
+    assert.deepEqual(config.disabledCells,[0]);
+    throw retry(100001,{...candidate('another-shape-layout',['AAA','BBB']),disabledCells:[0]},['AAA','BBB']);
   }},options);
-  assert.equal(level.name,'rectangle');
-  assert.equal(level.extraDuplicateFallback.duplicateCount,2);
+  assert.equal(level.name,'shape');
+  assert.deepEqual(level.disabledCells,[0]);
+  assert.equal(level.extraDuplicateFallback.duplicateCount,1);
 });
 
 test('parallel workers combine attempts, compare candidates, ignore target duplicates, and reset per level', async () => {

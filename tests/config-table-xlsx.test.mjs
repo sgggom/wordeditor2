@@ -62,13 +62,13 @@ test('invalid Excel data and extra columns are rejected with spreadsheet row num
 
 test('formatted trailing rows do not count as levels, but nonempty excess rows are rejected', () => {
   const file = editTemplate(sheet => {
-    sheet.G1731 = {t:'z',z:'@'};
-    sheet['!ref'] = 'A1:H1731';
+    sheet.G2731 = {t:'z',z:'@'};
+    sheet['!ref'] = 'A1:H2731';
   });
   assert.equal(parseConfigXlsx(file,defaults).length,1);
   assert.throws(()=>parseConfigXlsx(editTemplate(sheet=>{
-    sheet.A1502 = {t:'s',v:'extra'}; sheet['!ref']='A1:G1502';
-  }), defaults),/1500/);
+    sheet.A2002 = {t:'s',v:'extra'}; sheet['!ref']='A1:G2002';
+  }), defaults),/2000/);
 });
 
 test('the supplied optional target duplicate column overrides the editor default', () => {

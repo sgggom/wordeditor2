@@ -123,7 +123,7 @@
     },
     {
       "id": "our-levels-manual-library-shapes-2026-11-03",
-      "label": "造型库手拼 · 第二批50关 · 2026-11-03",
+      "label": "造型库手拼 · 第二批50关 · 2026-11-03 · 当前基础",
       "levelCount": 50,
       "format": "editor",
       "file": "./presets/our-levels-manual-library-shapes-2026-11-03.json",
@@ -133,6 +133,7 @@
         "sha256": "d955a48253732f7c56b53cf874f7a3b3b8af5d1937c0f1c19ab86cdf2dcd823a"
       },
       "notes": [
+        "2026-11-04 用户选定为当前关卡基础，后续调整与续拼以本批1～50关为起点。",
         "GPT-6.1-sol（medium）子代理手拼，主代理补充部分布局并独立复核；未调用自动字母搜盘或选词器。",
         "仅采用用户37种造型库：本批19种造型、38关镂空、12关完整矩形，前10关造型不重复。",
         "优先对齐竞品有效格子数，允许宽高按造型变化；49关格数相同，第38关11格、参考12格。",
@@ -161,6 +162,96 @@
         "四段按原内容合并用于对照；棋盘、词、路径、次数及原有关卡设置保留，合集编号为1～200。",
         "200关均通过单关通关安全及游戏导出重新读取校验；查重记录仍属于各原始段。",
         "原来的四个预设与本地版本记录保持不变。"
+      ]
+    },
+    {
+      "id": "our-levels-current-rules-trial-50-2026-11-04",
+      "label": "新生成器试跑 · 前50关 · 2026-11-04",
+      "levelCount": 50,
+      "format": "editor",
+      "file": "./presets/our-levels-current-rules-trial-50-2026-11-04.json",
+      "gameFile": "./presets/our-levels-current-rules-trial-50-2026-11-04-game.json",
+      "source": {
+        "file": "outputs/20261104-current-rules-trial-50/editor.json",
+        "sha256": "107754b892d32eea7141f99d8e14dc9993f37b45314c86fbce9d032150f26483"
+      },
+      "notes": [
+        "新版工具按当前规则独立生成前50关，seed 20261104；保留原50关基础和浏览器编辑关卡。",
+        "50关通过固定造型、词库、覆盖、次数、前后10关查重、全部合法选择通关和额外词完整枚举。",
+        "25关镂空、25关完整；8关含顶行横向答案（包含指定首关）。",
+        "46关词量对齐；第23、31、33关各少1词，第35关少3词。节奏指标仍有软目标偏差。"
+      ]
+    },
+    {
+      "id": "our-levels-three-in-ten-50-2026-11-04",
+      "label": "造型投放调整 · 每10关3关 · 前50关 · 2026-11-04",
+      "levelCount": 50,
+      "format": "editor",
+      "file": "./presets/our-levels-three-in-ten-50-2026-11-04.json",
+      "gameFile": "./presets/our-levels-three-in-ten-50-2026-11-04-game.json",
+      "source": {
+        "file": "outputs/20261104-three-in-ten-shapes/trial-50/editor.json",
+        "sha256": "4ebc0f7dfdc4acdc779fecb0067006f6edee3b3ef7b2d1d382783bf319f6353f"
+      },
+      "notes": [
+        "按用户新要求，每10关第1、3、7关镂空，其余7关完整矩形；首关T型计入3关。",
+        "前50关已重新生成：15关镂空、35关完整，逐组通过投放检查。",
+        "50关通过造型、词库、覆盖、次数、前10关查重、全部合法选择通关和额外词完整枚举。",
+        "47关词量对齐；第31关少1词、第33关少3词、第36关少1词。原50关基础及上一轮试跑保留。"
+      ]
+    },
+    {
+      "id": "our-levels-rhythm-optimized-50-2026-11-04",
+      "label": "长词与路径优化 · 前50关 · 2026-11-04",
+      "levelCount": 50,
+      "format": "editor",
+      "file": "./presets/our-levels-rhythm-optimized-50-2026-11-04.json",
+      "gameFile": "./presets/our-levels-rhythm-optimized-50-2026-11-04-game.json",
+      "source": {
+        "file": "outputs/20261104-rhythm-optimized-50/final-50/editor.json",
+        "sha256": "3167f1a3b2357f9a9c087241d1777ad4fd601ecc94e8d0741da1ee72cc901e7b"
+      },
+      "notes": [
+        "按用户新要求，每10关第1、3、7关镂空，其余7关完整矩形；首关T型计入3关。",
+        "造型与上一轮逐关保持一致；优化长词与直线、多拐路径分布。15关镂空、35关完整。",
+        "50关通过造型、词库、覆盖、次数、前10关查重、全部合法选择通关和额外词完整枚举。",
+        "49关词量对齐；第33关少3词。原50关基础及上一轮试跑保留。"
+      ]
+    },
+    {
+      "id": "our-levels-variety-selected-2000-2026-11-05",
+      "label": "体验变化筛选 · 2000关 · 2026-11-05",
+      "levelCount": 2000,
+      "format": "game",
+      "file": "./presets/our-levels-variety-selected-2000-2026-11-05.json",
+      "gameFile": "./presets/our-levels-variety-selected-2000-2026-11-05.json",
+      "source": {
+        "file": "outputs/20261105-selected-variety-2000/game.json",
+        "sha256": "ce7b725414d4413296c7df0415f00a948c853e146b9aeb76e67df7963705d406"
+      },
+      "notes": [
+        "从每关100个候选中联动筛选，首关为固定T型。",
+        "脚本联动选择整套关卡，模型复核开局、转折及异常关，并指定14处候选。",
+        "整体通过造型、词库、额外词、全部合法消词选择、前10关目标禁重、全局棋盘去重及游戏导出复核。",
+        "目标词数对齐 1819 关，差异详见筛选报告。"
+      ]
+    },
+    {
+      "id": "our-levels-direction-rarity-2000-2026-11-05",
+      "label": "顺向与生僻度重筛 · 2000关 · 2026-11-05",
+      "levelCount": 2000,
+      "format": "game",
+      "file": "./presets/our-levels-direction-rarity-2000-2026-11-05.json",
+      "gameFile": "./presets/our-levels-direction-rarity-2000-2026-11-05.json",
+      "source": {
+        "file": "outputs/20261105-direction-rarity-selected-2000/game.json",
+        "sha256": "8891b3c191f27f7c5a39e569a82b295d866ddd5ae13d185319d7b7d3f692ecd4"
+      },
+      "notes": [
+        "从原候选及保持原造型的朝向变体中重筛，首关为固定T型。",
+        "优先匹配竞品各关段的顺向与生僻词比例，联动检查重复词、词量及布局变化。",
+        "整体通过造型、词库、额外词、全部合法消词选择、前10关目标禁重、全局棋盘去重及游戏导出复核。",
+        "目标词数对齐 1812 关，差异详见筛选报告。"
       ]
     }
   ]

@@ -4,6 +4,7 @@ import { resizeDisabledCells } from "./board-shape.js";
 import { CONFIG_NUMBER_FIELDS, CONFIG_FILTER_OPTIONS, MAX_CONFIG_ROWS, readConfigLists, migrateConfigLists, changeConfigLists, saveConfigList,
   patchLevelConfigs, validateConfigNumber, validateLevelConfig, installConfigPreset, configJobsInRange, previousConfigWordUsage, createEmptyLevelConfig, defaultGenerationConfig, validateConfigList } from "./level-config.js";
 import { REFERENCE_CONFIG_ID } from "./reference-config.js";
+import { CURRENT_CONFIG_PRESET_ID, CURRENT_INITIAL_WORDS_REVISION, validateCurrentRuleConfigs } from './generation-policy.js';
 import { formatBatchState } from "./batch-runner.js";
 import { defaultGenerationWorkers, detectedProcessorCount } from "./generation-client.js";
 import { mountFixedBoardEditor, createConfigBoardPreview } from "./fixed-board-editor.js";
@@ -164,12 +165,23 @@ export function setupConfigList({ getConfig, loadConfig, runConfigs, stopRun, ge
     openButton.setAttribute("aria-busy", "true");
     try {
       library = migrateConfigLists();
+      const hadLibrary = Boolean(library);
       if (!library) {
         const response = await fetch(new URL("./data/list0-configs.json", import.meta.url));
         if (!response.ok) throw new Error("参考配置加载失败，请刷新重试。");
         const preset = await response.json();
         if (preset.id !== REFERENCE_CONFIG_ID || preset.records?.length !== 1500) throw new Error("参考配置数据不完整。");
         installConfigPreset({ ...preset, records: configureOpeningWords(preset.records), openingWordsPresetId: OPENING_WORDS_PRESET_ID });
+        library = readConfigLists();
+      }
+      const currentPreset = library.lists.find(list => list.presetId === CURRENT_CONFIG_PRESET_ID);
+      if (currentPreset?.initialWordsRevision !== CURRENT_INITIAL_WORDS_REVISION) {
+        const response = await fetch(new URL('./data/current-rule-configs.json',import.meta.url));
+        if (!response.ok) throw new Error('当前规则配置加载失败，请刷新重试。');
+        const preset = await response.json();
+        if (preset.id !== CURRENT_CONFIG_PRESET_ID || preset.initialWordsRevision !== CURRENT_INITIAL_WORDS_REVISION) throw new Error('当前规则配置版本无效。');
+        validateCurrentRuleConfigs(preset.records,{complete:true});
+        installConfigPreset({...preset,activate:!hadLibrary});
         library = readConfigLists();
       }
       activeListId = library.activeListId;

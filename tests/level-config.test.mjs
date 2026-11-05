@@ -83,10 +83,10 @@ test("invalid rows and storage failures cannot be reported as saved", () => {
   assert.throws(() => saveConfigList(records(), { setItem: () => { throw new Error("Storage unavailable"); } }), /Storage unavailable/);
 });
 
-test("the configuration list supports all 1500 reference levels", () => {
-  const full = Array.from({ length: 1500 }, (_, index) => ({ id: `reference-${index + 1}`, config: config() }));
-  assert.equal(validateConfigList(full).length, 1500);
-  assert.throws(() => validateConfigList([...full, { id: "reference-1501", config: config() }]), /1500/);
+test("the configuration list supports all 2000 planned levels", () => {
+  const full = Array.from({ length: 2000 }, (_, index) => ({ id: `reference-${index + 1}`, config: config() }));
+  assert.equal(validateConfigList(full).length, 2000);
+  assert.throws(() => validateConfigList([...full, { id: "reference-2001", config: config() }]), /2000/);
 });
 
 test("generation ranges include both endpoints and preserve the displayed configuration numbers", () => {
