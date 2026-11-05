@@ -163,4 +163,4 @@ node scripts/generate-anchor-candidates.mjs pick ../outputs/20261105-anchor-pool
 
 快照路径：`dist/data/versions/YYYY-MM-DD-vN/`，包含完整关卡、游戏导出和当时配置列表。历史登记在 `dist/data/local-versions.json`。2026-10-28-v1 是确认保留的 20 关（001～020），参考竞品预设与我们的版本独立保存。
 
-内置预设索引只列出竞品“Word Tiles · list 0”和当前的“三字母词库精简 · 2000关 · 2026-11-05”。当前预设支持直接下载游戏文件，历史预设文件保存在 `dist/data/presets/` 供对照。
+内置预设索引只列出竞品“Word Tiles · list 0”和当前的“三字母词库精简 · 2000关 · 2026-11-05”。当前预设支持直接下载游戏文件，旧预设可从 Git 历史找回。
