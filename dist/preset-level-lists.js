@@ -204,7 +204,14 @@ export function setupPresetLevelLists({ getView, getFiles, onSelect, onBrowser, 
     if (presets.length) return;
     try {
       const [reference, history] = await Promise.all([read('preset-level-lists.json'), read('local-versions.json')]);
-      presets = [...history.versions.map(version => ({ ...version, file: version.levels, format: 'editor' })), ...(reference.presets ?? []), ...reference.referenceLists];
+      const ourPresets = [
+        ...history.versions.map(version => ({ ...version, file: version.levels, format: 'editor' })),
+        ...(reference.presets ?? []),
+      ];
+      const visiblePresets = reference.activePresetId
+        ? ourPresets.filter(preset => preset.id === reference.activePresetId)
+        : ourPresets;
+      presets = [...visiblePresets, ...reference.referenceLists];
       refresh();
     } catch (problem) { failure(problem); }
   });
