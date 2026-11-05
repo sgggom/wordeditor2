@@ -61,9 +61,9 @@ test("checking ignores letter case but compares only the same word category", ()
 });
 
 test("an exhausted target pool fails immediately while extra duplicates keep retrying", async () => {
-  const simple = createGenerator([{ word: "ABCDEF" }], [{ word: "ABC" }]);
+  const simple = createGenerator([{ word: "ABCDEF" }], [{ word: "FEDCBA" }]);
   for (const kind of ["target", "extra"]) {
-    const duplicateCheck = createDuplicateCheck([historyEntry(1, ["ABCDEF"], ["ABC"])],
+    const duplicateCheck = createDuplicateCheck([historyEntry(1, ["ABCDEF"], ["FEDCBA"])],
       { target: 0, extra: 0, [kind]: 20 });
     const options = { rows: 2, columns: 3, targetCount: 1, duplicateCheck, random: () => 0 };
     if (kind === "target") {
@@ -85,12 +85,12 @@ test("an exhausted target pool fails immediately while extra duplicates keep ret
 });
 
 test("generation allows cross-category repeats and repeats in the independently disabled category", () => {
-  const simple = createGenerator([{ word: "ABCDEF" }], [{ word: "ABC" }]);
+  const simple = createGenerator([{ word: "ABCDEF" }], [{ word: "FEDCBA" }]);
   const options = { rows: 2, columns: 3, targetCount: 1, random: () => 0 };
   const cases = [
-    { history: historyEntry(1, ["ABC"], ["ABCDEF"]), ranges: { target: 20, extra: 20 } },
+    { history: historyEntry(1, ["FEDCBA"], ["ABCDEF"]), ranges: { target: 20, extra: 20 } },
     { history: historyEntry(1, ["ABCDEF"], []), ranges: { target: 0, extra: 20 } },
-    { history: historyEntry(1, [], ["ABC"]), ranges: { target: 20, extra: 0 } },
+    { history: historyEntry(1, [], ["FEDCBA"]), ranges: { target: 20, extra: 0 } },
   ];
   for (const { history, ranges } of cases) {
     const duplicateCheck = createDuplicateCheck([history], ranges);

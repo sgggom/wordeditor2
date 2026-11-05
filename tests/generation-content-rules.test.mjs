@@ -33,7 +33,7 @@ test("initial rarity participates in placement and coverage checks without broad
 
 test("negative and missing weighted emotion do not trigger generation retries", async () => {
   const options = { rows: 2, columns: 3, minimumEmotionScore: 0, random: () => 0 };
-  const generator = emotion => createGenerator([{ word: "ABCDEF", rarityLevel: 1, emotion }], [{ word: "ABC", emotion: -2 }]);
+  const generator = emotion => createGenerator([{ word: "ABCDEF", rarityLevel: 1, emotion }], [{ word: "FEDCBA", emotion: -2 }]);
   let retries = 0;
   const negative = await generateUntilComplete(generator(0), options, {
     onProgress: () => { retries++; },

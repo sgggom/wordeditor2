@@ -967,7 +967,7 @@ import { setupPlaytest } from "./playtest-dialog.js";
         ["次数分布", distribution(usage.distribution, "次")],
       ]],
       ["候选与额外", [
-        ["可连接单词总数", words.total], ["可作目标的候选词", words.eligibleCandidateCount],
+        ["目标与额外词总数", words.total], ["可作目标的候选词", words.eligibleCandidateCount],
         ["目标词", share(words.targetCount, words.targetRatio)],
         ["额外词", share(words.extraCount, words.extraRatio)], ["其中仅额外", words.onlyExtraCount],
       ]],
@@ -1069,7 +1069,8 @@ import { setupPlaytest } from "./playtest-dialog.js";
     rowLabels.replaceChildren(makeLabels(rows));
     columnLabels.replaceChildren(makeLabels(columns));
 
-    const selected = [...(level?.targetWords ?? []), ...(level?.extraWords ?? [])].find(entry => entry.word === selectedWord);
+    const selected = [...(level?.targetWords ?? []), ...(level?.extraWords ?? []), ...(level?.candidateWords ?? [])]
+      .find(entry => entry.word === selectedWord);
     const steps = new Map(selected?.path.map((cell, index) => [cell, index + 1]) ?? []);
 
     const fragment = document.createDocumentFragment();

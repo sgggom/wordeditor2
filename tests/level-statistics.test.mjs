@@ -148,7 +148,8 @@ test("all legal paths are counted, but representatives never replace assigned pa
   assert.equal(level.statistics.board.duplicateLetterCellRatio, 5 / 6);
   assert.equal(level.statistics.vocabulary.unknownRarityCount, 1);
   assert.equal(level.statistics.emotion.total, null);
-  assert.equal(level.statistics.words.extraRatio, 0.5);
+  assert.equal(level.statistics.words.extraRatio, 0);
+  assert.ok(level.foundWords.some(entry => entry.word === "AAA"));
 });
 
 test("emotion totals preserve negative and zero values; absent metadata is not scored as zero", () => {

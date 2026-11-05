@@ -10,15 +10,15 @@ const retry = (attempts,bestLevel,bestExtraWords) => Object.assign(new Error('re
 });
 
 test('real generation retains only target-valid candidates for soft extra-word fallback', () => {
-  const generator=createGenerator([{word:'ABCDEF'}],[{word:'ABC'},{word:'DEF'}]);
-  const check=createDuplicateCheck([{id:1,level:{targetWords:[],extraWords:[{word:'ABC'},{word:'DEF'}]}}],{target:50,extra:20});
+  const generator=createGenerator([{word:'ABCDEF'}],[{word:'FEDCBA'}]);
+  const check=createDuplicateCheck([{id:1,level:{targetWords:[],extraWords:[{word:'FEDCBA'}]}}],{target:50,extra:20});
   const options={rows:2,columns:3,random:()=>0,duplicateCheck:check};
   assert.throws(()=>generator.generate(options),error=>{
     assert.equal(error.code,'GENERATION_RETRY');
     assert.equal(error.attempts,80);
-    assert.deepEqual(error.bestExtraWords.sort(),['ABC','DEF']);
+    assert.deepEqual(error.bestExtraWords,['FEDCBA']);
     assert.equal(error.bestLevel.duplicateCheck.extra.range,20);
-    assert.deepEqual(findDuplicateWords(error.bestLevel,check),{target:[],extra:['ABC','DEF']});
+    assert.deepEqual(findDuplicateWords(error.bestLevel,check),{target:[],extra:['FEDCBA']});
     return true;
   });
   const blocked=createDuplicateCheck([{id:1,level:{targetWords:[{word:'ABCDEF'}],extraWords:[]}}],{target:50,extra:20});

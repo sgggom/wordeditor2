@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { createGenerator } from '../dist/level-generator.js';
 import { validateCurrentRuleConfigs, validateGenerationPolicy } from '../dist/generation-policy.js';
 import { fixedLayoutLetters, normalizeFixedLayout, validateFixedWords } from '../dist/fixed-words.js';
-import { prepareGeneration } from '../dist/level-rules.js';
+import { prepareGeneration, selectExtraWords, EXTRA_WORD_LENGTH_POLICY } from '../dist/level-rules.js';
 import { createGameExport } from '../dist/level-export.js';
 import { importSingleGameLevel, importGameLevels } from '../dist/level-import.js';
 import { analyzeTargetPaths } from '../dist/target-path-analysis.js';
@@ -106,8 +106,8 @@ export function verifyCandidate(level, game, job, context) {
     rows: level.rows, columns: level.columns, disabledCells: level.disabledCells,
     letters: level.cells.map(cell => cell.letter), minimumWordLength: 3,
   });
-  const expectedExtras = found.filter(entry => !targetNames.has(entry.word)).map(entry => entry.word).sort();
-  assert.equal(game.e, expectedExtras.join(' '), '额外词不完整');
+  const expectedExtras = selectExtraWords(found, level.targetWords).map(entry => entry.word).sort();
+  assert.equal(game.e, expectedExtras.join(' '), '额外词未按目标词长度完整收录');
   const roundTrip = createGameExport([{ level }]).books[0].levels[0];
   for (const key of ['g', 't', 'n', 'e']) assert.equal(roundTrip[key], game[key]);
   assert.equal(level.cells.map(cell => cell.count.toString(36)).join(''), game.n);
@@ -232,7 +232,7 @@ export function createPoolContext(planFile, sourceDirectory = dataDirectory) {
   assert.ok(Number.isSafeInteger(seed) && Number.isFinite(timeLimitMs) && timeLimitMs > 0, '种子或时间上限无效');
   const generator = createGenerator(ordinary, extra, { targetWordWhitelist: [...bank.keys()] });
   const context = { plan, preset, generator, dictionary, bank, history, count, seed, timeLimitMs };
-  const key = hash([plan, historyGame, plan.levels.map(task => preset.records[task.position - 1]), [...bank], dictionary.map(r => [r.word, r.rarityLevel, r.onlyExtra])]);
+  const key = hash([EXTRA_WORD_LENGTH_POLICY, plan, historyGame, plan.levels.map(task => preset.records[task.position - 1]), [...bank], dictionary.map(r => [r.word, r.rarityLevel, r.onlyExtra])]);
   return { context, key };
 }
 

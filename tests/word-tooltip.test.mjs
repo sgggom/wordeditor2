@@ -8,11 +8,12 @@ const bytes = await readFile(new URL("../dist/data/word-game-sources.json", impo
 const sources = JSON.parse(bytes);
 const names = word => sourceGamesForWord(sources, word).map(game => game.name);
 
-test("source games include all actual matches once and never infer a game from the word bank", () => {
+test("source badges only include actual Zen Word and Word Tiles matches", () => {
   assert.deepEqual(names("PO"), ["Zen Word"]);
-  assert.deepEqual(names("TI"), ["Word Connect Association", "Crossword Go!", "Zen Word"]);
-  assert.deepEqual(names(" if "), ["Word Connect Association", "Crossword Go!", "Zen Word"]);
-  assert.deepEqual(names("OK"), ["Word Connect Association"]);
+  assert.deepEqual(names("TI"), ["Zen Word"]);
+  assert.deepEqual(names(" if "), ["Zen Word"]);
+  assert.deepEqual(names("ICE"), ["Zen Word", "Word Tiles"]);
+  assert.deepEqual(names("OK"), []);
   assert.deepEqual(names("OH"), []);
   assert.deepEqual(names("NOTAREALWORD"), []);
   assert.deepEqual(sourceGamesForWord(null, "IF"), []);

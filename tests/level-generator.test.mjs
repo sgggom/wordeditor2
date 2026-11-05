@@ -41,6 +41,7 @@ function verifyLevel(level) {
   const targets = new Set(level.targetWords.map(entry => entry.word));
   const candidates = new Set(level.candidateWords.map(entry => entry.word));
   const extras = new Set(level.extraWords.map(entry => entry.word));
+  const targetLengths = new Set(level.targetWords.map(entry => entry.word.length));
   assert.equal(targets.size, level.targetWords.length);
   assert.equal(candidates.size, level.candidateWords.length);
   assert.equal(extras.size, level.extraWords.length);
@@ -67,7 +68,7 @@ function verifyLevel(level) {
   }
   for (const entry of level.candidateWords) {
     assert.ok(!entry.onlyExtra && !onlyExtraNames.has(entry.word));
-    assert.ok(targets.has(entry.word) || extras.has(entry.word));
+    assert.equal(targets.has(entry.word) || extras.has(entry.word), targetLengths.has(entry.word.length));
   }
   assert.deepEqual(level.cells.map(cell => cell.count), counts);
   assert.equal(level.statistics.workload.targetCount, targetCount);
@@ -179,7 +180,10 @@ test("candidate enumeration is exhaustive across both banks and does not calcula
   const found = generator.findWords({ rows: 3, columns: 4, letters, initialWords: level.initialWords });
   const expected = new Set([...normal, ...onlyExtra].filter(entry => canSpell(entry.word, letters, 3, 4)).map(entry => entry.word));
   assert.deepEqual(new Set(found.map(entry => entry.word)), expected);
-  assert.deepEqual(new Set([...level.targetWords, ...level.extraWords].map(entry => entry.word)), expected);
+  assert.deepEqual(new Set(level.foundWords.map(entry => entry.word)), expected);
+  const lengths = new Set(level.targetWords.map(entry => entry.word.length));
+  assert.deepEqual(new Set([...level.targetWords, ...level.extraWords].map(entry => entry.word)),
+    new Set([...expected].filter(word => lengths.has(word.length))));
   assert.deepEqual(new Set(level.candidateWords.map(entry => entry.word)), new Set(found.filter(entry => !entry.onlyExtra).map(entry => entry.word)));
   assert.ok(found.every(entry => !("count" in entry)));
 });
@@ -192,8 +196,8 @@ test("only-extra wins duplicate classification and cannot be placed or promoted"
   const options = { rows: 2, columns: 3, letters, initialWords, foundWords, random: seededRandom(1) };
   const level = restricted.selectTargets({ ...options, targetCount: 2 });
   assert.deepEqual(new Set(level.targetWords.map(entry => entry.word)), new Set(["ABC", "DEF"]));
-  assert.deepEqual(level.extraWords.map(entry => entry.word), ["ABCDEF"]);
-  assert.equal(level.extraWords[0].onlyExtra, true);
+  assert.deepEqual(level.extraWords, []);
+  assert.equal(level.foundWords.find(entry => entry.word === "ABCDEF").onlyExtra, true);
   assert.equal(level.candidateWords.length, 2);
   assert.deepEqual(level.cells.map(cell => cell.count), [1, 1, 1, 1, 1, 1]);
   assert.throws(() => setTargetWord(level, "ABCDEF", true), /候选词/);
@@ -212,12 +216,15 @@ test("all eligible candidates remain available for manual selection with no auto
   const level = rankedGenerator.selectTargets({ ...options, foundWords: rankedGenerator.findWords(options), filters: { scope: [1] }, targetCount: 99 });
   assert.deepEqual(level.targetWords.map(entry => entry.word), ["ABCFEDGHI"]);
   assert.deepEqual(new Set(level.candidateWords.map(entry => entry.word)), new Set(["ABCFEDGHI", "ABC", "DEF", "ABE", "CBA", "ABEF"]));
-  assert.ok(["ADG", "GHI"].every(word => level.extraWords.some(entry => entry.word === word)));
+  assert.deepEqual(level.extraWords, []);
+  assert.ok(["ADG", "GHI"].every(word => level.foundWords.some(entry => entry.word === word)));
   for (const word of ["ADG", "GHI"]) assert.throws(() => setTargetWord(level, word, true), /候选词/);
   const edited = setTargetWord(level, "ABEF", true);
   assert.deepEqual(edited.targetWords.map(entry => entry.word), ["ABCFEDGHI", "ABEF"]);
   assert.equal(edited.targetCount, 2);
   assert.deepEqual(edited.targetWords[0].path, options.initialWords[0].path);
+  const withShortTarget = setTargetWord(edited, "ABC", true);
+  assert.ok(["ADG", "GHI"].every(word => withShortTarget.extraWords.some(entry => entry.word === word)));
 });
 
 test("repeated-letter paths are deduplicated by word and extras never inflate usage", () => {
@@ -227,8 +234,8 @@ test("repeated-letter paths are deduplicated by word and extras never inflate us
   assert.deepEqual(level.targetWords.map(entry => entry.word), ["AAAAAA"]);
   assert.equal(level.candidateWords.length, 4);
   assert.ok(level.targetWords[0].pathAnalysis.legalPathCount > 1);
-  assert.ok(level.extraWords.every(entry => entry.pathAnalysis.safe === false));
-  assert.equal(level.extraWords.length, 3);
+  assert.ok(level.candidateWords.filter(entry => entry.word.length < 6).every(entry => entry.pathAnalysis.safe === false));
+  assert.equal(level.extraWords.length, 0);
   assert.deepEqual(level.cells.map(cell => cell.count), [1, 1, 1, 1, 1, 1]);
   for (const entry of [...level.targetWords, ...level.extraWords]) verifyPath(entry, level);
 });
@@ -281,7 +288,8 @@ test("multi-select uses OR within a field and AND across fields, retaining exclu
   const options = { rows: 2, columns: 3, letters, initialWords, foundWords, filters, targetCount: 2 };
   const level = scoped.selectTargets(options);
   assert.deepEqual(new Set(level.candidateWords.map(entry => entry.word)), new Set(["ABC", "DEF"]));
-  assert.deepEqual(new Set(level.extraWords.map(entry => entry.word)), new Set(["ABCDEF", "FED"]));
+  assert.deepEqual(new Set(level.extraWords.map(entry => entry.word)), new Set(["FED"]));
+  assert.ok(level.foundWords.some(entry => entry.word === "ABCDEF"));
   assert.equal(level.extraWords.find(entry => entry.word === "FED").onlyExtra, true);
   assert.deepEqual(level.cells.map(cell => cell.count), [1, 1, 1, 1, 1, 1]);
   assert.throws(() => setTargetWord(level, "ABCDEF", true), /候选词/);

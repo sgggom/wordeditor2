@@ -56,7 +56,7 @@ function loadLevelSources(sources, word) {
 export function sourceGamesForWord(sources, word) {
   const key = String(word).trim().toUpperCase();
   const mask = Object.hasOwn(sources?.entries ?? {}, key) ? sources.entries[key] : 0;
-  return (sources?.games ?? []).filter((_, index) => mask & (1 << index));
+  return (sources?.games ?? []).filter((game, index) => detailedSourceGames.has(game.id) && (mask & (1 << index)));
 }
 
 export function sourceLevelsForWord(sources, shard, word) {
@@ -199,7 +199,7 @@ export function setupWordTooltips() {
     block.replaceChildren(node("h3", "word-tooltip-sources-title", "来源游戏与关卡"));
     const games = sourceGamesForWord(sources, word);
     if (!games.length) {
-      block.append(node("p", "word-tooltip-note", status ?? "参考项目暂无记录"));
+      block.append(node("p", "word-tooltip-note", status ?? "Zen Word / Word Tiles 暂无来源记录"));
       return;
     }
     function locationRow(location) {
@@ -217,7 +217,7 @@ export function setupWordTooltips() {
       if (/^#[\da-f]{6}$/i.test(game.color)) chip.style.setProperty("--game-color", game.color);
       return chip;
     }
-    for (const game of games.filter(game => detailedSourceGames.has(game.id))) {
+    for (const game of games) {
       const section = node("section", "word-source-game");
       const heading = node("div", "word-source-heading");
       const chip = gameChip(game);
@@ -249,13 +249,6 @@ export function setupWordTooltips() {
         }
       } else section.append(node("p", "word-tooltip-note", status ?? (groups ? (game.id === "06_Zen_Word" ? "t1 / t3 暂无来源关卡记录" : "暂无来源关卡记录") : "来源关卡加载中…")));
       block.append(section);
-    }
-    const others = games.filter(game => !detailedSourceGames.has(game.id));
-    if (others.length) {
-      const summary = node("section", "word-source-other-games");
-      summary.append(node("h4", "", "其他来源游戏"));
-      const chips = node("div", "word-tooltip-games");
-      chips.append(...others.map(gameChip)); summary.append(chips); block.append(summary);
     }
   }
 

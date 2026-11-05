@@ -2,7 +2,8 @@ import { validateGenerationPolicy } from "./generation-policy.js";
 import { scoreGenerationQuality, placementQualityCost } from "./generation-quality.js";
 import { normalizeDisabledCells } from "./board-shape.js";
 import { calculateLevelStatistics, compareRepresentativePaths, describePath } from "./level-statistics.js";
-import { createDuplicateCheck, findDuplicateWords, EXTRA_DUPLICATE_ATTEMPT_LIMIT, acceptExtraDuplicateFallback } from "./level-rules.js";
+import { createDuplicateCheck, findDuplicateWords, EXTRA_DUPLICATE_ATTEMPT_LIMIT, acceptExtraDuplicateFallback,
+  selectExtraWords, EXTRA_WORD_LENGTH_POLICY } from "./level-rules.js";
 import { validateFixedWords, normalizeFixedWords, normalizeFixedLayout, fixedLayoutLetters, normalizeFixedWordExemptions } from "./fixed-words.js";
 import { analyzeTargetPaths } from "./target-path-analysis.js";
 
@@ -508,11 +509,12 @@ export function createGenerator(records, onlyExtraRecords = [], { targetWordWhit
         targetNames.add(entry.word);
       }
     }
-    const extraWords = foundWords.filter(entry => !targetNames.has(entry.word));
+    const extraWords = selectExtraWords(foundWords, targetWords);
     const cells = letters.map((letter, index) => ({ letter, count: 0, ...(disabledCells.includes(index) ? { disabled: true } : {}) }));
     for (const entry of targetWords) for (const cell of entry.path) cells[cell].count++;
     const level = { rows, columns, minimumWordLength, disabledCells: [...disabledCells], desiredTargetCount, targetCount: targetWords.length, targetLimitsEnabled: false,
-      filters: normalized, fixedWords: [...fixedWords], fixedWordExemptions: [...exemptions], cells, initialWords, candidateWords, targetWords, extraWords };
+      filters: normalized, fixedWords: [...fixedWords], fixedWordExemptions: [...exemptions], cells, initialWords, candidateWords, targetWords, extraWords,
+      foundWords, extraWordLengthPolicy: EXTRA_WORD_LENGTH_POLICY };
     if (cells.some(cell => !cell.disabled && (cell.count < 1 || cell.count > 35))) return null;
     return { ...level, statistics: calculateLevelStatistics(level) };
   }

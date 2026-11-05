@@ -2,6 +2,13 @@ import { futureFixedTargetWords } from "./level-config.js";
 import { calculateLevelStatistics } from "./level-statistics.js";
 
 export const EXTRA_DUPLICATE_ATTEMPT_LIMIT = 100_000;
+export const EXTRA_WORD_LENGTH_POLICY = "target-lengths-v1";
+
+export function selectExtraWords(foundWords, targetWords) {
+  const targets = new Set(targetWords.map(entry => entry.word));
+  const lengths = new Set(targetWords.map(entry => entry.word.length));
+  return foundWords.filter(entry => !targets.has(entry.word) && lengths.has(entry.word.length));
+}
 
 export function acceptExtraDuplicateFallback(level, attempts, duplicateWords) {
   return { ...level, extraDuplicateFallback: { attempts, duplicateCount: duplicateWords.length, words: [...duplicateWords] } };
@@ -57,7 +64,10 @@ export function setTargetWord(level, word, selected) {
   if ((!candidate || candidate.onlyExtra) && (selected || !wasSelected)) throw new Error("只能从候选词中选择目标词。");
   if (!selected && level.fixedWords?.includes(word)) throw new Error("固定词不能移出关卡目标。");
   if (wasSelected === selected) return level;
-  const allWords = [...level.targetWords, ...level.extraWords];
+  // Retain the complete scan so changing the target lengths can restore eligible
+  // extras, including only-extra words that are absent from candidateWords.
+  const allWords = [...new Map([...(level.foundWords ?? []), ...level.candidateWords,
+    ...level.extraWords, ...level.targetWords].map(entry => [entry.word, entry])).values()];
   const targetNames = new Set(level.targetWords.map(entry => entry.word));
   if (selected && (targetNames.has(word+'S') || (word.endsWith('S') && targetNames.has(word.slice(0,-1))))) {
     throw new Error('同关目标不能同时包含直接加S的词对。');
@@ -65,7 +75,7 @@ export function setTargetWord(level, word, selected) {
   if (selected) targetNames.add(word);
   else targetNames.delete(word);
   const targetWords = selected ? [...level.targetWords, candidate] : level.targetWords.filter(entry => entry.word !== word);
-  const extraWords = allWords.filter(entry => !targetNames.has(entry.word)).sort((a, b) => a.word.localeCompare(b.word));
+  const extraWords = selectExtraWords(allWords, targetWords).sort((a, b) => a.word.localeCompare(b.word));
   const cells = level.cells.map(cell => ({ ...cell, count: 0 }));
   for (const entry of targetWords) {
     for (const cell of entry.path) cells[cell].count += 1;
@@ -74,7 +84,8 @@ export function setTargetWord(level, word, selected) {
     throw new Error("移除后有格子没有目标词覆盖，请先勾选覆盖这些格子的其他目标词。");
   }
   // Counts and statistics always describe the current target selection.
-  const edited = { ...level, cells, targetWords, extraWords, targetCount: targetWords.length, targetLimitsEnabled: false, targetsEdited: true };
+  const edited = { ...level, cells, targetWords, extraWords, foundWords: allWords, extraWordLengthPolicy: EXTRA_WORD_LENGTH_POLICY,
+    targetCount: targetWords.length, targetLimitsEnabled: false, targetsEdited: true };
   return { ...edited, statistics: calculateLevelStatistics(edited) };
 }
 

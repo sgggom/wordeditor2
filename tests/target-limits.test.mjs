@@ -30,7 +30,7 @@ test('generation ignores all retired limits while preserving shaped fixed words'
   assert.equal(level.statistics.board.cellCount, 6);
   assert.deepEqual(level.disabledCells, [2, 5, 8]);
   assert.ok(level.candidateWords.some(entry => entry.word === 'AT'));
-  assert.ok(level.extraWords.some(entry => entry.word === 'AT'));
+  assert.ok(!level.extraWords.some(entry => entry.word === 'AT'));
   assert.ok(level.targetWords.every(entry => createPathSafetyChecker(level)(entry.word)));
   assert.equal(createGameExport([{ level }]).books[0].levels[0].g, 'CD-,AO-,TG-');
   assert.deepEqual(options, before);
@@ -59,7 +59,8 @@ test('post-generation selection can replace an initial word only while every ena
   const replaced = setTargetWord(full, 'ABCFED', false);
   assert.deepEqual(replaced.targetWords.map(entry => entry.word), ['ABC', 'FED']);
   assert.ok(replaced.cells.every(cell => cell.count === 1));
-  assert.ok(replaced.extraWords.some(entry => entry.word === 'ABCFED'));
+  assert.ok(!replaced.extraWords.some(entry => entry.word === 'ABCFED'));
+  assert.ok(replaced.candidateWords.some(entry => entry.word === 'ABCFED'));
   assert.deepEqual(replaced.initialWords, level.initialWords);
   assert.equal(replaced.statistics.workload.targetCount, 2);
   assert.ok(createGameExport([{ level: replaced }]));

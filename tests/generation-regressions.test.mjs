@@ -13,9 +13,11 @@ const real = createGenerator([...await read('required-words.json'), ...await rea
 const randomFrom = seed => () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
 
 test('historical longest words are excluded before placement while valid shorter targets still generate', () => {
+  // Keep the original regression fixture independent of later live-bank pruning.
+  const regression = createGenerator(['FROLIC', 'AWED', 'AAH'].map(word => ({ word, scope: 4, emotion: 2, rarityLevel: 4 })));
   const duplicateCheck = createDuplicateCheck([{ id: 1, level: { targetWords: [{ word: 'FROLIC' }], extraWords: [] } }], { target: 20, extra: 0 });
   for (let seed = 1; seed <= 8; seed++) {
-    const level = real.generate({ rows: 2, columns: 3, minimumWordLength: 3,
+    const level = regression.generate({ rows: 2, columns: 3, minimumWordLength: 3,
       filters: { scope: [4], emotion: [2], rarityLevel: [4] }, duplicateCheck, random: randomFrom(seed) });
     assert.deepEqual(new Set(level.targetWords.map(entry => entry.word)), new Set(['AWED', 'AAH']));
     assert.deepEqual(findDuplicateWords(level, duplicateCheck), { target: [], extra: [] });

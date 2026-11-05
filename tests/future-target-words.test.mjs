@@ -34,13 +34,13 @@ test('partial-range runs reserve later fixed words outside the requested interva
 });
 
 test('reserved future words cannot fill the board as random targets, but remain valid extras',()=>{
-  const generator=createGenerator(['CAT','DOG','AT'].map(word=>({word})));
-  assert.equal(generator.findPlacement({rows:2,columns:2,letters:['','','',''],reservedTargetWords:['CAT','DOG','AT']}),null);
-  const level=generator.generate({rows:2,columns:3,reservedTargetWords:['AT'],fixedWords:['CAT','DOG'],
+  const generator=createGenerator(['CAT','DOG','TAC'].map(word=>({word})));
+  assert.equal(generator.findPlacement({rows:2,columns:2,letters:['','','',''],reservedTargetWords:['CAT','DOG','TAC']}),null);
+  const level=generator.generate({rows:2,columns:3,reservedTargetWords:['TAC'],fixedWords:['CAT','DOG'],
     fixedLayout:{rows:2,columns:3,placements:[{word:'CAT',path:[0,1,2]},{word:'DOG',path:[3,4,5]}]}});
-  assert.ok(!level.targetWords.some(w=>w.word==='AT'));
-  assert.ok(!level.candidateWords.some(w=>w.word==='AT'));
-  assert.ok(level.extraWords.some(w=>w.word==='AT'));
+  assert.ok(!level.targetWords.some(w=>w.word==='TAC'));
+  assert.ok(!level.candidateWords.some(w=>w.word==='TAC'));
+  assert.ok(level.extraWords.some(w=>w.word==='TAC'));
   const pinned=generator.generate({rows:2,columns:3,reservedTargetWords:['CAT','DOG'],fixedWords:['CAT','DOG'],
     fixedLayout:{rows:2,columns:3,placements:[{word:'CAT',path:[0,1,2]},{word:'DOG',path:[3,4,5]}]}});
   assert.deepEqual(pinned.targetWords.map(w=>w.word),['CAT','DOG']);

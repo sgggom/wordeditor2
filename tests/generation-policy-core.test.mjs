@@ -36,12 +36,13 @@ test('S variant stays extra when optional target augmentation runs', () => {
 });
 
 test('whitelist restricts targets while ordinary dictionary extras retain their role', () => {
-  const generator = createGenerator(records(['CATOTO', 'CAT', 'COT', 'TOT']), records(['OTO']), { targetWordWhitelist: ['CATOTO'] });
+  const generator = createGenerator(records(['CATOTO', 'CAT', 'COT', 'TOT', 'OTOTAC']), records(['OTO', 'ATOTOC']), { targetWordWhitelist: ['CATOTO'] });
   const level = generator.generate({ rows: 2, columns: 3, fixedWords: ['CATOTO'], desiredTargetCount: 8,
     fixedLayout: { rows: 2, columns: 3, placements: [{ word: 'CATOTO', path: [0, 1, 2, 5, 4, 3] }] } });
   assert.deepEqual(level.targetWords.map(entry => entry.word), ['CATOTO']);
-  assert.ok(level.extraWords.some(entry => entry.word === 'COT' && !entry.onlyExtra));
-  assert.ok(level.extraWords.some(entry => entry.word === 'OTO' && entry.onlyExtra));
+  assert.ok(level.extraWords.some(entry => entry.word === 'OTOTAC' && !entry.onlyExtra));
+  assert.ok(level.extraWords.some(entry => entry.word === 'ATOTOC' && entry.onlyExtra));
+  assert.ok(!level.extraWords.some(entry => entry.word === 'COT' || entry.word === 'OTO'));
   assert.ok(analyzeTargetPaths(level).allChoicesComplete);
 });
 

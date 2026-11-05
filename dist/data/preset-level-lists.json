@@ -253,6 +253,60 @@
         "整体通过造型、词库、额外词、全部合法消词选择、前10关目标禁重、全局棋盘去重及游戏导出复核。",
         "目标词数对齐 1812 关，差异详见筛选报告。"
       ]
+    },
+    {
+      "id": "our-levels-low-extra-2000-2026-11-05",
+      "label": "低额外词筛选 · 2000关 · 2026-11-05",
+      "levelCount": 2000,
+      "format": "game",
+      "file": "./presets/our-levels-low-extra-2000-2026-11-05.json",
+      "gameFile": "./presets/our-levels-low-extra-2000-2026-11-05.json",
+      "source": {
+        "file": "outputs/20261105-low-extra-selected-2000/game.json",
+        "sha256": "ecae71b933c27a1ef0d7263ff074d529c8dc69bedfa3508aa7f61a6dd30ab75f"
+      },
+      "notes": [
+        "以已认可的顺向与生僻度版为基线，在造型、核心词、词量、分段节奏与连续关卡变化约束下，优先选完整额外词数量更少的棋盘。",
+        "完整额外词总数 22644，较基线减少 25.6%；每关均不增加。",
+        "2000关通过造型、词库、完整额外词枚举、全部合法消词选择、前10关目标禁重、全局棋盘去重及导出复核。",
+        "目标词数对齐 1814 关；分段顺向与生僻比例误差均不超过0.5个百分点。"
+      ]
+    },
+    {
+      "id": "our-levels-extra-length-filter-2000-2026-11-05",
+      "label": "额外词长度对齐 · 2000关 · 2026-11-05",
+      "levelCount": 2000,
+      "format": "game",
+      "file": "./presets/our-levels-extra-length-filter-2000-2026-11-05.json",
+      "gameFile": "./presets/our-levels-extra-length-filter-2000-2026-11-05.json",
+      "source": {
+        "file": "outputs/20261105-extra-length-filter-2000/game.json",
+        "sha256": "37dc4c5db30dece2f06a61e4e95e80b9925b5408389b2a287e9221a11e531edb"
+      },
+      "notes": [
+        "额外词长度必须出现在本关实际目标词长度集合中，同时满足原最短3字母及词库规则。",
+        "基于低额外词2000关直接过滤导出，未重新生成，棋盘、目标词及格子次数保持一致。",
+        "额外词 22644 → 21854，减少 790 个（3.49%），影响 442 关。",
+        "2000关通过新规则下完整搜词、通关安全与导出回读校验。"
+      ]
+    },
+    {
+      "id": "our-levels-three-letter-pruned-2000-2026-11-05",
+      "label": "三字母词库精简 · 2000关 · 2026-11-05",
+      "levelCount": 2000,
+      "format": "game",
+      "file": "./presets/our-levels-three-letter-pruned-2000-2026-11-05.json",
+      "gameFile": "./presets/our-levels-three-letter-pruned-2000-2026-11-05.json",
+      "source": {
+        "file": "outputs/20261105-remove-added-three-letter-2000/game.json",
+        "sha256": "52d68a07af47aa7e22e515dfdd52e7f9e7e8f7885ef666ab1e28bde2b2f8983d"
+      },
+      "notes": [
+        "移除447个三字母词，并继续只收录与本关目标词长度一致的额外词。",
+        "从当前词库删除447词后，直接清理2000关额外词并导出；棋盘、目标词及格子次数保持一致。",
+        "额外词 21854 → 13947，减少 7907 个（36.18%），影响 1904 关。",
+        "2000关通过新规则下完整搜词、通关安全与导出回读校验。"
+      ]
     }
   ]
 }
