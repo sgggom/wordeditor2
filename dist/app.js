@@ -15,11 +15,14 @@ import { normalizeFixedWords, normalizeFixedLayout, normalizeFixedWordExemptions
 import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists.js";
 import { bindWordTooltip, setupWordTooltips } from "./word-tooltip.js";
 import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } from "./level-file.js";
+import { createPathPreview } from "./path-preview.js";
+import { setupPathComparison } from "./path-comparison.js";
 import { setupPlaytest } from "./playtest-dialog.js";
 
 (() => {
   "use strict";
   setupWordTooltips();
+  setupPathComparison();
 
   const DEFAULT_SIZE = Object.freeze({ rows: 3, columns: 4 });
   const LIMITS = Object.freeze({ rows: [2, 5], columns: [2, 5] });
@@ -717,64 +720,6 @@ import { setupPlaytest } from "./playtest-dialog.js";
     }
   }
 
-  function svgElement(name, attributes) {
-    const element = document.createElementNS("http://www.w3.org/2000/svg", name);
-    for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, String(value));
-    return element;
-  }
-
-  function createPathPreview(entry) {
-    const path = entry.path ?? [];
-    const score = entry.pathAnalysis.assigned.difficultyScore;
-    const preview = svgElement("svg", {
-      class: "word-path-preview",
-      "data-score-band": Math.min(3, score),
-      viewBox: `0 0 ${size.columns * 12 + 4} ${size.rows * 12 + 4}`,
-      "aria-hidden": "true",
-      focusable: "false",
-    });
-    const title = svgElement("title", {});
-    title.textContent = `${entry.word} 的连接路径，难度 ${score} 分`;
-    preview.append(title);
-    for (let index = 0; index < size.rows * size.columns; index += 1) {
-      preview.append(svgElement("rect", {
-        class: "mini-cell",
-        x: 3 + (index % size.columns) * 12,
-        y: 3 + Math.floor(index / size.columns) * 12,
-        width: 10,
-        height: 10,
-        rx: 1.5,
-      }));
-    }
-    const points = path.map(index => ({ x: 8 + (index % size.columns) * 12, y: 8 + Math.floor(index / size.columns) * 12 }));
-    if (points.length) {
-      const line = svgElement("polyline", {
-        class: "mini-path-line",
-        points: points.map(point => `${point.x},${point.y}`).join(" "),
-      });
-      preview.append(line);
-      if (points.length > 1) {
-        const start = points.at(-2);
-        const end = points.at(-1);
-        const dx = end.x - start.x;
-        const dy = end.y - start.y;
-        const base = { x: end.x - dx * .5, y: end.y - dy * .5 };
-        line.setAttribute("points", [...points.slice(0, -1), base].map(point => `${point.x},${point.y}`).join(" "));
-        const sideX = -dy / 12 * 3.5;
-        const sideY = dx / 12 * 3.5;
-        preview.append(svgElement("polygon", {
-          class: "mini-path-arrow",
-          points: `${end.x},${end.y} ${base.x + sideX},${base.y + sideY} ${base.x - sideX},${base.y - sideY}`,
-        }));
-      }
-    }
-    const cell = document.createElement("span");
-    cell.className = "word-path-cell";
-    cell.dataset.column = "path";
-    cell.append(preview);
-    return cell;
-  }
-
   function renderWords() {
     const scrollTop = wordList.parentElement.scrollTop;
     const roles = [
@@ -862,7 +807,11 @@ import { setupPlaytest } from "./playtest-dialog.js";
           ? `${assigned.difficultyScore} + ${entry.rarityLevel} ×（1 + ${entry.word.length} × 0.1） = ${wordDifficulty}`
           : "缺少生僻档位或路径分，无法计算难度"
         : "仅目标词计入关卡难度";
-      button.append(text, rarity, createPathPreview(entry), pathScore, difficulty);
+      const pathCell = document.createElement("span");
+      pathCell.className = "word-path-cell";
+      pathCell.dataset.column = "path";
+      pathCell.append(createPathPreview({ word: entry.word, path: entry.path ?? [], score: assigned.difficultyScore }, size));
+      button.append(text, rarity, pathCell, pathScore, difficulty);
       const tags = roles.filter(role => role.words.has(entry.word));
       if (entry.onlyExtra) tags.push({ key: "only-extra", label: "仅额外" });
       for (const { key, label } of tagColumns) {

@@ -17,6 +17,7 @@
 
         <button type="button" id="open-config-list" class="reset-button" aria-haspopup="dialog">关卡配置列表</button>
         <button type="button" id="open-preset-levels" class="reset-button" aria-haspopup="dialog">关卡文件与预设</button>
+        <button type="button" id="open-path-comparison" class="reset-button" aria-haspopup="dialog" aria-controls="path-comparison-dialog">目标路径对比</button>
         <button type="button" id="open-playtest" class="generate-button" aria-haspopup="dialog" aria-controls="playtest-dialog" disabled><span aria-hidden="true">▶</span> 试玩</button>
       </div>
     </header>
@@ -504,6 +505,28 @@
         <nav id="preset-level-items" class="preset-level-items" aria-label="预设关卡"></nav>
         <section id="preset-level-preview" class="preset-level-preview" aria-label="预设关卡详情"></section>
       </div>
+    </dialog>
+    <dialog id="path-comparison-dialog" class="preset-level-dialog path-comparison-dialog" aria-label="目标路径对比">
+      <div class="preset-level-toolbar">
+        <fieldset id="path-comparison-modes" class="path-comparison-toggle" aria-label="查看方式">
+          <label><input type="radio" name="path-comparison-mode" value="ours" />我们</label>
+          <label><input type="radio" name="path-comparison-mode" value="theirs" />他们</label>
+          <label><input type="radio" name="path-comparison-mode" value="both" checked />对比</label>
+        </fieldset>
+        <fieldset id="path-comparison-views" class="path-comparison-toggle" aria-label="图表视图">
+          <label><input type="radio" name="path-comparison-view" value="table" checked />路径表</label>
+          <label><input type="radio" name="path-comparison-view" value="trend" />趋势图</label>
+        </fieldset>
+        <button type="button" id="path-comparison-prev" class="reset-button" disabled>上一页</button>
+        <button type="button" id="path-comparison-next" class="reset-button" disabled>下一页</button>
+        <form id="path-comparison-jump">
+          <label>关号 <input name="level" type="number" min="1" step="1" value="1" required disabled /></label>
+          <button type="submit" class="reset-button" disabled>跳转</button>
+        </form>
+        <span id="path-comparison-status" class="preset-level-metadata" role="status"></span>
+        <button type="button" id="close-path-comparison" class="filter-close" aria-label="关闭目标路径对比">×</button>
+      </div>
+      <div id="path-comparison-list" class="path-comparison-list" role="region" aria-label="逐关目标路径对比" tabindex="0"></div>
     </dialog>
   </body>
 </html>
