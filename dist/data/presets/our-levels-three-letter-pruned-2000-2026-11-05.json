@@ -15,9 +15,9 @@
           "id": "1",
           "name": "第1关",
           "g": "CAT,-L-,-L-",
-          "t": "ALL CAT",
-          "n": "121010010",
-          "e": "LAT",
+          "t": "ALL CAT CALL",
+          "n": "231020020",
+          "e": "LAT TALL",
           "lv": "",
           "ty": "",
           "curtains": []
@@ -25,10 +25,10 @@
         {
           "id": "2",
           "name": "第2关",
-          "g": "BIO,SRD,UND",
-          "t": "ODD SUN BIRD",
-          "n": "111112111",
-          "e": "DRIB RIB RIBS",
+          "g": "ASBI-,-KODY",
+          "t": "ASK BID BODY",
+          "n": "1121001121",
+          "e": "DIB OBI",
           "lv": "",
           "ty": "",
           "curtains": []
