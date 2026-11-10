@@ -70,7 +70,7 @@ export function createPathTrend(sources, bands, total, selectedLevel, hiddenBand
     text(axis, count, { x: LEFT - 9, y: height + 4, "text-anchor": "end" });
   }
   const ticks = [1];
-  for (let level = 10; level <= total; level += 10) ticks.push(level);
+  for (let level = 5; level <= total; level += 5) ticks.push(level);
   const tickLabels = ticks.map(level => text(chart, level, {
     y: BOTTOM + 20,
     "text-anchor": level === 1 ? "start" : level === total ? "end" : "middle",
