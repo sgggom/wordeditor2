@@ -62,7 +62,7 @@ test('coverage validates both five-level blocks and consecutive empty levels',{s
  }
 });
 test('compiled tightened plan preserves every core row and uses raw stage rates',()=>{
- const read=file=>JSON.parse(fs.readFileSync(new URL(file,import.meta.url))),plan=read('../dist/data/level-plan-tightened-first-50.json'),old=read('../../outputs/20261112-stage-budget-first-50/plan.json');
+ const read=file=>JSON.parse(fs.readFileSync(new URL(file,import.meta.url))),plan=read('../dist/data/level-plan-tightened-first-50.json'),old=read('./fixtures/outputs/20261112-stage-budget-first-50/plan.json');
  validateLevelPlan(plan);assert.equal(plan.records.length,45);
  for(const row of plan.records)for(const [key,value]of Object.entries(old.records.find(original=>original.position===row.position)))if(key!=='targetComposition')assert.deepEqual(row[key],value);
  assert.equal(plan.stageBudgets[0].firstStepPositiveShares[5],1);assert.equal(plan.stageBudgets[1].firstStepPositiveShares[6],.5);

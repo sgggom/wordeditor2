@@ -1,12 +1,13 @@
+import { readPlanningSource } from "./planning-source.mjs";
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+
 import {createHash} from 'node:crypto';
 import {createPresetRecords} from '../dist/preset-level-lists.js';
 import {measureWordDirections} from '../dist/word-direction.js';
 import {validateLevelPlan} from '../scripts/lib/level-plan.mjs';
 
-const root=new URL('../../',import.meta.url),read=f=>JSON.parse(fs.readFileSync(new URL(f,root)));
+const read = file => JSON.parse(readPlanningSource(file));
 const plan=read('level-editor/dist/data/level-plan-target-floor-first-500.json');
 test('500-level continuation freezes the approved 200 and preserves all accepted plan rows',()=>{
  const parent=read('level-editor/dist/data/level-plan-target-floor-first-200.json');
@@ -14,7 +15,7 @@ test('500-level continuation freezes the approved 200 and preserves all accepted
  assert.deepEqual(plan.records.slice(0,195),parent.records);
  assert.deepEqual(plan.stageBudgets.slice(0,parent.stageBudgets.length),parent.stageBudgets);
  assert.equal(plan.continuation.preservedThrough,200);
- const bytes=fs.readFileSync(new URL(plan.continuation.prefixFile,root));
+ const bytes=readPlanningSource(plan.continuation.prefixFile);
  assert.equal(createHash('sha256').update(bytes).digest('hex'),plan.continuation.prefixSha256);
  assert.equal(JSON.parse(bytes).level.length,200);
 });

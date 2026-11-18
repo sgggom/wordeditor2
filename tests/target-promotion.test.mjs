@@ -1,3 +1,4 @@
+import { readPlanningSource } from "./planning-source.mjs";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -29,5 +30,5 @@ test('the compiled plan raises every level 6–50 to its corresponding reference
  assert.equal(plan.records.reduce((sum,row)=>sum+row.targetCount-row.previousTargetCount,0),70);
  assert.deepEqual(plan.scope.excludedPositions,[1,2,3,4,5]);
  const baselineFile=plan.targetSupplementation.baselineFile;
- assert.equal(plan.targetFloorSources[baselineFile],createHash('sha256').update(fs.readFileSync(new URL('../../'+baselineFile,import.meta.url))).digest('hex'));
+ assert.equal(plan.targetFloorSources[baselineFile],createHash('sha256').update(readPlanningSource(baselineFile)).digest('hex'));
 });

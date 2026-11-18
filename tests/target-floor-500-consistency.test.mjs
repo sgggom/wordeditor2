@@ -1,10 +1,10 @@
+import { readPlanningSource } from "./planning-source.mjs";
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+
 import {createHash} from 'node:crypto';
 import test from 'node:test';
 
-const root=new URL('../../',import.meta.url);
-const read=file=>JSON.parse(fs.readFileSync(new URL(file,root)));
+const read = file => JSON.parse(readPlanningSource(file));
 const base=read('level-editor/dist/data/level-plan-target-floor-first-500.json');
 const plan=read('level-editor/dist/data/level-plan-target-floor-first-500-r2.json');
 const config=read('level-editor/dist/data/target-floor-500-budget-consistency.json');
@@ -14,7 +14,7 @@ test('the feasible revision preserves every level and all accepted stage budgets
   assert.deepEqual(plan.records,base.records);
   assert.deepEqual(plan.continuation,base.continuation);
   assert.deepEqual(plan.stageBudgets.filter(b=>b.to<=320),base.stageBudgets.filter(b=>b.to<=320));
-  const bytes=fs.readFileSync(new URL(config.sourcePlanFile,root));
+  const bytes=readPlanningSource(config.sourcePlanFile);
   assert.equal(createHash('sha256').update(bytes).digest('hex'),config.sourcePlanSha256);
   assert.deepEqual(config.adjustments.map(c=>[c.from,c.to,c.range[1]-c.previousRange[1]]),[[321,340,1],[341,360,2],[461,480,1]]);
   const expected=structuredClone(base.stageBudgets);

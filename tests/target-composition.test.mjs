@@ -71,7 +71,7 @@ test('validation rejects contradictory count, variety and direction settings',()
 
 test('compiled 1995-row plan preserves approved scores, sizes and totals and schedules one zero-three per block',()=>{
  const read=file=>JSON.parse(fs.readFileSync(new URL(file,import.meta.url)));
- const before=read('../../outputs/20261112-level-plan-reference-size/plan.json');
+ const before=read('./fixtures/outputs/20261112-level-plan-reference-size/plan.json');
  const after=read('../dist/data/level-plan.json');
  const policy=read('../dist/data/target-composition-policy.json');
  validateLevelPlan(after);assert.equal(after.records.length,1995);

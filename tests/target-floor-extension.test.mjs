@@ -1,18 +1,19 @@
+import { readPlanningSource } from "./planning-source.mjs";
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+
 import {createHash} from 'node:crypto';
 import {createPresetRecords} from '../dist/preset-level-lists.js';
 import {measureWordDirections} from '../dist/word-direction.js';
 import {validateLevelPlan} from '../scripts/lib/level-plan.mjs';
-const root=new URL('../../',import.meta.url),read=file=>JSON.parse(fs.readFileSync(new URL(file,root)));
+const read = file => JSON.parse(readPlanningSource(file));
 const plan=read('level-editor/dist/data/level-plan-target-floor-first-100.json');
 test('extension freezes the accepted first 50 and preserves their stage constraints',()=>{
  const parent=read('level-editor/dist/data/level-plan-target-floor-first-50.json');validateLevelPlan(plan);
  assert.equal(plan.parentPlanId,parent.id);assert.deepEqual(plan.records.slice(0,45),parent.records);
  assert.deepEqual(plan.stageBudgets.slice(0,3),parent.stageBudgets);assert.equal(plan.records.length,95);
  const prefix=plan.continuation.prefixFile;
- assert.equal(createHash('sha256').update(fs.readFileSync(new URL(prefix,root))).digest('hex'),plan.continuation.prefixSha256);
+ assert.equal(createHash('sha256').update(readPlanningSource(prefix)).digest('hex'),plan.continuation.prefixSha256);
 });
 test('new levels retain board and difficulty planning and independently meet each reference count',()=>{
  const original=read('level-editor/dist/data/level-plan.json');

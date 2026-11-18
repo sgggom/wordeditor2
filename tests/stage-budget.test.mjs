@@ -64,7 +64,7 @@ test('per-level templates distinguish long lengths even when aggregate 6+ count 
 
 test('compiled first-50 quotas fit our own word totals and preserve all original core rows',()=>{
  const read=file=>JSON.parse(fs.readFileSync(new URL(file,import.meta.url)));
- const plan=read('../../outputs/20261112-stage-budget-first-50/plan.json');
+ const plan=read('./fixtures/outputs/20261112-stage-budget-first-50/plan.json');
  const base=read('../dist/data/level-plan.json');validateLevelPlan(plan);assert.equal(plan.records.length,45);
  for(const current of plan.records){
   const original=base.records.find(row=>row.position===current.position);

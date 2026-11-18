@@ -1,18 +1,19 @@
+import { readPlanningSource } from "./planning-source.mjs";
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+
 import {createHash} from 'node:crypto';
 import {createPresetRecords} from '../dist/preset-level-lists.js';
 import {measureWordDirections} from '../dist/word-direction.js';
 import {validateLevelPlan} from '../scripts/lib/level-plan.mjs';
-const root=new URL('../../',import.meta.url),read=f=>JSON.parse(fs.readFileSync(new URL(f,root)));
+const read = file => JSON.parse(readPlanningSource(file));
 const plan=read('level-editor/dist/data/level-plan-target-floor-first-200.json');
 test('200-level extension freezes the amended 100-level prefix and all previous constraints',()=>{
  const parent=read('level-editor/dist/data/level-plan-target-floor-first-100.json');validateLevelPlan(plan);
  assert.equal(plan.parentPlanId,parent.id);assert.equal(plan.records.length,195);
  assert.deepEqual(plan.records.slice(0,95),parent.records);assert.deepEqual(plan.stageBudgets.slice(0,6),parent.stageBudgets);
  assert.equal(plan.continuation.preservedThrough,100);
- assert.equal(createHash('sha256').update(fs.readFileSync(new URL(plan.continuation.prefixFile,root))).digest('hex'),plan.continuation.prefixSha256);
+ assert.equal(createHash('sha256').update(readPlanningSource(plan.continuation.prefixFile)).digest('hex'),plan.continuation.prefixSha256);
  const prefix=read(plan.continuation.prefixFile);assert.equal(prefix.level.length,100);
  assert.equal(prefix.level[2].c,'BOX SKY CITY');assert.equal(prefix.level[3].c,'FAN WEB BOMB');
 });

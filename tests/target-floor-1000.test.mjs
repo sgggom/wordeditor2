@@ -1,11 +1,12 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import{createHash}from'node:crypto';
+import { readPlanningSource } from "./planning-source.mjs";
+import test from 'node:test';import assert from 'node:assert/strict';import{createHash}from'node:crypto';
 import{createPresetRecords}from'../dist/preset-level-lists.js';import{measureWordDirections}from'../dist/word-direction.js';import{validateLevelPlan}from'../scripts/lib/level-plan.mjs';
-const root=new URL('../../',import.meta.url),read=f=>JSON.parse(fs.readFileSync(new URL(f,root)));
+const read = file => JSON.parse(readPlanningSource(file));
 const parent=read('level-editor/dist/data/level-plan-target-floor-first-500-r2.json'),raw=read('level-editor/dist/data/level-plan-target-floor-first-1000.json'),plan=read('level-editor/dist/data/level-plan-target-floor-first-1000-r2.json'),config=read('level-editor/dist/data/target-floor-1000-budget-consistency.json');
 test('1000-level continuation freezes all approved 500 levels and their stage budgets',()=>{
  validateLevelPlan(plan);assert.equal(plan.records.length,995);assert.equal(plan.parentPlanId,parent.id);assert.equal(plan.continuation.preservedThrough,500);
  assert.deepEqual(plan.records.slice(0,495),parent.records);assert.deepEqual(plan.stageBudgets.filter(b=>b.to<=500),parent.stageBudgets);
- const bytes=fs.readFileSync(new URL(plan.continuation.prefixFile,root));assert.equal(JSON.parse(bytes).level.length,500);
+ const bytes=readPlanningSource(plan.continuation.prefixFile);assert.equal(JSON.parse(bytes).level.length,500);
  assert.equal(createHash('sha256').update(bytes).digest('hex'),plan.continuation.prefixSha256);
  assert.equal(plan.continuation.prefixSha256,'1756ad011e087b882473da14b8a975b8021a9fb770b46e008105535f98feba6e');
 });
@@ -29,7 +30,7 @@ test('all 25 new stages use the corresponding length-specific competitor directi
 });
 test('consistency corrections change only the recorded new-stage ranges',()=>{
  assert.equal(plan.revisionOf,raw.id);assert.deepEqual(plan.records,raw.records);assert.deepEqual(plan.continuation,raw.continuation);
- assert.equal(createHash('sha256').update(fs.readFileSync(new URL(config.sourcePlanFile,root))).digest('hex'),config.sourcePlanSha256);
+ assert.equal(createHash('sha256').update(readPlanningSource(config.sourcePlanFile)).digest('hex'),config.sourcePlanSha256);
  const expected=structuredClone(raw.stageBudgets);
  for(const c of config.adjustments){assert.ok(c.from>500);assert.match(c.metric,/^(hist:|variety:)/);const b=expected.find(b=>b.from===c.from);assert.deepEqual(b.ranges[c.metric],c.previousRange);b.ranges[c.metric]=c.range;}
  assert.deepEqual(plan.stageBudgets,expected);assert.equal(config.verifiedStages,25);
