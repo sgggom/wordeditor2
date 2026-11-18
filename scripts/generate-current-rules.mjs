@@ -5,7 +5,7 @@ import {createBatchRunner} from '../dist/batch-runner.js';
 import {validateCurrentRuleConfigs} from '../dist/generation-policy.js';
 import {analyzeTargetPaths} from '../dist/target-path-analysis.js';
 import {createGameExport} from '../dist/level-export.js';
-import {importGameLevels,importSingleGameLevel} from '../dist/level-import.js';
+import {importGameLevels,importSingleGameLevel,gameLevelLocations} from '../dist/level-import.js';
 
 const args=process.argv.slice(2);
 if(args.includes('--help')){console.log('node scripts/generate-current-rules.mjs --from 1 --to 20 --seed 20261104 --out OUTPUT_DIRECTORY [--history HISTORY_JSON]');process.exit(0);}
@@ -35,10 +35,10 @@ if(historyFile){
    const level=importSingleGameLevel(JSON.stringify({g:record.grid.join(','),t:record.paths.map(([w])=>w).join(' '),n:counts.map(n=>n.toString(36)).join(''),e:(record.extraPaths??[]).map(([w])=>w).join(' ')}),dictionary);
    return {id:position,level:{...level,sourceConfig:{position}}};
  });
- else if(input.books){
-   const raw=[...input.books.flatMap(b=>b.levels),...input.daily];
+ else if(input.level||input.books){
+   const raw=gameLevelLocations(input).map(location=>location.original);
    history=importGameLevels(input,dictionary).map((level,index)=>({id:Number(raw[index].id)||index+1,level:{...level,sourceConfig:{position:Number(raw[index].id)||index+1}}}));
- }else throw new Error('历史文件需为draft数组、编辑器records或游戏books/daily格式。');
+ }else throw new Error('历史文件需为draft数组、编辑器records或游戏level/daily格式（也支持旧版books/daily）。');
 }
 const saved=[],started=Date.now();
 fs.mkdirSync(destination,{recursive:true});
@@ -62,7 +62,7 @@ process.once('SIGINT',()=>runner.stop());
 const result=await runner.run(preset.records.slice(from-1,to),preset.records);
 write('drafts.json',drafts());
 write('editor.json',{schemaVersion:1,label:preset.label,records:saved});
-if(saved.length){const game=createGameExport(saved);game.books[0].name=preset.label;game.books[0].levels.forEach((l,i)=>{l.id=String(saved[i].position);});write('game.json',game);}
+if(saved.length)write('game.json',createGameExport(saved));
 const quality=saved.map(({level})=>({position:level.generationRules.position,...level.generationQuality}));
 const knownPositions=new Set([...history.map((r,i)=>r.level.generationRules?.position??r.level.sourceConfig?.position??i+1),...saved.map(r=>r.position)]);
 const partialHistory=saved.filter(r=>Array.from({length:Math.min(10,r.position-1)},(_,i)=>r.position-i-1).some(p=>!knownPositions.has(p))).map(r=>r.position);

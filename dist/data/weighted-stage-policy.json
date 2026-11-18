@@ -1,0 +1,136 @@
+{
+  "id": "weighted-tightened-first-50-20261113",
+  "scope": [
+    6,
+    50
+  ],
+  "directionPolicy": {
+    "rateSource": "same-stage-reference-unsmoothed",
+    "denominator": "all-actual-exported-target-words-including-neutral",
+    "largeSampleMinimum": 20,
+    "largeSampleTolerancePoints": 2,
+    "integerFallback": "joint-largest-remainder-allocation-if-no-triple-fits",
+    "smallSample": "joint-largest-remainder-exact",
+    "rounding": "half-up",
+    "nEqualsOne": "carry-three-category-rounding-residual-by-length",
+    "ranking": "minimize-stage-direction-deviation-before-level-quality",
+    "aggregate": "derived-from-per-length-quotas-no-independent-6plus-lock",
+    "basis": "weighted-path-direction-20261113",
+    "categories": [
+      "positive",
+      "reverse",
+      "neutral"
+    ]
+  },
+  "stage31To50": {
+    "fiveHistogram": {
+      "0": {
+        "target": 2,
+        "range": [
+          2,
+          3
+        ]
+      },
+      "1": {
+        "target": 14,
+        "range": [
+          13,
+          15
+        ]
+      },
+      "2": {
+        "target": 3,
+        "range": [
+          2,
+          4
+        ]
+      },
+      "3": {
+        "target": 1,
+        "range": [
+          0,
+          1
+        ]
+      },
+      "4": {
+        "target": 0,
+        "range": [
+          0,
+          0
+        ]
+      }
+    },
+    "varietyHistogram": {
+      "1": {
+        "target": 0,
+        "range": [
+          0,
+          0
+        ]
+      },
+      "2": {
+        "target": 3,
+        "range": [
+          2,
+          3
+        ]
+      },
+      "3": {
+        "target": 7,
+        "range": [
+          7,
+          9
+        ]
+      },
+      "4": {
+        "target": 9,
+        "range": [
+          8,
+          9
+        ]
+      },
+      "5": {
+        "target": 1,
+        "range": [
+          1,
+          1
+        ]
+      },
+      "6": {
+        "target": 0,
+        "range": [
+          0,
+          0
+        ]
+      }
+    },
+    "fiveCoverage": {
+      "targetLevels": 18,
+      "allowedLevels": [
+        17,
+        18
+      ],
+      "perFiveLevelsMinimum": 4,
+      "maxConsecutiveZeroLevels": 1
+    },
+    "rareLengthCounts": {
+      "7": 2,
+      "8": 2
+    }
+  },
+  "wordDirection": {
+    "id": "weighted-path-direction-20261113",
+    "basis": "all-path-steps",
+    "firstStepWeight": 2,
+    "subsequentStepWeight": 1,
+    "positiveDirections": [
+      "R",
+      "D"
+    ],
+    "reverseDirections": [
+      "L",
+      "U"
+    ],
+    "tie": "neutral"
+  }
+}

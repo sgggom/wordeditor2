@@ -21,7 +21,7 @@ function generate(task, context, key, directory, budgetMs) {
   const requested = context.count;
   const required = opening ? 1 : requested;
   const candidates = prior?.candidates ?? [];
-  const seen = new Set(candidates.map(candidate => candidate.game.g));
+  const seen = new Set(candidates.map(candidate => candidate.game.a));
   assert.equal(seen.size, candidates.length, '已存候选含重复棋盘');
   assert.ok(candidates.length <= required, '候选数量超过要求');
   if (candidates.length === required) return prior.summary;
@@ -41,7 +41,7 @@ function generate(task, context, key, directory, budgetMs) {
     const summary = {
       position: task.position, coreWords: job.config.fixedWords, requested, required,
       validatedDistinctBoards: candidates.length,
-      distinctTargetSets: new Set(candidates.map(candidate => candidate.game.t)).size,
+      distinctTargetSets: new Set(candidates.map(candidate => candidate.game.c)).size,
       exactTargetCount: candidates.filter(candidate => candidate.quality.targetCountDifference === 0).length,
       suggestedPlacementCount: candidates.filter(candidate => candidate.placementMode === 'suggested').length,
       attempts, passes: pass, elapsedMs: (prior?.summary.elapsedMs ?? 0) + Math.round(performance.now() - started),
@@ -62,15 +62,13 @@ function generate(task, context, key, directory, budgetMs) {
       const level = context.generator.generate({
         ...current.config, excludedBoards: [...excluded, ...seen], duplicateCheck: job.duplicateCheck, random,
       });
-      const game = createGameExport([{ level }]).books[0].levels[0];
-      game.id = String(task.position);
-      game.name = '第' + task.position + '关';
-      assert.ok(!seen.has(game.g), '本关出现重复候选棋盘');
+      const game = createGameExport([{ level }]).level[0];
+      assert.ok(!seen.has(game.a), '本关出现重复候选棋盘');
       verifyCandidate(level, game, current, context);
-      seen.add(game.g);
+      seen.add(game.a);
       attempts += level.generationQuality.attemptsEvaluated;
       candidates.push({
-        id: hash([task.position, game.g, game.t, game.n]).slice(0, 16),
+        id: hash([task.position, game.a, game.c, game.b]).slice(0, 16),
         number: candidates.length + 1,
         placementMode: current === job ? 'suggested' : 'varied',
         game, paths: level.targetWords.map(entry => [entry.word, entry.path]), quality: level.generationQuality,
@@ -175,7 +173,7 @@ async function main() {
         const pool = read(file);
         assert.equal(pool.key, key, '已存候选的输入不一致');
         assert.equal(pool.summary.validatedDistinctBoards, pool.candidates.length);
-        assert.equal(new Set(pool.candidates.map(candidate => candidate.game.g)).size, pool.candidates.length);
+        assert.equal(new Set(pool.candidates.map(candidate => candidate.game.a)).size, pool.candidates.length);
         summaries.set(task.position, pool.summary);
       }
     }

@@ -1,0 +1,3005 @@
+{
+  "level": [
+    {
+      "a": "CAT,-L-,-L-",
+      "b": "231020020",
+      "c": "ALL CAT CALL",
+      "d": "LAT TALL"
+    },
+    {
+      "a": "ASBE-,-KODY",
+      "b": "1121001121",
+      "c": "ASK BED BODY",
+      "d": "BODE DEBS ODE"
+    },
+    {
+      "a": "BSC,OKI,XYT",
+      "b": "111111121",
+      "c": "BOX SKY CITY",
+      "d": "KIT SKI SKIT TICS"
+    },
+    {
+      "a": "MOB,BEW,NAF",
+      "b": "111211111",
+      "c": "FAN WEB BOMB",
+      "d": "BEAN MOB WEAN"
+    },
+    {
+      "a": "PAI--,-FRY-,--YAW",
+      "b": "144000251000211",
+      "c": "AIR FRY WAY AIRY FAIR PAIR",
+      "d": ""
+    },
+    {
+      "a": "MAY,SAF,IDE",
+      "b": "111332133",
+      "c": "FED MAY SAD SAFE ASIDE",
+      "d": "DEFY DISA FAD FADE SADE SIDE YAM YAMS"
+    },
+    {
+      "a": "TIUS,ANUT",
+      "b": "32121422",
+      "c": "NUT TAN TIN STUN SUIT",
+      "d": "NIT NUTS TUNA UNIT"
+    },
+    {
+      "a": "COPY,EVER",
+      "b": "33312343",
+      "c": "COP EVE PER COPY EVER COVER",
+      "d": "COPE COPER COVE EVERY OVER PYRE REPO VERY"
+    },
+    {
+      "a": "ELH,NYE,DER",
+      "b": "213224333",
+      "c": "END EYE HER HEY RED HERE LEND",
+      "d": "EYED LYE"
+    },
+    {
+      "a": "MI-LP,ONDAY,-TEN-",
+      "b": "210111233201120",
+      "c": "DAY TEN MIND PLAN MONDAY",
+      "d": "ADEN DANE DEN LAD LADE LANE LAY MINT NAY NET PLANET PLAY"
+    },
+    {
+      "a": "SING,CLAP",
+      "b": "23523443",
+      "c": "LAP NAP SIN CLAN CLAP SING CLING",
+      "d": "ANIL ANIS CLANG LING NIL PAL PAN PANG"
+    },
+    {
+      "a": "RRI,AYV,SHE",
+      "b": "311321332",
+      "c": "RAY SHE SHY RASH ARRIVE",
+      "d": "ASH ASHY IVY RIVE SAY"
+    },
+    {
+      "a": "CGEM,HARM",
+      "b": "22414674",
+      "c": "ARM ERA GEM CHAR GERM HARE HARM CHARM",
+      "d": "AGE AGER ARE CHARE GAR HAREM MEGA RAG RAGE"
+    },
+    {
+      "a": "ARD,CHA,EGN",
+      "b": "322322211",
+      "c": "ACE HAD CARD HANG RACE",
+      "d": "CAR CHAD"
+    },
+    {
+      "a": "GA-IE,IMETS,NG-NU",
+      "b": "320212333121011",
+      "c": "GIN MET SUN TIE GAME ITEM AGING",
+      "d": "GAMIN MAG MAGI MING STEM TIES UNTIE USE"
+    },
+    {
+      "a": "SET,OKA,RRY",
+      "b": "332322212",
+      "c": "SET OKAY ROSE TAKE SORRY",
+      "d": "ATE SETA TAKES"
+    },
+    {
+      "a": "PRIZ,PAWE",
+      "b": "25113642",
+      "c": "AWE PAR PAW RAP RAW WARP PRIZE",
+      "d": "APP IRA WAR"
+    },
+    {
+      "a": "GRO,HTW,FIX",
+      "b": "234134221",
+      "c": "FIT FIX ROW TWO GROW GROWTH",
+      "d": "TROW WORT"
+    },
+    {
+      "a": "COBE,CAST,DEVO",
+      "b": "233314471222",
+      "c": "BET COB CAST EAST VOTE BOAST COAST DEVOTE",
+      "d": "BETS BOAS CASTE OAST STOVE"
+    },
+    {
+      "a": "MIT--,-XWI-,--ING",
+      "b": "111000132000131",
+      "c": "MIX WIN TWIN WING",
+      "d": ""
+    },
+    {
+      "a": "LOBE,FORC",
+      "b": "44324541",
+      "c": "FOR LOB ORB FOOL LOBE FLOOR FORCE",
+      "d": "FORB"
+    },
+    {
+      "a": "CHA,DIM,EPP",
+      "b": "162354111",
+      "c": "DIM HAM HID HIM HIP HIDE CHAMP",
+      "d": "AMID CHIDE CHIP DIP IMP PIMA"
+    },
+    {
+      "a": "MADE,LIFE",
+      "b": "55434443",
+      "c": "AIL DAM FEE MAD FEED FILM LIFE MADE MAIL",
+      "d": "DAIL EDAM"
+    },
+    {
+      "a": "HAR,TEW,FIF",
+      "b": "121431111",
+      "c": "TEA WET TEAR FIFTH",
+      "d": "EAR WEAR"
+    },
+    {
+      "a": "OJ-RT,BAKER,-YDA-",
+      "b": "120324436203330",
+      "c": "BAY JAY JOB BAKE READ TREK BAKER READY TREAD",
+      "d": ""
+    },
+    {
+      "a": "WWA,IRK,SEE",
+      "b": "311322453",
+      "c": "SEE SEEK WAKE WIRE WISE WISER",
+      "d": "AKEE IRE IRES KRIS REEK RISE SIR SIRE WIRES"
+    },
+    {
+      "a": "TERU,HENS",
+      "b": "43113641",
+      "c": "HEN TEE THE TEEN THEN ENSURE",
+      "d": "ERNE HENS SURE TERN THEE URN URNS"
+    },
+    {
+      "a": "HKL,UEE,MAN",
+      "b": "422445434",
+      "c": "EEL HUE HUM KEEL KEEN MANE HUMAN HUMANE",
+      "d": "ELK LEEK MAN"
+    },
+    {
+      "a": "MATH,LAVA,MISS",
+      "b": "111112132223",
+      "c": "AIM ASS HAS MAT LAVA MISS",
+      "d": "ALMA MATH SIAL"
+    },
+    {
+      "a": "THIRD,COULD,-SEA-",
+      "b": "341111533105420",
+      "c": "SEA HOSE SEAL SOUL THOU COULD THIRD THOSE",
+      "d": "LUES"
+    },
+    {
+      "a": "SSL,TSO,REW",
+      "b": "147389476",
+      "c": "LOW OWE SEW SOW LOSE LOSS LOST SLOW LOSER LOWER TRESS STRESS",
+      "d": "OWES REST RESTS SLOWER SOLS SOWER STREW WEST"
+    },
+    {
+      "a": "CLAM,RULO,OBAR",
+      "b": "332422341334",
+      "c": "ROB RUB CLAM CLUB ORAL MOLAR MORAL CLAMOR",
+      "d": "ALAMO ALAR AMOR AMORAL AROMA BAR LAB LABOR MALAR MOLA ROMA"
+    },
+    {
+      "a": "YROT,DHIS,WELL",
+      "b": "135315833496",
+      "c": "HEW HIS ILL OIL ROT HELL HILL ROIL SILL TOIL WELL DWELL HISTORY",
+      "d": "ELLS HILLS HIST ILLS LEWD LIST ROTS STORY TOR TORY WELLS"
+    },
+    {
+      "a": "PGRI,ITFM,ANOE",
+      "b": "312245223542",
+      "c": "ANT EON FOE PIT RIM TIP ANTI FONT GRIM PIANO",
+      "d": "EMIR GRIME PIAN RIME TIAN"
+    },
+    {
+      "a": "KUD--,-TON-,--SER",
+      "b": "1140005ba000461",
+      "c": "DON DOT NOT ONE SEN SON TON DONE NOSE TONE KUDOS TONER",
+      "d": "DOSE NOD ONES RENO SONE UDON"
+    },
+    {
+      "a": "BRUS,OATH",
+      "b": "47325753",
+      "c": "BRA OAR OAT RAT RUT BOAR BOAT OATH RUSH BRUSH",
+      "d": "BRAT BRUT OATHS RATH RUTA RUTH RUTHS SURA TAR TURBO TUSH"
+    },
+    {
+      "a": "LCCO,OUTS,NGER",
+      "b": "232247932542",
+      "c": "GET GUT OUT TUG COST CUTE CUTS LONG OUTER LONGER STUCCO",
+      "d": "CLON CLOUT CUT CUTER ERST GETS GUTS LONGE LOUT OUTS RETS TEG TEGU"
+    },
+    {
+      "a": "SELL,WIFE,NOUN",
+      "b": "234212632223",
+      "c": "ELF FEN FUN ION FELL NOUN SELF SELL WIFE",
+      "d": "SEIF"
+    },
+    {
+      "a": "MSJ,ITO,LEY",
+      "b": "322463464",
+      "c": "JOT JOY LET TOY YET MITE TILE SMILE SMILEY",
+      "d": "LETS LIT LITE MIL MILE MITS SMITE STILE YETI"
+    },
+    {
+      "a": "SH-GO,JOINT,-PPE-",
+      "b": "230222678404410",
+      "c": "GOT HOP NIP PEN PIN INTO JOIN SHOP JOINT POINT SHOPPING",
+      "d": "INGOT PENG PENGO PENT PINE PING PINT PINTO"
+    },
+    {
+      "a": "UNDL,BNIE,YEKD",
+      "b": "229533773424",
+      "c": "BYE DIE DIN KEY KID LED YEN DIED DINE IDLE IDLED BUNDLE BUNDLED",
+      "d": "BUN BUND DIEL DIKE ENID INN KEN KIN KINE NUB"
+    },
+    {
+      "a": "REAC,SOPT",
+      "b": "22641265",
+      "c": "ACT APT CAP OPT SOP PACT REAP REACT",
+      "d": "CAPO"
+    },
+    {
+      "a": "MULL,SUCH,TOOL",
+      "b": "111156638875",
+      "c": "TOO COOT LOOT MULL OUCH OUST SUCH TOOL LOCUS STOOL TOUCH LOCUST",
+      "d": "COOTS LOCH MULCH"
+    },
+    {
+      "a": "FSH,RWO,ONT",
+      "b": "224347445",
+      "c": "FRO HOT HOW NOR OWN TOW ONTO SHOT SHOW FRONT",
+      "d": "SHOWN TOWN"
+    },
+    {
+      "a": "ROG--,-DUS-,--ETY",
+      "b": "234000784000441",
+      "c": "DUE DUG GOD ROD SUE DUET DUST GUST DUSTY ROGUE",
+      "d": "DOG DUETS GUSTY SUDOR SUET SUETY"
+    },
+    {
+      "a": "DUMB,ECOR,ALLE",
+      "b": "325323872356",
+      "c": "COMB CORE DEAL DUMB LORE MOLE MORE ROLE ROLL DECOR UMBRELLA",
+      "d": "COLE DECO DUCE MOLL MOREL OLLA OMBRE"
+    },
+    {
+      "a": "TAP,OAK,PEG",
+      "b": "432332531",
+      "c": "OAK PAT PEA PEG TAP TOP ATOP PEAK",
+      "d": "POT TOPE"
+    },
+    {
+      "a": "HAVE,SPUN,OBEY",
+      "b": "255534452231",
+      "c": "PUN SOB SPA HAVE OBEY PAVE SPUN HAVEN VENUE AVENUE",
+      "d": "HAP HAPS PUNY SHAVE SHAVEN SPUE"
+    },
+    {
+      "a": "TAB,FDU,IRY",
+      "b": "456383342",
+      "c": "BAD BUD BUY DAB DRY DUB FIR TAB TAD DRIFT ADRIFT",
+      "d": "BAT"
+    },
+    {
+      "a": "FP-DI,LORDG,-JAM-",
+      "b": "230114672103640",
+      "c": "DIG JAM JAR LOP MAR RAM DROP FLOP LORD FLORA MAJOR",
+      "d": "DRAM IDDM ROLF"
+    },
+    {
+      "a": "WALK,WITH,AXIS",
+      "b": "343134412322",
+      "c": "LAW SIT SIX WAX WIT WAIT WALK WITH AXIAL",
+      "d": "AXIS TIS"
+    },
+    {
+      "a": "GUY,CRT,OUN",
+      "b": "222354464",
+      "c": "GUY OUR RUG RUN RUNT COUNT COURT COUNTY",
+      "d": "GURU YURT"
+    },
+    {
+      "a": "BIND,HIKE,WADE",
+      "b": "366311332232",
+      "c": "BIN INK NIB WAD BIND HIKE WADE INKED INDEED",
+      "d": "DEED"
+    },
+    {
+      "a": "LWS,IEP,KED",
+      "b": "342384484",
+      "c": "LIE WEE KEEP LIKE PEED SPEW WEED WEEK LIKED SPEED",
+      "d": "DEEP DEEPS LWEI PEE PEEK PEW"
+    },
+    {
+      "a": "EAD-I,HOLAO,W-EAT",
+      "b": "124015671120532",
+      "c": "ALE EAT LEA OLD WHO HEAD HOLD HOLE IOTA LOAD WHOLE",
+      "d": "LEAT TAEL WHOA"
+    },
+    {
+      "a": "MUS,OBT,MEN",
+      "b": "455244333",
+      "c": "BUS MEN MOM SUB SUM BENT BUST MUST MOMENT",
+      "d": "MOB OMEN SUMO"
+    },
+    {
+      "a": "NADD,CRYE,INGD",
+      "b": "375235431222",
+      "c": "ADD ARC CRY DYE RAN DARN EDGY NARY ADDED DANCING",
+      "d": "DYED EYRA NARC RYE"
+    },
+    {
+      "a": "BIS,AGA,NDT",
+      "b": "614775422",
+      "c": "AND BAG BAN BIG GAB GAS NAB SAG SAT TAG BAND SAGA",
+      "d": "AGAS NAG NAGA"
+    },
+    {
+      "a": "LOAF,IGHT,CORK",
+      "b": "553325123311",
+      "c": "AFT COG LOG OAF CORK LOAF LOGO LIGHT LOGIC",
+      "d": "HAFT"
+    },
+    {
+      "a": "AY-PE,HTRIB,-YKC-",
+      "b": "11053258a301340",
+      "c": "HAY RIB RIP EPIC PICK RIPE TRIP BIRTH TRIBE TRICK TRICKY",
+      "d": "ICKY PICKY RICK TRIPE"
+    },
+    {
+      "a": "CURE,CAVE,MAID",
+      "b": "446323771457",
+      "c": "AID CUR VIA AIDE AVID CAVE CURE MAID REED VEER CAVED CURVE CURVED",
+      "d": "DEER DEVI DIAM DIVA DIVE VIDE"
+    },
+    {
+      "a": "LANE,TUBE,SLUG",
+      "b": "112344852345",
+      "c": "BEE BEG BUG BUT LUG TUB BEEN LANE LUGE SLUG STUB TUBE",
+      "d": "ALTS BUTS LUBE SLUB"
+    },
+    {
+      "a": "POR,LPE,END",
+      "b": "245246334",
+      "c": "END ORE PER POP RED LEND POPE ROPE LENDER",
+      "d": "PORE REPO"
+    },
+    {
+      "a": "UNIR,DETS",
+      "b": "6b825993",
+      "c": "DEN DUN DUNE NETS NITE NITS NUDE RITE STIR TINE UNIT UNITE UNITED",
+      "d": "NET NIT TEN TIN TINED UNITS"
+    },
+    {
+      "a": "PO-ID,KCABE,SO-TS",
+      "b": "110242437411021",
+      "c": "BED BID CAB COP BACK BEST DEBT SOCK ABIDE",
+      "d": "ABED BIDE DIB IDES POCK POCO"
+    },
+    {
+      "a": "SAY,YRM,STE",
+      "b": "274375483",
+      "c": "ARM ART MET SAY TRY ARMY STEM TRAY ARTSY STRAY SYSTEM",
+      "d": "ARMET ARTS RAY"
+    },
+    {
+      "a": "CODE,HOST,BOND",
+      "b": "355337734531",
+      "c": "COD ODE BOND BOOS CODE COOS HOOD HOST SNOB SOON BOOST HOSTED",
+      "d": "CODS TEDS"
+    },
+    {
+      "a": "LID,PRR,AWA",
+      "b": "125115265",
+      "c": "LID PAW RAW RID WAR DRAW WARD AWARD",
+      "d": "APRIL"
+    },
+    {
+      "a": "FAST,INCH,COOK",
+      "b": "421159445522",
+      "c": "CON FAN FIN COOK FAST ICON INCH NOOK CINCH CONCH FINCH",
+      "d": "COON FINO"
+    },
+    {
+      "a": "LW-HI,COAST,-RLD-",
+      "b": "250314865403410",
+      "c": "ASH COW HIT OWL ROW COAL COWL LASH LAST COAST ROAST WORLD",
+      "d": "HITS OAST"
+    },
+    {
+      "a": "MPHO,YAIN,SLRY",
+      "b": "172229654532",
+      "c": "AIR PAY LAIN LAIR PAIN PAIR PALS SLAP PHONY SLAIN SYMPHONY",
+      "d": "AIRY LAP LAY LAYS PAL PAYS PHI PHON RIAL RIALS SLAY"
+    },
+    {
+      "a": "SHI,CAN,OTY",
+      "b": "432455132",
+      "c": "ANY CAN CAT HAT SCAN SCOT SHIN SHINY",
+      "d": "CANY COT HANI SCAT SHAN SHINA TACO TAN"
+    },
+    {
+      "a": "ANGE,DPAR",
+      "b": "116615a8",
+      "c": "AGE ARE ERA GAP GAR PAR RAG RAP PAGE PARE DANGER",
+      "d": "AGER RAGE"
+    },
+    {
+      "a": "FALL,EDGE,JULY",
+      "b": "465637472335",
+      "c": "ALL FAD FED GEL LAD LEG LYE DULY EDGE FADE FALL JULY YELL ALLEY JUDGE",
+      "d": "GLAD GLADE JUDA JUDE LADE"
+    },
+    {
+      "a": "DAMTM,ICIWA,-EEO-",
+      "b": "454212634104120",
+      "c": "ACE DAM MAD MAW TWO WOE ACID DICE MICA MICE TWICE",
+      "d": "CAD CADI DACE ICE MACE"
+    },
+    {
+      "a": "GRES,WAND,NETA",
+      "b": "256325951251",
+      "c": "DATE ENDS NEAR REND RENT SEND SENT WANE WANT GRAND GRANT",
+      "d": "ANTE ARES ETNA GRAN NARES RAND RANT RENDS RENTE SENTE SERA TADS TEAR WAND WARE WARES"
+    },
+    {
+      "a": "MSI,AAD,YPE",
+      "b": "353355333",
+      "c": "APE MAY PAD SAD SAP YAM SIDE ASIDE DISMAY",
+      "d": "APED DISA SADE YAMS"
+    },
+    {
+      "a": "EASU,RCIR,THOE",
+      "b": "443134451414",
+      "c": "HOE IRE SIR ACRE EACH RICH SIRE REACH TREASURE",
+      "d": "CHOIR HOER SURE URIC"
+    },
+    {
+      "a": "NIW,TLE,TOB",
+      "b": "344595245",
+      "c": "LOB LOT NIL WEB WIN BELT LINT LOBE WELT WILT BOTTLE",
+      "d": "BOLE BOLT BOT TOLE WILE"
+    },
+    {
+      "a": "NOW--,-NHT-,--ERE",
+      "b": "134000262000654",
+      "c": "HER NOW THE WON HERE THERE WHERE NOWHERE",
+      "d": ""
+    },
+    {
+      "a": "MOVE,GRIN,OVER",
+      "b": "258544653352",
+      "c": "VIE GRIN MOVE OVEN OVER ROVE VEIN VINE GROVE MOVIE VIRGO GOVERN",
+      "d": "ERNE NEVI OVINE REIN RIVE RIVEN"
+    },
+    {
+      "a": "LUD,AME,GOW",
+      "b": "215457356",
+      "c": "AGO DEW LAG MOW MUD OWE WED GAME LAME OWED MOWED",
+      "d": "ALUM DEMO EMU GAMED LAGO LAMED MAG MEW"
+    },
+    {
+      "a": "SAIL,GIFO,DETR",
+      "b": "234522751264",
+      "c": "AIL FOR FORT GIFT LIFT LOFT SAIL FORTE GIFTED SAILOR",
+      "d": "FIG FIGS LIAS"
+    },
+    {
+      "a": "HAB,PFE,LAT",
+      "b": "11323849a",
+      "c": "ATE BET FAT LAT BETA FATE FETA LATE PLATE ALPHABET",
+      "d": "ABET ALPHA FETAL PLAT"
+    },
+    {
+      "a": "OX-YA,FIELD,-TRU-",
+      "b": "120314334202320",
+      "c": "DAY FIT FIX FOX LURE RELY FIELD TRULY",
+      "d": "RULE RULY TIE TIER TIFO"
+    },
+    {
+      "a": "MOST,LUSE,AORA",
+      "b": "221313571124",
+      "c": "EAR SEA SET TEA USE MOUSE ALMOST AROUSE",
+      "d": "ROUSE SOUSE TEARS"
+    },
+    {
+      "a": "PFL,ITY,GNI",
+      "b": "423446444",
+      "c": "FLY PIG PIT TIP YIN PITY LYING TYING FLYING",
+      "d": "INTI"
+    },
+    {
+      "a": "MAED,DSKR,ISCA",
+      "b": "251326452555",
+      "c": "ASK ASS CAR ARKS CARD DISC MASK MASS SCAR ASKED DISCARD",
+      "d": "ARK DISS KEAS RACK RACKS SKED"
+    },
+    {
+      "a": "ECOM,AHAM,SENU",
+      "b": "233344445651",
+      "c": "HAM HAS HEN MAN SEN AMMO EASE MOAN CEASE CHASE COMMUNE",
+      "d": "COMMA MANE MOCHA"
+    },
+    {
+      "a": "MIN--,-HUG-,--TEJ",
+      "b": "112000364000641",
+      "c": "GET HUG HUT JET NUT TUG HUGE MINUTE",
+      "d": "GUN GUT HIM TEG TEGU"
+    },
+    {
+      "a": "ENOT,PIED",
+      "b": "48437621",
+      "c": "NIP NOT ONE PEN PIE PIN PIED PINE TONE PINOT",
+      "d": "EON TOE TOED TON"
+    },
+    {
+      "a": "HSHU,ELFF,SLOW",
+      "b": "441187523542",
+      "c": "ELF LOW OFF SHE SELF SELL SLOW HELLO SHELF SHELL SHUFFLE",
+      "d": "ELLS HELL"
+    },
+    {
+      "a": "VOT,EYE,DHW",
+      "b": "234255112",
+      "c": "EYE TOY WHY YET YEW VOTE DEVOTE",
+      "d": "EYED WET"
+    },
+    {
+      "a": "CELL,CUTE,SKID",
+      "b": "123533772565",
+      "c": "CUE CUT KID KIT LED LET SKI CELL CUTE DELL KITE SKID TELL TIDE",
+      "d": "CELT DITE EDIT SCUT SKIT"
+    },
+    {
+      "a": "SA-AW,GLOVE,-TAR-",
+      "b": "120222654406540",
+      "c": "AWE OAR RAT TAR LOVE SALT VOLT WAVE ALTAR GLOAT GLOVE",
+      "d": "ATLAS OAT VOLTA"
+    },
+    {
+      "a": "ISONG,NHOPS,SIGHT",
+      "b": "134311554434431",
+      "c": "HIS HOG HOP SON HIGH OOPS SIGH SHOPS SONGS SPOON INSIGHT",
+      "d": "GOON GOOS HOPS INS NOSH OOHS POO POON POOS SHOO SHOP SIGHT SIN SINS SONG"
+    },
+    {
+      "a": "CEGRS,OFOEE,MMUTR",
+      "b": "212212258323571",
+      "c": "EGO FOE FOG OUT SEE TEE MUTE TREE OUTER COMMUTE COMMUTER",
+      "d": "EGRET ERGO GOER GOERS GOUT GREE MUTER OGRE OUTRE SEER TEES TERSE"
+    },
+    {
+      "a": "SPT,TOS,TRU",
+      "b": "4737b4572",
+      "c": "TOP OPTS PORT POST POTS ROTS SPOT TORT TROT SPORT TORUS TRUST",
+      "d": "OPT POT ROT RUST SOP SORT SOTS STOP TOPS TOR TROP"
+    },
+    {
+      "a": "MOCF,PILE,CHLN",
+      "b": "121159841331",
+      "c": "FEN HIP ILL LIP OIL HILL PILE PILL CHILE COMPILE",
+      "d": "CHILL CHIP CLIP COIL COMP FELL MOIL"
+    },
+    {
+      "a": "SEY-E,ELCOM,W-ROB",
+      "b": "211022147720354",
+      "c": "ROB SEW YES BOOM COMB COME MOOR ROOM COMBO WELCOME",
+      "d": ""
+    },
+    {
+      "a": "SLOP,HUMP,TJAR",
+      "b": "242226951221",
+      "c": "HUM JAM LOP MAR JUMP LUMP POMP SLUM SLUMP THUMP",
+      "d": "HUMP JAR MOLS MOP POLS PRAM RAM RAMP SLOP"
+    },
+    {
+      "a": "HOW,STP,PAM",
+      "b": "343562574",
+      "c": "HOT HOW MAP PAT SPA TAP SHOW SPAM STOW TAMP STAMP",
+      "d": "HOTS MAPS MAT MATS PATS SHOT SPAT TAPS TOW"
+    },
+    {
+      "a": "EVEN,SGWT,EGUY",
+      "b": "568721241212",
+      "c": "EGG EVE GUY NEW EVEN VENT WENT EVENT SEVEN SEVENTY",
+      "d": "EGGS EVES NEVE NEVES NEWT WEN"
+    },
+    {
+      "a": "BRDS,LOOT,EUGH",
+      "b": "377138631242",
+      "c": "DOG DOT ORB GODS LORD ROLE ROOT BLOOD BROOD ROUGH DROUGHT",
+      "d": "BLEU DOOR DOTS GOD GOT GOTH LOOT LORDS LOUGH OUGHT ROOD ROOTS ROUE STOG STOOL TODS TOO TOOL"
+    },
+    {
+      "a": "JAO--,-WAY-,--KEN",
+      "b": "121000552000553",
+      "c": "JAW KEN OAK WAY YEN WAKE AWAKE WAKEN",
+      "d": "AWAY KEY"
+    },
+    {
+      "a": "LUFHS,TRUTS,SMELO",
+      "b": "112214676311553",
+      "c": "RUE RUT FUEL LOSS LOST MELT SOLE TRUE STRUT TRUTH TRUTHFUL",
+      "d": "FUR RUTH RUTHS RUTS SMELT"
+    },
+    {
+      "a": "THAD,AKNO,TSGP",
+      "b": "245412742332",
+      "c": "DON HAD NOD POD HANG HANK PONG TATS ANGST THANKS",
+      "d": "ANKH DANK DONG HANKS KHAN PONGS STAT THAN THANK"
+    },
+    {
+      "a": "THI,BUN,HSK",
+      "b": "3735a7276",
+      "c": "BUS HUB INK NUB BUNK BUSH HUSH HUSK SUNK THIN THUS HUNKS THINK",
+      "d": "BUN HUNK INKS SUB SUN"
+    },
+    {
+      "a": "FCHE,LAKE,LUFR",
+      "b": "164535472123",
+      "c": "ACHE CAKE CALL FREE LAKE CHEEK CHEER FLAKE CHEERFUL",
+      "d": "AKEE CALF CAUL FLAK FULL"
+    },
+    {
+      "a": "RO-AU,YDITN,ED-PA",
+      "b": "220233416621045",
+      "c": "ANT APT DYE NAP ODD PAN ROD RYE TAU AUNT PANT UNTIDY",
+      "d": "ANTI DORY DYED EDDO TIDY"
+    },
+    {
+      "a": "SOYU,PUMP,DNIK",
+      "b": "443146333643",
+      "c": "KIN SOY YOU YUP KIND MIND PUMP SOUP SPUN SOUND PUMPKIN",
+      "d": "IMP MUNI PUN SOUM"
+    },
+    {
+      "a": "RLA,IGH,BAT",
+      "b": "411563656",
+      "c": "BAG BAT BIG RIB RIG TAB TAG BATH RIGHT ALRIGHT",
+      "d": "AGHA ALGA BIGHT BIRL GAB GIRL RIGA"
+    },
+    {
+      "a": "HSIF,GOLD,FAME",
+      "b": "232235552232",
+      "c": "OLD FAME FILM GOLD GOSH SOLD FAMED GOLDFISH",
+      "d": "FISH LOAF LOAM LOG OAF SILD SILO SOLI"
+    },
+    {
+      "a": "SHID,CAVE,AGPE",
+      "b": "2636267a1122",
+      "c": "HID CAVE DEEP HAVE HIDE HIVE PEED AGAVE CAVED SHAVE SHAVED",
+      "d": "AVID DEVI DIVA DIVE GAVE PEE SHAG SHIV SHIVA VIDE"
+    },
+    {
+      "a": "STI--,-END-,--GUB",
+      "b": "185000595000443",
+      "c": "BUD BUG DUB DUG END NET NIT TEN TIN NITE TEND TING STING",
+      "d": "NETS NITS TENDU TINE"
+    },
+    {
+      "a": "SMABE,BILER,MENAK",
+      "b": "1333115aa113542",
+      "c": "ALE MEN BEAK BEAN BILE LEAK LEAN LIEN MALE MILE ALIEN REBEL SMILE",
+      "d": "ABEL BALE BALER BAMS BELIE BERK ILEA LAB LAMS LEA LIE LIMA MALI MIEN MIL"
+    },
+    {
+      "a": "ELKS,SICH,STFI",
+      "b": "366148413611",
+      "c": "ELK LIT SIT LESS LICK SICK SILK TICK TILE STICK SHIFTS",
+      "d": "ELKS ILKS LICKS SHIFT SICKLE SILKS SITS STICH STILE TICKLE TICKS TILES TIS"
+    },
+    {
+      "a": "HCN,BRA,URB",
+      "b": "125579225",
+      "c": "BAR BRA NAB RAN RUB BARB BRAN CRAB URBAN BRANCH",
+      "d": "ARC ARCH BAN BURB BURR NARC RANCH"
+    },
+    {
+      "a": "TROR,YLPE,SUPD",
+      "b": "223522662331",
+      "c": "ORE PER RED REPLY TROPE UPPER SUPPLY SUPPORT",
+      "d": "PLY REPORT ROPER SUPPED SUPPER UPPED"
+    },
+    {
+      "a": "COPNI,CURTA,-MIX-",
+      "b": "3531148b4105410",
+      "c": "COP CUR MIX OUR RIM RUM CURT POUR PRIM TRIM COURT OCCUR CURTAIN",
+      "d": "TAIN"
+    },
+    {
+      "a": "ELMS,MOOS,NUDE",
+      "b": "143126742485",
+      "c": "DUN DUO ELM MOD ODE LOUD MOOD MOSS NUDE LOOSE MOOSE LOOSED",
+      "d": "DOOM DOSE DOSS ELMS LOOM LOOMS LOOS MODE MODES MOLE MOOS NUDES ODES OUD"
+    },
+    {
+      "a": "MPL,LAA,REY",
+      "b": "264564554",
+      "c": "LAP LAY PAL PALM PLAY REAL REAP LAYER REALM PLAYER",
+      "d": ""
+    },
+    {
+      "a": "POPP,AFRO,YUNW",
+      "b": "212124571135",
+      "c": "FRO FUN OWN PAY POP POW ROW AFRO PROW FROWN",
+      "d": "PORN PRO PROP WORN"
+    },
+    {
+      "a": "SMER,AYTE,NYRO",
+      "b": "155232542243",
+      "c": "ANY MET NAY ROE SAY TRY MERE METER METRO METEOR",
+      "d": "METE REMS RETE RETEM RETRO RETRY"
+    },
+    {
+      "a": "ASU-W,WARFE,D-DAR",
+      "b": "122015577510444",
+      "c": "FAD FEW WAR DARE FARE SURF WARD AWARD DWARF SURFER WARFARE",
+      "d": "ARE DRAW ERA FAR RAW SARD SAW SURA SURD WAS"
+    },
+    {
+      "a": "SAMP,HUNL,YRGE",
+      "b": "332243242255",
+      "c": "ASH GEL LEG SHY HUNG URGE AMPLE HUNGRY SAMPLE",
+      "d": "ASHY MASH MAUN RUN RUNG SAURY SHUN"
+    },
+    {
+      "a": "ENV,DAI,UCT",
+      "b": "452782384",
+      "c": "ACT CAD CAN CUD DEN VIA DANE DUCT CANED ENACT VIADUCT",
+      "d": "ADEN CADE CANE TIAN"
+    },
+    {
+      "a": "CHAR,GNIM,SADE",
+      "b": "349612561141",
+      "c": "AID AIM ARM SAD HARM RAID ARMED CHAIN CHARM CHARMING",
+      "d": "AIDE AIMED ANIME CHAI CHAR DIM DIME DIN DING DINGS IDEM MEDIA MINA MING NIDE RAIN SADE SANG"
+    },
+    {
+      "a": "KEGYE,TPULL,RICKY",
+      "b": "153223855348763",
+      "c": "KEG LUG EPIC ICKY LUGE PICK PUCK PULL RIPE YELL PICKY TRICK TRIPE PULLEY TRICKY",
+      "d": "CUP GULL KEPI KEPT LUCK LUCKY LYE PEG PICUL PUG RICK RIP TRIP"
+    },
+    {
+      "a": "UY-ST,BACHA,-MEO-",
+      "b": "140122645204430",
+      "c": "ACE BAY BUY HAT HOE MAY YAM CAME CHAT SHOE MACHO",
+      "d": "BACH CAB CAMEO CHATS ECHO HATS MACE MACH MECH"
+    },
+    {
+      "a": "DBR,WEE,BLL",
+      "b": "2536b6175",
+      "c": "BEE WEB WEE BEER BELL BLEW REEL WELL BELLE DWELL DWELLER",
+      "d": "BLEB EEL LEER LEWD"
+    },
+    {
+      "a": "SWIN,IOVE,PNYL",
+      "b": "375426551412",
+      "c": "ION IVY NOW SIP VOW WIN WON OVEN WINE NOVEL SWINE SWIVEL",
+      "d": "LEVY NEVI OVINE PION SION VINE VOWS WIVE WOVE"
+    },
+    {
+      "a": "BOAX,RCSE,EATH",
+      "b": "323322343463",
+      "c": "AXE EAT SEX THE CATS COAX BOAST BREATH BREATHE",
+      "d": "ACRE AXES BOAS CAT COAST COB EATS HEST HEX OAST SCAT TACO"
+    },
+    {
+      "a": "ABS,DIL,ECY",
+      "b": "346896741",
+      "c": "ABS BID ICE LID SLY BADE ICED SLID ABIDE SLICE SLIDE SLICED",
+      "d": "BAD BIDE CEDI DAB DABS DIB DICE ICY LICE"
+    },
+    {
+      "a": "RE-ST,EBOWI,TU-LB",
+      "b": "110121634244021",
+      "c": "BIT BUT OWL TUB WIT BOWL BOWS TUBE REBUT",
+      "d": "BERET BET BITS BOW TUBER WITS"
+    },
+    {
+      "a": "AGED,SUMA",
+      "b": "79955494",
+      "c": "AGE DAM EMU GAS GEM GUM MAD SAG SUM AGED DAME MADE MEGA SAGE USAGE",
+      "d": "DEGAS EDAM EMUS MUG"
+    },
+    {
+      "a": "CSE,AUI,PET",
+      "b": "332422563",
+      "c": "APE CAP PET SUE TIE CAPE SUITE ESCAPE",
+      "d": "CAUSE PACS PAUSE SCAPE SUET SUIT TIES USE"
+    },
+    {
+      "a": "ONFI,CHER,UOVM",
+      "b": "215555792332",
+      "c": "FIR HER IRE CHEF FIRE FIRM OVER OCHER VOUCH CONFIRM VOUCHER",
+      "d": "CON HERM HOVE HOVER OUCH RIFE"
+    },
+    {
+      "a": "YTLIG,FAVAL,INGIS",
+      "b": "132213532126222",
+      "c": "FAT FIN TAN VAN GILT SIGN AVAIL NAVAL SIGNIFY",
+      "d": "AIL FAN FANG GNAT LAVA SIAL SLAV TANG VAIL"
+    },
+    {
+      "a": "TF-HD,EASTE,-TEN-",
+      "b": "120114877207630",
+      "c": "EASE EAST FAST FATE TEAS TENT TEST EATEN TASTE TENTH TASTED",
+      "d": "ETAS NEST NESTED SATE SENT SENTE SETA SETAE TEASE TEAT TENTS"
+    },
+    {
+      "a": "SWR,PEA,YDY",
+      "b": "445796121",
+      "c": "EAR PEA PEW RAY SPY WED PEAR SPED SPEW WEAR SPEAR",
+      "d": "DEAR DEW DEWS"
+    },
+    {
+      "a": "UETD,DIRR,KSCA",
+      "b": "243297241454",
+      "c": "CAR DIE DUE RID CARD DIET DIRT DISC DISK DUET SCAR DISCARD",
+      "d": "RISK SIR"
+    },
+    {
+      "a": "RITE,PARR,LANE",
+      "b": "445278525554",
+      "c": "AIR ART RAP LANE PAIR PART PLAN RITE TRAP PLANE RENAL TERRA AIRPLANE",
+      "d": "ERR PAR PARR TRNA"
+    },
+    {
+      "a": "FOO,LAG,OWS",
+      "b": "622886375",
+      "c": "AGO WAG FLAG FLAW FOAL GOOF LAGS LAWS LOWS SWAG WOLF FLOWS",
+      "d": "ALOW FLAGS FLOW LAG LAGO LAW LOW WAGS"
+    },
+    {
+      "a": "ISHSD,WNAME,-DSO-",
+      "b": "115131688603420",
+      "c": "HAM HAS MAN MEDS NAME SOME WISH HANDS NAMED DEMAND HANDSOME",
+      "d": "AMOS AND DEMO DEMOS DEMS HAME HAMS HAND MANS OMAN SAME SAND SANS SHAM SHAME SHAN SOMA SOMAN"
+    },
+    {
+      "a": "SPID,HUTE,RETL",
+      "b": "554146931222",
+      "c": "HUE HUT LET PIT PUT DIPS SHUT SPIT SPITE UTTER SHUTTLE",
+      "d": "DIP DITE EDIT LED LTTE PUTT SPUE TIDE TIP TIPS TUPI"
+    },
+    {
+      "a": "SGO,TUN,KCE",
+      "b": "342897344",
+      "c": "CUT GUN GUT ONE TUG GONE NECK NUTS STUN TUCK TUNE STUCK",
+      "d": "CUTS GUTS NOGS NUT TUGS"
+    },
+    {
+      "a": "HIMH,STRU,OARG",
+      "b": "221233232332",
+      "c": "HIM HIT HUG OAR RUG SOAR STAR HURTS",
+      "d": "HITS HURT MITS OAT OATS RAT RATS SHIM TAR"
+    },
+    {
+      "a": "FPOSH,OPVEM,RTIFY",
+      "b": "333425213145331",
+      "c": "FIT FOR OPT SOP FIVE FORT MESH PORT POSE POSH FORTIFY",
+      "d": "TROP"
+    },
+    {
+      "a": "SL-EN,VOTER,-BSF-",
+      "b": "140322687302210",
+      "c": "FEE LOB TEE LOTS SLOT TEEN TERN VOTE VOTER LOBSTER",
+      "d": "BOT BOTS ERNE FERN LOBS LOT REFS RETS SLOB SLOTS STEEN STERN"
+    },
+    {
+      "a": "THC,OIL,SSA",
+      "b": "321455452",
+      "c": "HIS OIL LASS SOIL THIS TOIL TOSS CLASS",
+      "d": "ASS CHIS HILA HISS LASSO"
+    },
+    {
+      "a": "TGOO,ADWD,LLIR",
+      "b": "223343446641",
+      "c": "ALL LAD TAD GOOD TALL WILD WILL WOOD DRILL GOODWILL",
+      "d": "ILL LAT RILL"
+    },
+    {
+      "a": "RSTW,OUTE,TLKR",
+      "b": "532178641212",
+      "c": "OUT ROT WET LUST ROUT SULK OUTER ROUST ROUTE ROUTER",
+      "d": "LUTE OUST ROTL TOR TORS TOUT"
+    },
+    {
+      "a": "SMG,PAI,HTF",
+      "b": "332782162",
+      "c": "FIG MAP MAT PAT SPA TAP GIFT PATH SPAM SPAT",
+      "d": "FIAT MAPS MATH TAMS TAPS"
+    },
+    {
+      "a": "CSS-R,REEVE,P-NNI",
+      "b": "254025793420422",
+      "c": "EVE SEN EVER REIN SEEN SEER SEES VEIN PREEN PRESS SCREE SCREEN",
+      "d": "CREE CREES CRESS EVEN EVES INN NESS NEVE NEVER REEVE SEE SEVER VEER"
+    },
+    {
+      "a": "ACHO,SLIP,KEFE",
+      "b": "256335782311",
+      "c": "ASK HIP HOP CASK CHIP CHOP CLIP FILE HOPE PILE SLIP CHILE",
+      "d": "FILS HOPI LEKS LIFE LIP"
+    },
+    {
+      "a": "SON,TOP,YNS",
+      "b": "6629c5253",
+      "c": "NOT POT SON TOO TOP NOON OOPS SOON STOP TONS SOOTY SPOTS STONY",
+      "d": "PONS PONY POO POON POOS POTS SNOT SOOT SPOON SPOT STOPS TON TONY TOON TOPS"
+    },
+    {
+      "a": "TSGH,IKNO,THAD",
+      "b": "132113622452",
+      "c": "HAD NOD SKI HANG HONK THAN ANGST THANKS",
+      "d": "ANKH DANK DON DONG HANK HANKS HOD KHAN KIT KITH KITS SKIT THANK"
+    },
+    {
+      "a": "POINT,PJZSU,EPINR",
+      "b": "122241111226552",
+      "c": "NIP PEP PIN ZIP TURN JOINT POINT SNIPE TURNIP",
+      "d": "INS JOIN PINS RUT SNIP TURNS URN URNS"
+    },
+    {
+      "a": "ST-YE,HOWER,-CKN-",
+      "b": "660115b86304320",
+      "c": "COT COW HOT OWE YEN KNEW SHOT SHOW STOW WERE SHOCK STOCK TOWER SHOWER",
+      "d": "COTS COWER EYE HOCK HOTS HOW HOWE NEW TOW WEN YEW"
+    },
+    {
+      "a": "DOG,NTE,OHV",
+      "b": "496174111",
+      "c": "DOG DOT EGO GET GOD GOT DOTE GOTH ONTO VETO",
+      "d": "DOGE TEG THON VET"
+    },
+    {
+      "a": "ULBS,OAKA,SHEN",
+      "b": "131136615574",
+      "c": "HEN KEN OAK SHE BLAH LAKE SANE SOAK SOUL SHAKE SHAKEN",
+      "d": "ALBS HAKE LAOS SAKE"
+    },
+    {
+      "a": "CMPP,HEAO,AYDD",
+      "b": "133178622373",
+      "c": "ADD DYE HAY HEM HEY ODD PAD POD HEAD HEMP MEAD AHEAD CHEAP",
+      "d": "AHEM APP HEAP"
+    },
+    {
+      "a": "THI,JUN,HSK",
+      "b": "353166155",
+      "c": "INK SUN HUSH HUSK JUNK SUNK THIN THUS THINK",
+      "d": "HUNK HUNKS INKS"
+    },
+    {
+      "a": "IB-FE,GOSOL,NR-EV",
+      "b": "140111333212021",
+      "c": "BIG FOE ROB SOB BORN SOLE SOLVE",
+      "d": "BOG GOBI OBI"
+    },
+    {
+      "a": "OYQUD,THGIN,EJSTE",
+      "b": "122225448911185",
+      "c": "END GIN JET NIT TEN THY TIN TOY NETS NIGH QUIT TEND NIGHT QUITE TIGHT",
+      "d": "GITS NET NITE NITS QUITS TENDU TINE"
+    },
+    {
+      "a": "ALE,MIN,EKT",
+      "b": "3b5495332",
+      "c": "ALE KIN MIL NIL LENT LIKE LIME LINE LINT MALE MILE ALIKE",
+      "d": "AMINE KINE LAME LIMA MALI MIKE MINE MINT"
+    },
+    {
+      "a": "MMUT,OLDE,CAMS",
+      "b": "244443543112",
+      "c": "MUD OLD SET CAMS COLD MOLD MUTE MUTED COMMUTE",
+      "d": "CALM COLA LAMS MOLA SEDUM UTES"
+    },
+    {
+      "a": "CRESS,STWNT,CLEAP",
+      "b": "1265111582146a5",
+      "c": "ANT APT EWE LEA NAP PAN SEW CREW LEAN LEAP SEWN SNAP WEAN STRESS CLEANSE",
+      "d": "ANTS CLEANS CRTS EWER EWES PANS PANT WELT"
+    },
+    {
+      "a": "UR-LB,CERAR,-NTS-",
+      "b": "110213535202340",
+      "c": "BRAS CURE ERAS LAST RARE CENTS CENTRAL",
+      "d": "ARTS BLARE BLAST CENT CERT CERTS RARER RECUR RENT TSAR"
+    },
+    {
+      "a": "ORA,MBN,REG",
+      "b": "277156255",
+      "c": "BEG BRA ORB RAN BERM BRAN RANG ANGER RANGE ORANGE",
+      "d": "GERM GNAR ORANG RANGER"
+    },
+    {
+      "a": "EDUR,BULE,LOCK",
+      "b": "142453245544",
+      "c": "BED BUD DUB LOCK LOUD LURE RULE BLOCK LOCKER BLOCKER",
+      "d": "CLUB DUO ELUDE LUBE OUD RUDE"
+    },
+    {
+      "a": "OHTC,UBJO,SING",
+      "b": "221143134555",
+      "c": "BIN BUS COG JOG SIN THOU BINGO USING HOUSING",
+      "d": "NIB SING SUB"
+    },
+    {
+      "a": "FKD,REE,TYP",
+      "b": "23469a335",
+      "c": "KEY DEER FREE KEEP PEEK PEER REED TREE TYPE FREED TYPED",
+      "d": "PEE TREED TREK TREY"
+    },
+    {
+      "a": "OREYA,WNORT,-NAD-",
+      "b": "236411269201330",
+      "c": "DRY EON NOR ORE ROE RYE TRY ROAD ROAN WORE AORTA DRYER",
+      "d": "OWN ROW WORN"
+    },
+    {
+      "a": "YTHG,SLRI,COPE",
+      "b": "122423243555",
+      "c": "COP LOP RIG COPE GIRL EIGHT SCOPE SLOPE EIGHTY",
+      "d": "COLS COLT GIRLS LOPE POLS PRIG RIGHT SLOP"
+    },
+    {
+      "a": "ELRA,MOOS,REDI",
+      "b": "114155631462",
+      "c": "RED ROD MOLE MOOD MOOR MOOS RODE ROOM SIDE ASIDE",
+      "d": "DERM DISA DOOM LOOS ODE OSAR REDO RODEO ROSA SAROD SIDER SORA"
+    },
+    {
+      "a": "HEAVY,OFFER,GYLNF",
+      "b": "544533236322231",
+      "c": "FEN FLY FOG FRY HOG VERY HEAVE HEAVY OFFER HEAVEN HEAVENLY",
+      "d": "AVER EAVE OFF"
+    },
+    {
+      "a": "WDWA,AINR,SHGD",
+      "b": "325563355313",
+      "c": "AID ASH WAR WAS DRAW SAID WARD WARN WASH DRAWN WASHING",
+      "d": "DIN DING HID RAW SAW SHIA SHIN WAIN"
+    },
+    {
+      "a": "KID--,-MEA-,--TCH",
+      "b": "144000375000543",
+      "c": "ACT DIM KID MET TEA DIME EACH ETCH IDEA TEACH",
+      "d": "ACTED IDEM"
+    },
+    {
+      "a": "SHAA,SWRE,SIMM",
+      "b": "148122a81353",
+      "c": "ARE ARM ERA AREA HARE HARM SWIM HAREM SHARE SIMMER SWIMMER",
+      "d": "AAHS MISS"
+    },
+    {
+      "a": "CLTI,ROSL,TVED",
+      "b": "262139411582",
+      "c": "LIT LOSE LOST LOVE ROSE ROVE CLOVE LOVED TROVE CLOSED",
+      "d": "CLOSE CLOVES LOVES SLIT SORT TILDE VEST VOLT VOLTS"
+    },
+    {
+      "a": "NUR,DOS,ACE",
+      "b": "376688445",
+      "c": "RUN ACES CODA DACE DOSE DOUR OURS SODA SOUR NURSE SOUND COURSE",
+      "d": "ACE ADOS CAD COD OUR UNDO"
+    },
+    {
+      "a": "SELFI,LUCKS,PALYH",
+      "b": "343423443221122",
+      "c": "ELF LAP CUES LUCK SELF FISHY LUCKY PLUCK SELFISH",
+      "d": "CLAP CUE FISH HYLA LUES PAL PALY PAUL SHY SKY SLUE"
+    },
+    {
+      "a": "SM-SE,JABAD,-YOJ-",
+      "b": "130222564406320",
+      "c": "BAD BAY BOY JAM JAY JOB JOY MAY SAD BADE YAMS BASED",
+      "d": "ABAS ABASE BAMS BASE DAB JADE JAMS MAYO SADE YAM"
+    },
+    {
+      "a": "BKE,ONL,WHO",
+      "b": "332542533",
+      "c": "BOW NOW WHO BONK HOLE KNOB KNOW WHOLE",
+      "d": "WON"
+    },
+    {
+      "a": "HFOW,URDL,MOPE",
+      "b": "221126224743",
+      "c": "FRO MOP OWL DROP FROM MOPE ROPE HUMOR HURDLE",
+      "d": "DRUM FOWL HUM RUM"
+    },
+    {
+      "a": "CCEED,URICK,SPMOB",
+      "b": "121531687324432",
+      "c": "COB ICE MOB RIM DECK IMPS RICE CRICK PRICK PRIMO PRICED SUCCEED",
+      "d": "BOCK COMP CRUS CUR CURIE CUSP DECO ECRU ICED IMP MICE MICK MOCK PRICE PRIM RICK URIC"
+    },
+    {
+      "a": "BUYE,GRYT,IPAS",
+      "b": "332223441754",
+      "c": "BUY PAY PIG PRY SAY YET BURG BURP PAST PASTE PASTY",
+      "d": "BURY GRUB RUB SAP"
+    },
+    {
+      "a": "EOM--,-WAK-,--DED",
+      "b": "115000582000551",
+      "c": "DAM MAD MAW WOE MADE MAKE WADE WAKE WADED",
+      "d": "EDAM MOW WAD"
+    },
+    {
+      "a": "SHUN,COVE,VEIL",
+      "b": "451216651544",
+      "c": "HOE LIE VIE COVE LIVE OVEN SHOE SHUN VEIL SHOVE SHOVEL",
+      "d": "COVEN EVIL HOVE HOVEL LIVEN NEVI VILE"
+    },
+    {
+      "a": "BAF,RTE,EHD",
+      "b": "484293451",
+      "c": "ATE BAT FAT FED HER TAB THE BATH FATE BATHE FATHER",
+      "d": "BATE BATED DEFAT ETHER FATED FETA HERB"
+    },
+    {
+      "a": "NGUL,AICA,BMOR",
+      "b": "332542362335",
+      "c": "AIM CAR LUG NAB BANG MICA ORAL CORAL MORAL ANGULAR",
+      "d": "BAN COMB CORA"
+    },
+    {
+      "a": "AMAZI,SCRYN,TAING",
+      "b": "135213682145422",
+      "c": "AIR ARC CAT CRY RAM CRAM RING SCAT CRAZY STAIN STAIR AMAZING",
+      "d": "AIRY AMAS ARCA ARCS ARIA CAIN CATS IRA MAR MARIA MAST SCRY TAIN"
+    },
+    {
+      "a": "OC-BO,MEGAX,-LLR-",
+      "b": "220414766102110",
+      "c": "AGE BAG BAR BOX GEM CELL COME MEGA BAGEL OMEGA",
+      "d": "GAB GAR GEL LEG MELL RAG RAGE"
+    },
+    {
+      "a": "ECNO,FLAC,INYK",
+      "b": "257239b42252",
+      "c": "CAN CON FIN LAY NAY CLAN CLAY FLAN FLAY LACK ONCE CLACK INLAY LANCE",
+      "d": "CALF NOCK"
+    },
+    {
+      "a": "WHT,LAA,ETS",
+      "b": "252261462",
+      "c": "HATE HATS LATE THAT WHAT TASTE WHALE",
+      "d": "HAAT HALE LATS LETS STALE TALE THATS"
+    },
+    {
+      "a": "SPRIN,TUSUT,TISEO",
+      "b": "242332343444342",
+      "c": "SIT SUE TOE INTO PUTS PUTT SUIT ISSUE PRINT SPRINT TISSUE",
+      "d": "OTUS PUSS PUT SUES TIS TOES"
+    },
+    {
+      "a": "KESB,CMUA,APKC",
+      "b": "235433553424",
+      "c": "ABS CAB CAP EMU SUM USE BACK PACK SUMP CAUSE BACKPACK",
+      "d": "ACME BAUM CABS EMUS KEMP MUSE"
+    },
+    {
+      "a": "AFI--,-TRR-,--EAT",
+      "b": "244000275000864",
+      "c": "AFT EAR EAT ERR FIR IRE RAT TAR FIRE REAR AFIRE TREAT",
+      "d": "RIFT"
+    },
+    {
+      "a": "FWPS,LAUN,IGHT",
+      "b": "332156331412",
+      "c": "LAG LAW PUN WAG AUNT FLAG FLAW SPUN FLIGHT",
+      "d": "ALIGHT HUNS HUNT PUNS PUNT"
+    },
+    {
+      "a": "SAG,EMO,ALI",
+      "b": "765533331",
+      "c": "AGO GAS OIL SAG SEA MEAL SAGO SAME SEAL GAMES",
+      "d": "ALMA ASEA GAME MAG MESA MOIL"
+    },
+    {
+      "a": "DUNE,PAWE,DEGD",
+      "b": "224324871225",
+      "c": "AWE DEW DUN PAW WEE AWED DUNE NEED PAWN WEDGE WEDGED",
+      "d": "EDGE EDGED WED"
+    },
+    {
+      "a": "UAUES,AWDCR,TRITE",
+      "b": "112221341126763",
+      "c": "DUE RID TAU DIRT RITE SECT WRIT AUDIT WRITE WRITERS",
+      "d": "DITE DUES TAW TERCE TERSE TRITE"
+    },
+    {
+      "a": "TS-BE,OLTUC,-ETN-",
+      "b": "320513457202220",
+      "c": "BUN BUT CUB CUT LET LOT NUT BUTT SLOT TUBE STOLE",
+      "d": "BUNT BUTTE CUBE LOTS LTTE NUB TOLE TUB"
+    },
+    {
+      "a": "BETY,IIDA,RTHR",
+      "b": "431332333321",
+      "c": "BET DAY DIE RAY RIB TIE BIRTH BIRTHDAY",
+      "d": "TRIBE"
+    },
+    {
+      "a": "UAL,SSL,UOY",
+      "b": "265444325",
+      "c": "ALL ASS SLY SOY YOU ALLY LASS USUAL USUALLY",
+      "d": "SALLY SOUS"
+    },
+    {
+      "a": "HELSS,WFLOW,OOSGO",
+      "b": "2332215bb611331",
+      "c": "LOW SOW HELL LOGO LOGS SLOG SLOW WOLF WOOF FLOSS FLOWS HELLO FELLOW",
+      "d": "ELLS FELL FLOG FLOW GOLF LOG LOSS LOWS OSLO SOLS WOLFE"
+    },
+    {
+      "a": "FILE,EWLR,TIME",
+      "b": "455234314333",
+      "c": "FEW ILL WET WIT FILE FILL MERE TIME WILL LIFETIME",
+      "d": "EMIT LIFE MERL MITE WIFE WILE"
+    },
+    {
+      "a": "SPO--,-ARJ-,--TOO",
+      "b": "362000561000621",
+      "c": "ART JOT PAR SPA TOO PART PORT SPAR SPORT",
+      "d": "RAP RAPS TRAP TROP"
+    },
+    {
+      "a": "TRIO,FOTT,TUGH",
+      "b": "37112a324975",
+      "c": "FOR GUT OUT ROT TUG ROUT TRIO TROT OUGHT ROUGH TOUGH FOUGHT TROUGH",
+      "d": "FORT OTTO RIOT ROTI TIRO TOR TORI TORT TOUT TROUT"
+    },
+    {
+      "a": "YHW,FES,DEL",
+      "b": "1313955b6",
+      "c": "FEE LED SEE WHY EELS ELSE FEED FEEL HEED HEEL SEED SLED",
+      "d": "EEL LEES SEEL"
+    },
+    {
+      "a": "ONOH,SSNT,EVEY",
+      "b": "2332519376a3",
+      "c": "EVE ONE YEN EVEN NONE NOSE SONS EVENT HONEY SEVEN SEVENTH SEVENTY",
+      "d": "EVENS EVES HONE NEVE NEVES SON THON VENT YENS"
+    },
+    {
+      "a": "OFTEE,SULDY,HAVEN",
+      "b": "113115323157673",
+      "c": "DEN TEE DENY HAUL HAVE SOFT SHAVE SUAVE VAULT SHAVED SHAVEN",
+      "d": "AULD DYE DYNE EDEN HAVEN LUSH"
+    },
+    {
+      "a": "ST-KK,HOWEN,-CKA-",
+      "b": "310113554202310",
+      "c": "HOW KEN OWE KNEW SHOW WEAK SHOCK STOCK",
+      "d": "COT COTS COW HOCK HOT HOTS HOWE NEW SHOT STOW TOW WEN"
+    },
+    {
+      "a": "IFAS,SUNL,THGI",
+      "b": "143145724452",
+      "c": "FAN FUN SUN FANG FIST HUNG SANG THUS LIGHT SUNLIGHT",
+      "d": "ANUS FUNGI GNUS SUFI SUNG"
+    },
+    {
+      "a": "PMASA,ATHYN,HCIWD",
+      "b": "512346642443113",
+      "c": "AND ANY HAM HAS HAT PAT TAP THY CHAP PATH SAND PATCH SANDWICH",
+      "d": "CHAT HAP HATH MASA"
+    },
+    {
+      "a": "SPRE,KINT,EEGE",
+      "b": "47117c832231",
+      "c": "GET KIN NIP PIE PIN SKI GEEK KING PIKE PINT SKIN SKIP SPIN INTER",
+      "d": "NIPS PING RETE SKINT SPIKE TEG TERN"
+    },
+    {
+      "a": "UDY,TOP,SNT",
+      "b": "1517a4451",
+      "c": "DON DOT NOD NOT OPT POD TOP POTS SNOT TONS STUDY",
+      "d": "DONS DONT DOPY DOTS PONS PONT POT STOP STUD TODY TON UDON"
+    },
+    {
+      "a": "TTT-B,PENDI,A-SEV",
+      "b": "171024b96320341",
+      "c": "APE APT BID END NET PET TEN BIDE PENS TEND TENT TENSE ENDIVE TENSED",
+      "d": "DEVI DIB DIVE DIVES IDES NETT PEN PEND PENT TENS VIDE"
+    },
+    {
+      "a": "CUP,SDU,MOG",
+      "b": "222152245",
+      "c": "CUD CUP DOG DUG GOD MOD PUG SMOG",
+      "d": "GODS MODS PUDS SCUP"
+    },
+    {
+      "a": "IOSE,NPIL,TYCK",
+      "b": "136417851145",
+      "c": "ELK ICY LIP SIP SOP PICK PILE POSE SICK SILK POINT SICKLE",
+      "d": "LICK PICKLE PILES POINTY TYPO"
+    },
+    {
+      "a": "REPEO,EYLLS,SPRES",
+      "b": "344113522343233",
+      "c": "PER PLY SPY YES EYES LESS PRESS REPEL REPLY ESPRESSO",
+      "d": "EYE LYE LYES PELL PELS SELL SERE"
+    },
+    {
+      "a": "OSTSS,TSNER,WINGG",
+      "b": "11352268a329961",
+      "c": "EGG INN SEN SIN NESS NEST RENT SENT SING TOSS TWIN WING INNER SINGE SENSING SINGERS",
+      "d": "GEN GENS GENT GENTS INNS NESTS REST RESTS SOTS WIN"
+    },
+    {
+      "a": "DF-RE,RAOBE,-KEY-",
+      "b": "320124525204530",
+      "c": "BEE BYE FAR KEY BEER FAKE BOARD DRAKE KEYBOARD",
+      "d": "BOAR OAF OAK OAR RAKE"
+    },
+    {
+      "a": "SLE,MIJ,ENU",
+      "b": "382991762",
+      "c": "MEN MIL NIL JUNE LIME LINE MENU MILE MINE SLIM SLIME SMILE",
+      "d": "LIMEN MILS NILS"
+    },
+    {
+      "a": "RTEST,ECOPE,ASURE",
+      "b": "121531336613255",
+      "c": "COPE COPS PEER STEP SURE TEST SCOPE SPREE STEER TREASURE",
+      "d": "CERT COPSE PETS POET POUR SCOUR"
+    },
+    {
+      "a": "CAMP,ROMA,CITN",
+      "b": "133423461135",
+      "c": "ANT MAN MAP PAN AMMO CAMP PANT ROAM ROMANTIC",
+      "d": "AMOR ANTI NAP OMAN ORCA ROMA"
+    },
+    {
+      "a": "WHF,PIF,STU",
+      "b": "242593381",
+      "c": "FIT HIP HIT PIT TIP SPIT WHIP WHIT STIFF STUFF",
+      "d": "FITS HIPS HITS PITS TIFF TIPS TUFF WHITS"
+    },
+    {
+      "a": "DR-NI,NIGHT,SE-IS",
+      "b": "130223766612023",
+      "c": "GIN HIS NIT RIG TIN NIGH THIS DRIES EIGHT RIGHT NIGHTS",
+      "d": "GINS GIRD HIST INS NIGHT NITS RIGHTS RIND RINSE"
+    },
+    {
+      "a": "UPLEH,UTGAV,TURNE",
+      "b": "136611239413273",
+      "c": "LEA NAG URN VAN GAVE HELP LEAN PLEA TUTU VANE GLEAN LEAVE UPTURN",
+      "d": "EAVE HEAVE HEAVEN NAVE RUT TURN VENA VENAE"
+    },
+    {
+      "a": "HURT,EGOS,ASHE",
+      "b": "233214332452",
+      "c": "ASH EGO HOG HUG RUG SHE ASHES HURTS SHORTS",
+      "d": "SHORT"
+    },
+    {
+      "a": "IUBIT,LAKOA,DINGN",
+      "b": "223143211356532",
+      "c": "AID BIT DIN INK OAT TAN DING GNAT LAIN BUILD BUILDING",
+      "d": "DIAL DINGO DINK GOAT LAID TANG TANGO"
+    },
+    {
+      "a": "WOV,ARE,SKE",
+      "b": "9529a6541",
+      "c": "ARE ASK ERA ORE RAW ROW SAW VOW WAR WAS ARKS REEK WARE WOVE WORKS",
+      "d": "ARK ERAS OVER ROVE SAREE WORE WORK"
+    },
+    {
+      "a": "ME-KE,YTHID,-LAC-",
+      "b": "330222688403440",
+      "c": "HID KID MET ACID HALT HIDE HIKE MYTH ETHIC ETHICAL MYTHICAL",
+      "d": "DIKE METH"
+    },
+    {
+      "a": "OFO,BAD,RED",
+      "b": "14358a688",
+      "c": "ADD BAD DAB FAD FOB ODD RED BRED DEAD DEAF READ BREAD ODDER FODDER",
+      "d": "ADDER EDDO FADO REDD"
+    },
+    {
+      "a": "FLDEH,BOOKA,POHSD",
+      "b": "174115a54144221",
+      "c": "HAD HOP LOB OLD BOLD BOOK LOOP POOL FLOOD LOOKS BOOKED BOOKSHOP",
+      "d": "BOOKS DAKS DOHS HAKE HOD LOOK ODE OOHS POO SHOD SHOO SHOP SKED"
+    },
+    {
+      "a": "LIVE,ATYR,SWON",
+      "b": "565334221332",
+      "c": "IVY LIT NOW SAT TWO WON ALIVE LIVER VITAL LIVERY",
+      "d": "LAT SATYR"
+    },
+    {
+      "a": "ACE,MHG,RAN",
+      "b": "133234575",
+      "c": "ACE ARM RAN HANG RANG CHARM RANGE CHANGE",
+      "d": "CHANG CHAR GNAR HARM MACE MACH"
+    },
+    {
+      "a": "CLAMP,RUBOT,-MMY-",
+      "b": "244423444203130",
+      "c": "BOT BOY MOB RUB RUM TOY ALUM CLAM LAMP CLAMP RUMMY",
+      "d": "CLUB LAB YOMP"
+    },
+    {
+      "a": "PMA,RIX,OSE",
+      "b": "232675275",
+      "c": "AXE MIX RIM SEX SIR SIX AXIS PRIM RISE ROSE PROSE",
+      "d": "AMIR AXES EXAM IMP IMPRO MAXI MIRO MISE MISO PRIMA PRO PROS RIMA SIMA SIMP SORI"
+    },
+    {
+      "a": "DCLA,ASOD,DECK",
+      "b": "136314642333",
+      "c": "DAD LAD CLAD CLOD DECK LOCK LOSE SOCK SODA CLOSE",
+      "d": "ADOS CLOCK COD CODA COLA DECO DOCK DOSE DOSED SAD SADE SOLA"
+    },
+    {
+      "a": "UFAHF,RFLUE,EOSTN",
+      "b": "134411666513133",
+      "c": "FEN FOE FUR HUE HUT OFF ALSO FLUE HALF HULA FLUENT AFFLUENT",
+      "d": "FLU HUTS RUFF SLUE"
+    },
+    {
+      "a": "IGO,BUS,AYH",
+      "b": "151776155",
+      "c": "BAY BIG BUG BUY GUY SHY SUB BUSH GOSH GUSH BUSHY",
+      "d": "BUS"
+    },
+    {
+      "a": "FA-RP,ETHEO,-MOM-",
+      "b": "340314778101360",
+      "c": "ATE FAT HEM HER MOM THE FATE FETA HOME POEM THEM ETHER HOMER",
+      "d": ""
+    },
+    {
+      "a": "ROO,HBM,TAI",
+      "b": "332253451",
+      "c": "AIM BAT ROB TAB BATH ROOM BATHROOM",
+      "d": "BOOM MOOR"
+    },
+    {
+      "a": "JMYST,ILACI,GESTR",
+      "b": "123431797324541",
+      "c": "ACT JIG LAY LEG SAY CALM CASE CAST LAST LEST STIR TICS SCALE MYSTICAL",
+      "d": "ACTS ALE ALES ELM GEL LACS LASE LAYS SACS SALE SAYS YALE"
+    },
+    {
+      "a": "YMOW,SAJA,TERY",
+      "b": "251335334413",
+      "c": "JAM JAW JAY MOW TEA WAY EASY MAST TEAM MYSTERY",
+      "d": "AERY EAST MASTERY REAM RETS TEAS"
+    },
+    {
+      "a": "LSS,IUI,DET",
+      "b": "384366475",
+      "c": "LID SIT SUE SITE SLID SUED SUIT ISSUE SLIDE SUITE TISSUE",
+      "d": "DEUS ISSUED SITED SUET TIS"
+    },
+    {
+      "a": "BND-O,EIATN,D-MOU",
+      "b": "113011178510764",
+      "c": "BED DAM MAD MAT TAD ATOM ONTO UNTO MOUNT AMOUNT MOUNTAIN",
+      "d": "MAIN TAIN"
+    },
+    {
+      "a": "FIN,KCE,LUR",
+      "b": "377388245",
+      "c": "CUR FIN ICE CURE FINE LUCK LURE NECK NICE NICK FINER NICER",
+      "d": "CINE ICER LUCE RECK RUCK"
+    },
+    {
+      "a": "YRTS,AFFA,MRIP",
+      "b": "423233634552",
+      "c": "AFT FIR FRY MAY RIP SAP TRY YAM FAST FIRM RIFF AFFIRM",
+      "d": "PAST PASTRY RIFT"
+    },
+    {
+      "a": "SOBRO,HIVIE,ALONG",
+      "b": "122311213225344",
+      "c": "ROE VIE BOIL HALO LONG RING SOIL ALONG BRING",
+      "d": "BRIE HILA LONGE OIL ORB SHIV SOB VILA VINO"
+    },
+    {
+      "a": "SUMP,IDEA,MSIL",
+      "b": "356469873227",
+      "c": "DIM EMU LAP LIE MUD PAL SUM DEAL DUMP IDEA MEAL MIDS SIDE SUMP IDEAL IDEALISM",
+      "d": "DEISM DIMS EMUS IDEM LIED MEDS MUDS SUDS"
+    },
+    {
+      "a": "PE-CK,BAGAY,-CKP-",
+      "b": "110324525103250",
+      "c": "BAG CAB CAP GAP PAY PEA BACK PACK BACKPACK",
+      "d": "GAB GAY"
+    },
+    {
+      "a": "CRY,TAC,REK",
+      "b": "2924a5242",
+      "c": "CAR CAT CRY EAR EAT RAT TAR RACK RACY REAR CRACKER",
+      "d": "ARC TACK TREK"
+    },
+    {
+      "a": "COURA,EADWG,SCREE",
+      "b": "122341334435674",
+      "c": "AGE DUO GAR RAG SEA WEE ACRE CREW DREW CADRE SCREE SCREW COURAGE",
+      "d": "AGEE CAD CREE DREE DURA OUD OUR RAGE RAGEE"
+    },
+    {
+      "a": "EARU,WHAT,EMOS",
+      "b": "114133781357",
+      "c": "HATS MOAT MOST OATS RATS RUTS SOAR WEAR WHAT SOMEWHAT",
+      "d": "RUTA SOME STAR"
+    },
+    {
+      "a": "SAG,FLO,OLW",
+      "b": "256588135",
+      "c": "AGO ALL GAS LOG LOW OWL SAG FLAG FLOW GOLF WOLF FOLLOW",
+      "d": "ALOW FLOG GALL LAG LAGO OLLA SAGO"
+    },
+    {
+      "a": "EL-VF,TBAIL,TU-RE",
+      "b": "220312558633045",
+      "c": "AIL AIR BUT ELF IRE LET TUB VIA BAIL BUTT VILE VILER RELIABLE",
+      "d": "ABLE ABUT AIRE BUTTE LIRE RILE TUBA"
+    },
+    {
+      "a": "WES,SDT,PAR",
+      "b": "2324359a7",
+      "c": "ART PAR RAP SPA WED PADS PART SPAR TRAP WEST SPADE STRAP",
+      "d": "ARTS DAPS DART DARTS DEW DEWS PAD RADS RAPS SEW SEWS TRAD TRADE WEDS"
+    },
+    {
+      "a": "ROUC,ALTH,ISER",
+      "b": "589322811152",
+      "c": "CUT OUT CUTE LOUT ORAL OUCH ROUT OUTER RAISE ROUTE ROUTER",
+      "d": "ALTER CUTER ORALS RAISER SET SIAL TESLA UTES"
+    },
+    {
+      "a": "CUSED,OGPEM,PDEFT",
+      "b": "338832156113331",
+      "c": "COG COP FED FEE SEE USE CUSP DEFT PEED SEEM SEEP SPED USED SPEED",
+      "d": "DEEM DEEP DEEPS EPEE FEED FEES MEED PEE PEES"
+    },
+    {
+      "a": "TWA,RID,OTE",
+      "b": "231797278",
+      "c": "RID ROT WIT DIRT EDIT RIDE RITE ROTE TIDE WADE WIDE TRITE",
+      "d": "ADIT DITE ROTI TIRO TOR TORI TORT TROT WAD"
+    },
+    {
+      "a": "SH-YE,PUNDI,-ATI-",
+      "b": "220322664101420",
+      "c": "DIE DYE PUN AUNT HUNT SHUN SPUN TIDY UNTIDY",
+      "d": "PUNT TAU"
+    },
+    {
+      "a": "DEN,WHI,WOB",
+      "b": "245353232",
+      "c": "BOW DEN HEN HOW NIB WHO WHINE WHINED",
+      "d": "BIN HOB OBI"
+    },
+    {
+      "a": "ECTTJ,RHOSO,EMONY",
+      "b": "223111374213523",
+      "c": "HOT JOY SOY TOO ECHO HOST MOOS MOOT SOON CEREMONY",
+      "d": "CERE MERE MHOS MONS NOME RHOS TOOM TOON"
+    },
+    {
+      "a": "FISS,AGHA,INIM",
+      "b": "346214742545",
+      "c": "FIG HAM HAS HIM FISH GAIN MASS MINI SHAM SHIN SIGN FISHING",
+      "d": "AGHA ASS FAIN GISH INGA INIA MING SAMI SHIM SIGH"
+    },
+    {
+      "a": "ABA,WEN,OKI",
+      "b": "232685341",
+      "c": "AWE BAN KEN KIN NEW OWE WEB BANE WOKE AWOKE",
+      "d": "ANEW KINA KINE NAB NABE WEN WOKEN"
+    },
+    {
+      "a": "FRAME,FLAKE,-DUN-",
+      "b": "133422555304420",
+      "c": "DUN MAR RAM DUAL DUNK FLAK LAKE LAUD MEEK FLAKE FRAME",
+      "d": "AKEE MARL"
+    },
+    {
+      "a": "BBF,ULR,DEE",
+      "b": "322365686",
+      "c": "BUD DUB EEL LED BLED BULB DEER FREE LEER REEL FREED",
+      "d": "BLUB REED"
+    },
+    {
+      "a": "LLSE,IFTM,WETI",
+      "b": "631476154655",
+      "c": "FEW ILL WET EMIT FILL LIFE LIFT MITE SEMI TIME WIFE WILL LIFETIME",
+      "d": "EFTS ILLS MEST MITT WEFT"
+    },
+    {
+      "a": "LOFAA,KSUNL,ITHGI",
+      "b": "113113457323353",
+      "c": "FAN FUN KIT SKI SUN FOLK HUNG SUNG ALIGN LIGHT SUNLIGHT",
+      "d": "ANUS FANG FOLKS FUNGI GNUS HUSK KITH KITS LOST SKIT SOFA THUS"
+    },
+    {
+      "a": "HDI,TUG,APE",
+      "b": "131666484",
+      "c": "APE DIG DUG GUT PEG PUG PUT TAP TUG DUPE PATH TAPE",
+      "d": "PAT TAPU"
+    },
+    {
+      "a": "EI-UR,SPINE,-EOW-",
+      "b": "110123547201330",
+      "c": "OWN PIN RUN WOE NIPS PIES PINE SPIN OWNER",
+      "d": "NIP PIE RUNE SPINE"
+    },
+    {
+      "a": "COT,ENN,TSE",
+      "b": "266474344",
+      "c": "COT NET NOT ONE SEN TEN TON NEST SENT TONE CONSENT",
+      "d": "CON CONE CONN CONS NETS SNOT TENS TONS"
+    },
+    {
+      "a": "PRINT,EMHCE,POTRR",
+      "b": "336641133511113",
+      "c": "ERR INCH MOPE TECH THIN INTER PRINT PRINCE PRINTER",
+      "d": "CHIN CHIRP ECHT HINT MOP MOTH PEP POME POT TOME TOP TOPE"
+    },
+    {
+      "a": "UNIA,EOOB,RDNS",
+      "b": "264125621461",
+      "c": "ABS DOE DON ION NOD BOND NOON ONION UNION REUNION",
+      "d": "BAIN BOON DOER EON IONS SNOB SNOOD"
+    },
+    {
+      "a": "MEL,ANT,PHA",
+      "b": "552885511",
+      "c": "ANT HAT MAP MEN NAP PAN MELT NAME PANE PANT MANTLE",
+      "d": "AMEN LENT MAN MANE"
+    },
+    {
+      "a": "OST-B,PUREE,T-GMT",
+      "b": "34303648b920115",
+      "c": "BEE BET OPT SOP TEE BEER POST PURE SURE TEEM TREE ERUPT GREET PUREE STREET",
+      "d": "GREE MEET OPUS RUST"
+    },
+    {
+      "a": "SPE,EYT,VEN",
+      "b": "432765686",
+      "c": "EVE EYE PET SPY YEN YES EVEN TYPE VENT EVENT SEVEN SEVENTY",
+      "d": "EVES EYES NEVE NEVES"
+    },
+    {
+      "a": "SABF,EHEE,BALL",
+      "b": "114313753498",
+      "c": "BALE BALL BEEF BELL FEEL FELL HALL HEEL HELL BELLE BASEBALL",
+      "d": "ABEL ALEE BASE FELLA HALE HELA"
+    },
+    {
+      "a": "CUPSL,PENIO,ILSEC",
+      "b": "221212664213211",
+      "c": "CUE CUP PEN SIN COIN ELSE LENS LOIN PILE SINE",
+      "d": "COLS CUPS INS LIP PELS PENS SINS SLIP SPUE"
+    },
+    {
+      "a": "GLAV,TUNE,IEDU",
+      "b": "357255a52471",
+      "c": "AND DUE END NUT TIE VAN GLUE LAND LANE TIED TUNA TUNE VANE GLAND GLUED",
+      "d": "LAVE LUNA LUNE NAVE UNDUE VALUE VENA VENAL VEND VENUE"
+    },
+    {
+      "a": "SW-LD,MAKES,-SHI-",
+      "b": "240113823107410",
+      "c": "ASH MAW WAS SAKE SAWS WASH MAKES SMASH SHIELD",
+      "d": "ELDS HIES MAKE MASH SAW SHIES SWAM WAKE"
+    },
+    {
+      "a": "TVE,WIN,SLG",
+      "b": "2366db264",
+      "c": "NIL WIN EVIL LINE LING LIVE TWIN VINE WINE WING SLING SWING TWINE",
+      "d": "EVILS LIVEN NEVI NILS SWINE WIVE"
+    },
+    {
+      "a": "NAOTS,KYEMI,CITSP",
+      "b": "111111473124621",
+      "c": "MET NAY SIP TOE YET CITE ICKY STEM YETI ITEMS",
+      "d": "ETIC ITEM MIST SPIM STICK TICK YANK"
+    },
+    {
+      "a": "COLT,PODS,PLOT",
+      "b": "475167411543",
+      "c": "DOT LOP LOT OLD POD COLD COOL COOP LOOP PLOT POLO POOL COLTS",
+      "d": "COLDS COLT DOTS LOTS OLDS PLOD PLOP PODS POO TODS"
+    },
+    {
+      "a": "ABO,SRA,KNW",
+      "b": "242377224",
+      "c": "ASK BRA RAW WAR BASK BOAR OARS WARN BRAWN",
+      "d": "BOARS BRAW OAR WARS"
+    },
+    {
+      "a": "ER-YS,COVER,AW-KY",
+      "b": "240115878512012",
+      "c": "ACE COW ROW COVE KEYS OVER ROVE VERY COVER ROVER RECOVERY",
+      "d": "ACER CAW CERO CORE COVEY KEY ORE VOW WORE WOVE"
+    },
+    {
+      "a": "UOF,NKA,DER",
+      "b": "215226487",
+      "c": "ARE ERA FAR RED FAKE FARE FAKED UNDER FOUNDER",
+      "d": "FOUND RAKE RAKED"
+    },
+    {
+      "a": "EHOS,PORP,LATI",
+      "b": "231356352384",
+      "c": "HOP LAT OAT PIT HOPE PORT PROP SPIT TIPS TROPE HOSPITAL",
+      "d": "PITA PLAT PRO PROS ROPE SORT TIP TROP"
+    },
+    {
+      "a": "SIRYH,OMPLT,NGSEX",
+      "b": "563412553121221",
+      "c": "IMP PRY RIM SEX SIR SON THY IMPLY SONGS SIMPLE SIMPLY",
+      "d": "PLY PRIMO PRISON"
+    },
+    {
+      "a": "RUT,NSH,KNA",
+      "b": "344146344",
+      "c": "RUT HANK RUSH THAN TUSH URNS SHANK THANK",
+      "d": "RUTH RUTHS SHAN TURN TURNS URN"
+    },
+    {
+      "a": "FF-PS,VOLES,-RTR-",
+      "b": "140122745304320",
+      "c": "FOR OFF PER FORT LESS VOLE VOLT ROLES FORTRESS",
+      "d": "PELT PERT REPS ROLE SPELT TRESS VOLES"
+    },
+    {
+      "a": "ODB,OAY,GBE",
+      "b": "262354332",
+      "c": "BAD BAY BYE DAB DAY GOAD GOOD GOODBYE",
+      "d": ""
+    },
+    {
+      "a": "HIVER,UDVAS,TRODE",
+      "b": "343431313323464",
+      "c": "HID HUT ODE ROD SAD HIVE READ RODE TROD VASE DIVER DIVERSE",
+      "d": "DIVE EASE EASED ODES SADE SAVOR VADE VERSE"
+    },
+    {
+      "a": "BLEG,UHAN,ILDI",
+      "b": "333433452263",
+      "c": "DIN GEL HAD HUB DING HANG LEAD LEAN BUILD BUILDING",
+      "d": "ANGEL BUHL DAHL DINGE GEAN HANI LEA LEG"
+    },
+    {
+      "a": "ETA,GIN,RAY",
+      "b": "263368445",
+      "c": "ANY ATE GET GIN NIT RAY TAN TIN GRAY RAIN TINY RAINY",
+      "d": "GETA GITA GRAIN NITE TEG"
+    },
+    {
+      "a": "LRFTY,EIGHE,-JSS-",
+      "b": "141632778401110",
+      "c": "HEY RIG SHE THE GIRL JIGS THEY EIGHT RIGHT EIGHTY FRIGHT",
+      "d": "JIG LEIGH RIEL RIGS"
+    },
+    {
+      "a": "TAD,CID,AKE",
+      "b": "353546423",
+      "c": "ACT ADD AID TAD ACID AIDE CAKE CAKED ADDICT",
+      "d": "DICTA DIKE EDICT KID"
+    },
+    {
+      "a": "HOGO,SITT,SUED",
+      "b": "112145513342",
+      "c": "GOT HOG SIT SITE SUED SUIT SITED TISSUE",
+      "d": "DEUS ISSUE ISSUED SUE SUET SUITE TIS TOGO"
+    },
+    {
+      "a": "MBOMB,YSLIU,JOTCE",
+      "b": "155631588111343",
+      "c": "ICE JOT MIL BOLT BOMB LIMB MICE MOBS SLIM SLOB BUILT SLICE SYMBOLIC",
+      "d": "LICE LIMO LOB LOBS MILO MILS MILT MOB MOLS MOLT OSLO"
+    },
+    {
+      "a": "ASM,YLA,ROY",
+      "b": "144257226",
+      "c": "LAY MAY SAY SLY YAM SLAM SLAY MAYOR ROYAL",
+      "d": "LAMS LORY MAYO YAMS"
+    },
+    {
+      "a": "LI-DD,YEGOB,-ALS-",
+      "b": "210312458301130",
+      "c": "BOG DOG GOD LIE LYE ODD SOB ALSO EGOS BOGEY",
+      "d": "DOGE EGO"
+    },
+    {
+      "a": "IMF,DAO,ILE",
+      "b": "153683164",
+      "c": "ALE DAM DIM FOE LAD LID MAD DALE FOAL FOAM MALE",
+      "d": "AMID MALI MIDI"
+    },
+    {
+      "a": "SUMRE,HCOMT,RIEMU",
+      "b": "344133543311144",
+      "c": "EMU MOM SUM MUCH MUTE RICH SUCH SUMO COMMUTE COMMUTER",
+      "d": "MUSH SHRI TERM"
+    },
+    {
+      "a": "ACRA,THOC,WALK",
+      "b": "255422253447",
+      "c": "ARC CAR CAT LAW HOCK RACK ROCK WALK CHALK CRACK CATWALK",
+      "d": "ARCA ARCH CAROL CHAW COLA CORA CROC CROCK HALO LOCK ORCA TACH THAW THOR"
+    },
+    {
+      "a": "WEY,GAR,NUN",
+      "b": "363277112",
+      "c": "EAR GAR NUN RAG YEW EARN WEAR YEAR WEARY",
+      "d": "EYRA RYE YEARN"
+    },
+    {
+      "a": "GRA-R,FINGE,E-KJE",
+      "b": "1860437d6510411",
+      "c": "FIN INK RAN GRIN JEER RANG RANK RING RINK ANGER KNIFE RANGE FINGER RANGER",
+      "d": "FINK FIR GNAR GRAN GRANGE IRA IRAN RANI RIFE RINGER"
+    },
+    {
+      "a": "OOC,AIR,FLY",
+      "b": "132795565",
+      "c": "AIL AIR CRY FLY OAF OIL AIRY COIL FAIL FAIR OILY FAIRY",
+      "d": "COIR"
+    },
+    {
+      "a": "BURY,SPRU,WAGB",
+      "b": "244244332333",
+      "c": "BUY SPA WAG BURG BURY GRUB PURR RUBS SPUR SWAP",
+      "d": "BURP BURR GAP PAW PAWS PUBS RUB SWAG"
+    },
+    {
+      "a": "SHIRT,EUKES,WGROA",
+      "b": "366642227411221",
+      "c": "HUE HUG IRE ROE SEW HIKE HIRE REST ROAST SHIRE SHIRTS STRIKE",
+      "d": "HIKER HIKES HIRES HUES IRES OAST ROES SHIRES SHIRT SHUG TREK TRIKE TRIKES UKES"
+    },
+    {
+      "a": "SRTS,GUEA,CYST",
+      "b": "136335a61267",
+      "c": "EAT GUY RUE SAT SEA SET TEA CYST EAST RUGS TEST GUEST TASTE TRUEST",
+      "d": "EATS GUYS RUES RUG SEAS SEAT SETS TASTES TEAS TEAT TEATS TESTA TRUE YURT YURTS"
+    },
+    {
+      "a": "SB-FA,TUSLL,-CWO-",
+      "b": "150334637302550",
+      "c": "ALL BUS BUT CUB CUT LOW TUB FALL FLOW SLOW STUB WOLF ALLOWS",
+      "d": "BUTS CUBS CUTS FALLOW LOWS OLLA SUB SUBS TUBS"
+    },
+    {
+      "a": "BLT,IAS,GGE",
+      "b": "333365353",
+      "c": "AGE BIG EGG GAS LAG BIAS LAST SALT BIGGEST",
+      "d": "AGES ALTS LASE SAG SAGE"
+    },
+    {
+      "a": "CLERK,ASTTE,FILIH",
+      "b": "234212695124762",
+      "c": "HIT LET LIT CAST FAST FIST HILT ISLE LIST LITE SILT TILT CLERK LITTER",
+      "d": "ASTER CASTE FILTER HILTS HITTER ISLET LETS LITRE LTTE RETS"
+    },
+    {
+      "a": "FBAG,ROUN,ATGD",
+      "b": "142266332312",
+      "c": "BAG BOT FRO GAB GUN RAT ROB ROT ROUND AROUND",
+      "d": "ABOUND BOUND TAR TOR"
+    },
+    {
+      "a": "PAS,YRT,AKE",
+      "b": "8a3185131",
+      "c": "ARK ART PAR RAP SAP TRY PARK PART PAST PARKA PASTE",
+      "d": "ARTS STRAP TRAP TSAR"
+    },
+    {
+      "a": "TA-LT,OREAM,SD-TE",
+      "b": "110312667412023",
+      "c": "AREA LAME LATE REAL SORE TAME TORE DREAM DREAMT",
+      "d": "AERO AREAL DRAT EROS MALT MATE META METAL REAM ROTA SORA TARE TARO TAROS"
+    },
+    {
+      "a": "SPP,WEE,LAK",
+      "b": "3737c7256",
+      "c": "PEW WEE LAKE PEAK PEAL PEEK PEEP SPEW WEAK WEEK WEEP SPEAK SWEEP",
+      "d": "AKEE KEEP PEA PEE PEEPS WEAL"
+    },
+    {
+      "a": "BLED,IDEA,EDKF",
+      "b": "46657a642112",
+      "c": "BID DIE FAD LED BIDE BLED DEAD DEAF DIED IDEA IDLE LEEK BLEED IDLED",
+      "d": "DEED DIB EEL FADE KEEL"
+    },
+    {
+      "a": "ATOYB,MOUNO,NIATO",
+      "b": "332215476311394",
+      "c": "MAT TAU TOO TOY YOU ATOM AUNT BOOT ONTO UNTO MOUNT AMOUNT MOUNTAIN",
+      "d": "AMNIA BONY IOTA MOTO OMNI TAIN TOON"
+    },
+    {
+      "a": "EWH,DGE,IRN",
+      "b": "442856442",
+      "c": "DEW HEN RID WED EDGE GRID WHEN DIRGE RIDGE WEDGE",
+      "d": "GEN RIDE"
+    },
+    {
+      "a": "CH-GN,MAJNI,-RMI-",
+      "b": "240113812207520",
+      "c": "ARM HAM JAR MAR RAM CHAR HARM MINI CHARM MINING",
+      "d": "ARMING JAM MING NINJA"
+    },
+    {
+      "a": "FFD,REE,BAN",
+      "b": "226579323",
+      "c": "BAN DEN FEE BANE DEER FEED FREE REED BREED FREED",
+      "d": "NAB"
+    },
+    {
+      "a": "CONSU,WAEBL,ONWIT",
+      "b": "345111153112323",
+      "c": "BIT CON NEW ONE WEB WIT WON BEAN CONE CONSULT",
+      "d": "CONS NOW WAN WEAN WEBS WEN WENS"
+    },
+    {
+      "a": "LBAT,ACKH,MOEO",
+      "b": "255445523331",
+      "c": "BAT HOE TAB BAKE BATH CAMO COMA LACK MOCK TAKE BLACK",
+      "d": "TABLA"
+    },
+    {
+      "a": "PRN,IEW,NTO",
+      "b": "541863663",
+      "c": "NIP PIE PIN TOW WET INTO PIER PINT REIN TOWER INTERN",
+      "d": "INTER OWE OWN PINTO TERN TOWN"
+    },
+    {
+      "a": "GLOOM,MASSY,-AIM-",
+      "b": "586331478201110",
+      "c": "ASS AIMS LASS LOOM LOSS MASS GLASS GLOOM GLOSS GLOOMY GLOSSY",
+      "d": "AIM ASIA GLASSY LASSO LOOS MISO MISS MISSY MOOS MOSS SOLA"
+    },
+    {
+      "a": "TRE,CUF,ELF",
+      "b": "172384344",
+      "c": "CUR ELF FUR CUFF CURE LURE RUFF RULE TRUFFLE",
+      "d": "CURT FLU LUCE TREF"
+    },
+    {
+      "a": "HDUB,ISNE,JUNK",
+      "b": "147515731444",
+      "c": "BUD BUN DUB DUN HIS KEN NUB SUN DUNE JUNK SNUB SUNK SUNKEN",
+      "d": "BUDS BUNS DUNS KENS SUNN"
+    },
+    {
+      "a": "VECWE,AEHER,WOOKS",
+      "b": "233322276321211",
+      "c": "HEW WOE CHEW ECHO HERE HERS WAVE WERE CHOKE HEAVE",
+      "d": "EAVE EWE EWER HER SKEW"
+    },
+    {
+      "a": "SMI,SEN,NET",
+      "b": "1747d7388",
+      "c": "MEN NET SEE SEN TEE MEET MESS MINE MINT SEEN SEMI SENT TEEM TEEN INTENSE",
+      "d": "NEEM NESS TEES TEN TENS"
+    },
+    {
+      "a": "NB-YS,EEDLE,-GUL-",
+      "b": "240123555204550",
+      "c": "BED BEE BEG DUG LUG BEEN DULL GULL SELL DULLY NEEDLES",
+      "d": "LUGE LUGED LYSE NEED"
+    },
+    {
+      "a": "PET,TUO,AGN",
+      "b": "126446144",
+      "c": "NOT OUT PET TAG TON TUG TONG TOUT TONGUE",
+      "d": "AGUE GUT NOTE NOUGAT"
+    },
+    {
+      "a": "RSERY,UMKRO,NBINN",
+      "b": "425314132133532",
+      "c": "BIN ERR INN KIN NOR RUM RUN BIKE BIKER NURSE NURSERY",
+      "d": "BIKES NIB NORN NUMB RUMS YORK"
+    },
+    {
+      "a": "LYAC,ICKH,NAPT",
+      "b": "221156216652",
+      "c": "APT CAN CAP ICY NAP NIL PAN LICK NICK PANIC YACHT",
+      "d": "ACYL ANIL PACK PACY"
+    },
+    {
+      "a": "NUP,FTO,OLD",
+      "b": "345254335",
+      "c": "DOT NUT OLD POD POT PUN PUT TOP FOLD UNFOLD",
+      "d": "LOFT"
+    },
+    {
+      "a": "SAH-S,PWARD,U-BWA",
+      "b": "342011888610111",
+      "c": "BAR HAS RAW SAW WAD WAR WAS DRAW HARD WARD AWARDS UPWARD",
+      "d": "BARD DRAB HASP WADS WASP"
+    },
+    {
+      "a": "TCS,WOV,BRE",
+      "b": "1514b5178",
+      "c": "COW ORE TWO BROW CORE COVE OVER ROVE WOVE COVER SCORE",
+      "d": "ORB REVS ROCS ROW VERB VOW WORE"
+    },
+    {
+      "a": "CFKE,LANG,OVEY",
+      "b": "211255725771",
+      "c": "FAN KEG VAN YEN LANE LOVE OVAL OVEN CLOVE AVENGE CLOVEN",
+      "d": "CLAN CLANG CLANK FANE FANG LANK LAVE NAVE VANE VENA VENAL"
+    },
+    {
+      "a": "ASHIP,NKOOB,DWICH",
+      "b": "684224434231131",
+      "c": "AND ASH ASK COB HIP COOK SAND SANK SHIP SHOO BOOKS SANDWICH",
+      "d": "BOOK COOKS NASH OOHS"
+    },
+    {
+      "a": "SHNS,SORT,SPME",
+      "b": "241219691655",
+      "c": "HOP MET HORN PORT SHOP SORT STEM TEMP METRO SHORT TEMPO SPORTS",
+      "d": "HOPS HORNS ORTS PORN PORTE PORTS ROSS SHOPS SHORTS SOP SPORT STROP TROP"
+    },
+    {
+      "a": "AP-NR,DISTU,-GEI-",
+      "b": "140234635304210",
+      "c": "DIG DIP PAD PIG RUT SIP TIE URN GIST TURN DIGEST",
+      "d": "EGIS RUTS TIES"
+    },
+    {
+      "a": "STR,SPI,REV",
+      "b": "248178373",
+      "c": "PER RIP REPS RIPE RIVE TRIP RIVER STRIP TRIPE STRIVE",
+      "d": "RIPER RIPS RIVERS SPIRT STRIPS TRIPS VIPER"
+    },
+    {
+      "a": "UPTOS,SHINE,UALLY",
+      "b": "312216666425873",
+      "c": "ALLY HALL HILL LINE ONES ONLY PUSH SHIN TILL TINE SHALL SHINE USUAL USUALLY",
+      "d": "ALIT HILA HILLY INLY LINES LYES NOSE SONE TINES TONE UPTO"
+    },
+    {
+      "a": "LOUR,APDE,FENT",
+      "b": "487714952661",
+      "c": "DUO END LOP OUR PEN RED FEND LOUD OPEN POUR RUDE ALOUD ENTER FENDER LOUDER",
+      "d": "APE ENDER ENDURE FEN LAP LOPE NEPAL OPAL OUD PAL PALO PEND PENT POURED"
+    },
+    {
+      "a": "PRE,AYV,TNE",
+      "b": "435216556",
+      "c": "EVE PAT PRY TAP EVEN VENT EVENT NEVER PREVENT",
+      "d": "EVER EVERY NEVE PAY VERY"
+    },
+    {
+      "a": "NI-FA,CAMER,ES-ON",
+      "b": "220254769611021",
+      "c": "ACE ARE EON ERA FAR CAME FARE MAIN SAME CAMEO CAMERA REMAIN",
+      "d": "ACES CAIN CASE FERN INCA INCAS MACE NREM"
+    },
+    {
+      "a": "SKA,PIT,EYE",
+      "b": "56249a137",
+      "c": "ATE EYE KIT PIT SKI TIP YET KITE SKIP SKIT YETI SKATE SPITE",
+      "d": "PIKA PITA SKITE SPIT TIPS YIPS"
+    },
+    {
+      "a": "YANK,COTT,SHAF",
+      "b": "233124723443",
+      "c": "AFT ANT COT FAT HAT HOT NAY SCOT SHOT YANK SHAFT",
+      "d": "CYAN HAFT"
+    },
+    {
+      "a": "LENGT,MOSEH,NOKLY",
+      "b": "111121334233121",
+      "c": "ELK GEL THE THY LENS MOON SOON NOOSE",
+      "d": "ELKS ELM LEG"
+    },
+    {
+      "a": "SLE,MIP,ECO",
+      "b": "272494562",
+      "c": "COP ICE LIP MIL COPE LICE LIME MICE MILE SLIP SLICE",
+      "d": "EMIC EPIC MILS PELS PICE PILE SLIM SLIME SMILE"
+    },
+    {
+      "a": "ST-SR,GINGE,-SOY-",
+      "b": "140111784106310",
+      "c": "GIN NIT SIN SIT SON SOY SONG STING TINGS SINGER",
+      "d": "GINGER GITS NITS SIGS SING SINGE SINGS SITS SONGS TIN TING TINGE TIS"
+    },
+    {
+      "a": "NKE,RAY,DOB",
+      "b": "155896443",
+      "c": "BYE KEY OAK OAR RAY RAKE YARD YARN BOARD DRAKE KEYBOARD",
+      "d": "BOAR DRAY"
+    },
+    {
+      "a": "ADADS,VONYU,EMBER",
+      "b": "141212541133243",
+      "c": "DAD DON DYE NOD DOME NOVA SURE EMBER NOVEMBER",
+      "d": "ANY DADA DADS DOVE DYER DYNO MOD MONA MONAD MOVE NADA NOME"
+    },
+    {
+      "a": "RCUY,IMPL,BAYE",
+      "b": "322355633341",
+      "c": "BAY CUP IMP MAY PLY RIB RIM YAM YUP CRIB YELP IMPLY",
+      "d": "AMIR AMPLE AMPLY RIMA"
+    },
+    {
+      "a": "VID,TAD,TCU",
+      "b": "122375463",
+      "c": "ACT ADD AID CAT CUD TAD DUCT TACT VIADUCT",
+      "d": "CAD VIA"
+    },
+    {
+      "a": "DOGPR,EALVE,-WEI-",
+      "b": "211121324204640",
+      "c": "ALE AWE DOG VIE DEAL VIEW REVIEW PREVIEW",
+      "d": "GOAL GOD LAW ODE ODEA OGLE WALE"
+    },
+    {
+      "a": "TMA,HUD,KSE",
+      "b": "2934c73a6",
+      "c": "DAM HUM MAD MUD SUM USE DESK HUSK MUSE MUSK THUD THUS USED AMUSE MUSED",
+      "d": "DUSK EDAM MADE SEDUM"
+    },
+    {
+      "a": "CIGL,LFOO,OTEG",
+      "b": "112224332333",
+      "c": "EGO FIG FOE FOG GET LOG LOT CLOT FOOL",
+      "d": "GIFT GOOF LOGE TEG"
+    },
+    {
+      "a": "ALPHA,EIGHB,UONTE",
+      "b": "272223722213242",
+      "c": "BET ION LIE OIL LIEU LION ALPHA EIGHT LIGHT ALPHABET",
+      "d": "ABET ALIGN BETH PLIE"
+    },
+    {
+      "a": "JCO,ORG,GAN",
+      "b": "121242673",
+      "c": "AGO ARC COG GAR JOG NAG RAG RAN GANG",
+      "d": "ARCO ARGO CRAG GNAR GRAN GROG NARC RANG"
+    },
+    {
+      "a": "CR-RT,LOSER,-DTA-",
+      "b": "32011689a302540",
+      "c": "EAT ROD SEA CLOD LOSE LOST REST ROSE SEAT CLOSE LOSER TREAT CLOSER",
+      "d": "DOSE DOST EATS"
+    },
+    {
+      "a": "SHE,TUB,TER",
+      "b": "3528a6232",
+      "c": "BUT HUB HUE HUT SHE TUB SHUT STUB TUBE UTTER BUTTER",
+      "d": "BUTS BUTT BUTTE HUTS"
+    },
+    {
+      "a": "AOMEM,LHSPY,MIGHT",
+      "b": "111111311445454",
+      "c": "HIM SPY HIGH HOME MYTH MIGHT MIGHTY ALMIGHTY",
+      "d": "MEMO MEMS SHIM SHOAL TYPE"
+    },
+    {
+      "a": "FPLC,UTEA,LLHR",
+      "b": "225234a83125",
+      "c": "CAR EAR LEA LET TEA FULL HEAR LUTE PLEA TEAR CLEAR HELPFUL",
+      "d": "HELP LEAR RHEA"
+    },
+    {
+      "a": "FST,AIR,LLS",
+      "b": "321784561",
+      "c": "AIL AIR ALL ILL SIR FAIL FALL SILL FAIRS TRIAL",
+      "d": "AILS AIRS FAIR LAIR LAIRS LIST RIAL RILL SIAL SIRS STRIA TRILL"
+    },
+    {
+      "a": "FFY-F,LITRO,Y-EUB",
+      "b": "111043366510531",
+      "c": "FIT FLY FOB FOR LIT RUE EURO LITE TRUE FORTE FORTY",
+      "d": "BORT BURT FLIT FLITE FORT ROB RUB TIFF"
+    },
+    {
+      "a": "GGE,AUM,SMO",
+      "b": "454354541",
+      "c": "EGG EMU GAS GEM MOM SAG GUMS MUMS SMUG GAUGE",
+      "d": "GUM MOMS MUG"
+    },
+    {
+      "a": "BTHA,OXIN,LUFK",
+      "b": "156423472134",
+      "c": "BOX FIN FIX LOX HANK THAN THIN THANK THINK THANKFUL",
+      "d": "FINK HANI INK LOB LUX"
+    },
+    {
+      "a": "FDBOW,AEUSH,CULTY",
+      "b": "115331347344233",
+      "c": "BOW BUS CUE SHY SOB SOW SUE WHY BUSH BUST CUED CULT FACULTY",
+      "d": "DEAF DEUS LUSH LUST SUB SUED"
+    },
+    {
+      "a": "PLOY,MATE,ERTE",
+      "b": "68329ea55643",
+      "c": "LAME LAMP LATE MARE MART MATE PLOT PLOY RAMP RATE TAME TARE TART LATTE MATTE PLATE EMPLOYEE",
+      "d": "LOTA MATEY MATT PLAT TAMER TAMP TRAM"
+    },
+    {
+      "a": "AL-JY,NATOM,-STY-",
+      "b": "220214875204340",
+      "c": "JOT JOY SAT TAN TOY ALAS ATOM LAST NASTY NATTY ANATOMY",
+      "d": "ANAL ANAS LAT MOTT NALA TALA TASTY"
+    },
+    {
+      "a": "SPE,OLE,RID",
+      "b": "223278568",
+      "c": "EEL LED LID RID DEEP RIDE RILE ROLE RILED SOLID SPEED",
+      "d": "DEEPS DELI PEE PEED PEEL PLED SOLE SOLED SOLI SORI"
+    },
+    {
+      "a": "YREIR,WINGU,EEFEP",
+      "b": "145226655122111",
+      "c": "FEE IRE PEG RIG RUG WEE WIN WINE WING WIRE REIGN WINERY",
+      "d": "EIRE PUG RING WIRY"
+    },
+    {
+      "a": "NEHM,GDII,AGED",
+      "b": "463125214674",
+      "c": "AGE DEN DIM HEN HID AGED DIED EDGE HEDGE ENGAGE ENGAGED",
+      "d": "DIE EDGED GAG GAGE GAGED HIDE HIED"
+    },
+    {
+      "a": "MGW,ANO,BEL",
+      "b": "2336b7665",
+      "c": "BAN LOW MAN NAB ONE WON BANE BANG LONE LONG MANE BELOW BELONG",
+      "d": "ABEL ANOLE ENOL LENO MANO NABE NOW"
+    },
+    {
+      "a": "AR-WH,TRAIO,SY-TO",
+      "b": "330224212321042",
+      "c": "TAR TOO WHO WIT HOOT RATS TRAIT STARRY",
+      "d": "ART ARTS ARTSY RAT STAR STRAIT TARRY TRY"
+    },
+    {
+      "a": "EBS,SAK,IDE",
+      "b": "281592386",
+      "c": "ABS BAD DAB SAD BADE BAKE BASE SIDE ASIDE BAKED BESIDE",
+      "d": "DABS DAKS DISA SADE SAKE SKED"
+    },
+    {
+      "a": "GYCO,LAJD,OSSD",
+      "b": "231246121541",
+      "c": "ASS COD JAY LAY ODD SAY LASS GLASS GLOSS",
+      "d": "LOSS ODDS SOLA"
+    },
+    {
+      "a": "YMDOS,SAPOM,TICAL",
+      "b": "231114342432333",
+      "c": "MAP MOP SAP ALMS CALM DOOM PAST MYSTIC MYSTICAL",
+      "d": "MAST MOOD MOOS POMS POO POOS"
+    },
+    {
+      "a": "MSU,OTN,WED",
+      "b": "332742874",
+      "c": "DEW MOW OWE SUN WED MOTE OWED STOW UNTO WETS MOWED",
+      "d": "MOTS STEW TOMS TOW WET"
+    },
+    {
+      "a": "BAT--,-WAU-,--KEN",
+      "b": "225000251000553",
+      "c": "BAT KEN TAB TAU TAKE WAKE TAKEN WAKEN",
+      "d": "AWAKE KATA TAW"
+    },
+    {
+      "a": "BUF,IDE,TSA",
+      "b": "522576443",
+      "c": "BID BIT DUB FED BIDE BUDS EAST TIDE FEAST IDEAS",
+      "d": "BITS BUD DIB DITS EDIT EDITS FEDS IDEA"
+    },
+    {
+      "a": "AWCKE,UAITT,OYJES",
+      "b": "242111446313244",
+      "c": "JET WAY YOU AWAY JEST TEST WAIT AWAIT CITES TICKETS",
+      "d": "CITE ETIC SET SETT TICK"
+    },
+    {
+      "a": "CHAR,JUIM,SGNT",
+      "b": "456413441331",
+      "c": "AIM ARM JUG CHAR CHUG HUGS MINT RAIN CHAIN CHARM",
+      "d": "CHAI HARM HUG MING"
+    },
+    {
+      "a": "AFY,LAD,REU",
+      "b": "113367341",
+      "c": "DUE FAD LAD LADY READ READY ALREADY",
+      "d": "ALAE REAL"
+    },
+    {
+      "a": "SP-TR,WEAKE,-BNI-",
+      "b": "140124977204320",
+      "c": "KIN PEA PEW WEB AKIN BEAK BEAN PEAK SPEW TREK WEAK BEAKER",
+      "d": "KINA PEAN WEAN"
+    },
+    {
+      "a": "EPP,TOU,SDT",
+      "b": "261884424",
+      "c": "DOT OUT PET POD PUT TOP POTS STEP STOP TOUT STOUT",
+      "d": "DOPE DOTE DOTS PETS PODS POT POUT TODS TOPE"
+    },
+    {
+      "a": "BSHA,LWOK,ASEE",
+      "b": "124135631343",
+      "c": "HOE OWL WOE HOWL SEEK WOKE BLASE SHAKE SHOWS",
+      "d": "AKEE ALBS HAKE HOES HOW LASE SEE SHOE SHOES SHOW WOES"
+    },
+    {
+      "a": "NOUCH,LOCKE,BNIBR",
+      "b": "231134654415434",
+      "c": "BIN HER NIB HERB ICON LOCK LOON NICK NOON OUCH LOCKER BLOCKER",
+      "d": "CON COON KERB LOCI NOCK"
+    },
+    {
+      "a": "RPP,EIA,TNW",
+      "b": "254374262",
+      "c": "NIP PAW PIE PIN PAIN PAWN PIER PINT PAINTER",
+      "d": "APP REIN WAIN"
+    },
+    {
+      "a": "SENSS,SWTOE,-NSR-",
+      "b": "575211455201130",
+      "c": "ROE SEN SEW TOE NEWS ROTS SENT SEWN TOSS WENT SENSOR",
+      "d": "NESS NEW NEWT ROES ROSS ROT SEWS SOTS TOES TOR TORS WEN WENS"
+    },
+    {
+      "a": "SDJ,BRA,COW",
+      "b": "131284255",
+      "c": "BRA COW JAR ORB RAW ROW CORD DRAW WORDS",
+      "d": "BRAW BROW CORA JAW ORBS WAR WARD WARDS WORD"
+    },
+    {
+      "a": "ALORE,VDIDE,TRUST",
+      "b": "146761326524445",
+      "c": "DID OLD ORE TEE DEER LORD LORE REED RUST DROID TRUST VALOR RUSTED TRUSTEE",
+      "d": "DREE LORDS REEDS STEER SURD TEDS"
+    },
+    {
+      "a": "SCHE,PANS,TUNT",
+      "b": "45226a642332",
+      "c": "NAP NUT SPA ACHE AUNT CANS CAPS PANS SCAN SNAP SPAN CHESTNUT",
+      "d": "APT CAN CAP HEST NAPS PACS PAN"
+    },
+    {
+      "a": "HAS,VAH,END",
+      "b": "234355353",
+      "c": "AND ASH END HAS VAN HAND HASH HAVE SHAVEN",
+      "d": "AAHS NAVE SHAN VANE VENA VEND"
+    },
+    {
+      "a": "LS-YE,OPENS,-URT-",
+      "b": "440115b94202530",
+      "c": "LOP PEN PER YES LOPE PERT PURE RENT SLOP SPUR OPENS SLOPE SPENT",
+      "d": "LOPS OPEN PENS PENT PERU POLS REPO REPS SPURT"
+    },
+    {
+      "a": "CUT,RRE,UND",
+      "b": "685197253",
+      "c": "CUR CUT RED RUN URN CURE CUTE TERN TURN CURED CUTER UNDER",
+      "d": "DERN ERR RUT"
+    },
+    {
+      "a": "FURA,SLYR,SEVE",
+      "b": "245336581659",
+      "c": "ARE ERA EVE FUR SLY EVER FURY LESS LYRE RARE RULE SLUR VERY EVERY LEVER",
+      "d": "ARYL EVES LEVY LYRA REVEL RULES RULY SEVER"
+    },
+    {
+      "a": "FRIES,UYCHI,NETDL",
+      "b": "333231444245411",
+      "c": "FRY FUN HIS ICY NET TEN YEN YET ETCH CHILD FRIES RICHES",
+      "d": "CHIS HEIR RICH RYE SILD"
+    },
+    {
+      "a": "ASEDA,CFGUN,HANOE",
+      "b": "113712257724744",
+      "c": "DUG DUN DUO EON FAN GUN CASE DANE DUNE FANG HANG NEON NOUN NUDE CHANGED",
+      "d": "OUD"
+    },
+    {
+      "a": "KSP-D,ILICE,M-SOM",
+      "b": "284034798930122",
+      "c": "ICE LIP MIL SKI COME ICED LICE SKIM SLIM SLIP SOME SLICE SPICE SLICED SPICED",
+      "d": "DECO DEMO DEMOS LIPS MILS PICE PILI SICE SIP"
+    },
+    {
+      "a": "PAT,RYN,AME",
+      "b": "643332242",
+      "c": "MEN PAT PAY PRY RAM TAP PRAM PAYMENT",
+      "d": "AMEN MAR"
+    },
+    {
+      "a": "SCHOO,KOHAL,EPTOS",
+      "b": "262122722357212",
+      "c": "COP HOP OPT ALSO COKE COPE HALO KEPT EPOCH SCOPE SCHOOLS",
+      "d": "COPT HOPE LAOS OSLO POKE SKEP SOTHO"
+    },
+    {
+      "a": "FILL,EYEE,RASR",
+      "b": "457542412141",
+      "c": "ERAS EYES FILL LIFE SELL YELL FILES ILLER REFILL",
+      "d": "AYES ERASE EYAS FILE FILLE FILLER LEER LEERS LEES LIFER RASE REEL REFILE SEEL SEER SELLER YARE"
+    },
+    {
+      "a": "GGN,LIN,OVE",
+      "b": "131685488",
+      "c": "GIN INN NIL EVIL GIVE LIVE LOVE OVEN GIVEN GLOVE OLIVE",
+      "d": "LINE LIVEN NEVI OVINE VINE"
+    },
+    {
+      "a": "IP-AL,TRICK,-OPU-",
+      "b": "230116643103610",
+      "c": "CUP PIT RIP TIP PORT PROP TRIP TRICK TROPICAL",
+      "d": "CALK LACK PICA PICK PRICK PRO PUCK RICK TROP"
+    },
+    {
+      "a": "KOB,RAY,DKE",
+      "b": "154895344",
+      "c": "ARK BYE KEY OAK OAR RAY BOAR RAKE YARD BOARD KEYBOARD",
+      "d": "DRAKE DRAY OKRA"
+    },
+    {
+      "a": "HEAL,AYHT,DEMI",
+      "b": "653336363433",
+      "c": "DAY EYE HAD HAY HEY THY EMIT HEAL TIME TIMED HEALTH HEALTHY",
+      "d": "EYED HADE HALT YEAH"
+    },
+    {
+      "a": "MORAL,ROIVE,TAMUR",
+      "b": "347542223412412",
+      "c": "MAT RIM RUM MOOR ORAL RAVE ROAM MORAL RAVEL RIVER MORALE",
+      "d": "ALE AMIR AVER IRA LARI LAVE LAVER LEVA MIRO MURE OAT RALE RAVER RIMA RIVAL RIVE ROOM VALE VELA VELAR VIRAL"
+    },
+    {
+      "a": "SOI,INS,TCE",
+      "b": "442693545",
+      "c": "ION NIT SIN SIT SON TIN ONCE SECT NOISE SINCE INSECT",
+      "d": "INS IONS SINS SION SNIT SONS TINS TIS"
+    },
+    {
+      "a": "KI-OC,FTIVA,AC-ET",
+      "b": "110122623354044",
+      "c": "ACT AFT ATE CAT KIT FACT COVET ACTIVE ACTIVATE",
+      "d": "CATE CAVE COVE TACO VET"
+    },
+    {
+      "a": "DIT,RAN,YGO",
+      "b": "422695242",
+      "c": "AGO AID ANT DRY NAG RAG RAN RANT DIARY DRAGON",
+      "d": "AGON ANTI DRAG GAIT GAR NARD NARY RAID TIAN"
+    },
+    {
+      "a": "DBETS,EIGHR,ALTOU",
+      "b": "122653567435365",
+      "c": "BEG BIG HOT LIE ALTO DEAL GETS OURS THOU THRU EIGHT HOURS TOURS ALIGHT LIGHTS",
+      "d": "BET BETH BETS BIGHT GET GIBE GILT HOUR LIED LIGHT OUR TEG TOUR"
+    },
+    {
+      "a": "ILDI,UTTN,BLOG",
+      "b": "223331334354",
+      "c": "BUT DIN GOT LOG LOT BLOG INTO BUILD BUILDING",
+      "d": "BLOT BUILT BUTT DING DINGO DINT INGOT TUB"
+    },
+    {
+      "a": "UDE,CAI,EMV",
+      "b": "161692552",
+      "c": "ACE CAD CUD DAM MAD VIA VIE CAME DACE DAME MACE",
+      "d": "CADE DUCE EDAM MADE VIED"
+    },
+    {
+      "a": "TR-NA,OILLE,-ANG-",
+      "b": "440124735403220",
+      "c": "AIR ILL LEA OIL LEAN RIOT TOIL TRIO ANGLE TRIANGLE",
+      "d": "AIL GLEAN NAIL RILL TRILL"
+    },
+    {
+      "a": "PUY,ALL,RGE",
+      "b": "413886433",
+      "c": "ALL LAP LEG PAL PAR ALLY PULL LARGE RALLY LARGELY",
+      "d": "GEL PALL PULA RAP YUP"
+    },
+    {
+      "a": "TRFE,BUHA,PEST",
+      "b": "241226331545",
+      "c": "EAT HUB RUB RUE FEAT HATS HUES PEST TRUE TRUEST",
+      "d": "BURT EATS HAT HUE HURT RUES"
+    },
+    {
+      "a": "KEBEP,ERMLT,GDULE",
+      "b": "113412236222353",
+      "c": "KEG MUD BELL DULL GERM MULE PELT TELL BELLE REBEL",
+      "d": "BELT BERM DREG DUMB ELM LET MULL PELL UMBEL UMBER"
+    },
+    {
+      "a": "SER,AAC,WRL",
+      "b": "562272251",
+      "c": "CAR EAR SAW SEA WAS EARL REAR SEAR ACRES",
+      "d": "ACRE ASEA"
+    },
+    {
+      "a": "DRASK,HOBBS,-SEI-",
+      "b": "176222782105520",
+      "c": "BAR ROB SOB ASKS BASK DRAB HOSE ROBE ROSE AROSE RABBI HOBBIES",
+      "d": "ASK BARD BORA BOSE EBBS HOB ROBES SARD SOBA SORA"
+    },
+    {
+      "a": "OPM,EHE,LIT",
+      "b": "114126357",
+      "c": "HEM HIT LIT MET ITEM LITE ELITE TEMPO",
+      "d": "HEMP PHI TEMP TILE"
+    },
+    {
+      "a": "YUSUY,AMPLL,COUNT",
+      "b": "124114741135554",
+      "c": "MAY CAMP COMA PUNT SPUN SUMO SUMP COUNT MOUNT SULLY AMOUNT",
+      "d": "AMPS CAMO CAMPS CAMUS COMP COUP PLUS PUN SUM SUMAC UMPS YAM"
+    },
+    {
+      "a": "MERE,OUST,BLER",
+      "b": "353139833451",
+      "c": "MOB SUE USE BLUE LEST LUST MERE OUST USER BLUER MOUSE REUSE",
+      "d": "BLEST ERST ESTER MOUE OUSE REST RETS STERE SUER TERSE"
+    },
+    {
+      "a": "DEP,RGA,INK",
+      "b": "155475553",
+      "c": "AGE APE GAP INK PEG GAPE GRIN PAGE RING RINK DRINK",
+      "d": "AGED APED INGA"
+    },
+    {
+      "a": "TH-UR,WINGE,-FER-",
+      "b": "220115994104410",
+      "c": "FEN FIN RUG WIN TWIN WIFE WINE WING FINER HINGE THING",
+      "d": "FINE THIN THINE TWINE"
+    },
+    {
+      "a": "ART,VON,IDE",
+      "b": "254187196",
+      "c": "ART DEN NOD NOR ODE ONE ROD AVID DENT DONE TROD RODENT",
+      "d": "DIVA DON DONT NODE NOVA RODE VIDE"
+    },
+    {
+      "a": "COMB,LAME,BANE",
+      "b": "222323344343",
+      "c": "BAN BEE NAB BANE BEEN COMB LAME BLAME COMMA",
+      "d": "AMMO BEMA CLAM COAL NEEM"
+    },
+    {
+      "a": "EAKER,NJOBE,SSYAS",
+      "b": "325423574121632",
+      "c": "BOY JOB JOY SAY BASE BAYS JOKE YOKE ENJOY JOKER SNEAK SNEAKER",
+      "d": "BAY BOYS JOYS SABER SAYS SERE"
+    },
+    {
+      "a": "WON,HXF,EEL",
+      "b": "322213466",
+      "c": "EEL ELF NOW WON FLEE FLEX HEEL WHEEL",
+      "d": "EXON"
+    },
+    {
+      "a": "TEA-E,ABSOL,M-ETU",
+      "b": "443013273410522",
+      "c": "EASE LOSE LUTE MATE SOLE TABS TEAS TEASE ABSOLUTE",
+      "d": "ABET BATE BETA LUTES TOLE TOLU TULE UTES"
+    },
+    {
+      "a": "TRE,DIY,ESK",
+      "b": "1a38c25a5",
+      "c": "RID SIR SKY DESK DIRE DIRT DISK RIDE RISE RISK SIDE SIRE RISKY DESIRE",
+      "d": "DESI IDES IRE RIDES TREY"
+    },
+    {
+      "a": "BMYTE,ACIHC,UDIEN",
+      "b": "122542438412253",
+      "c": "CAB DIE HEN THE CHIC MYTH TECH ETHIC HENCE MYTHIC AUDIENCE",
+      "d": "BAUD ECHT THEN THENCE"
+    },
+    {
+      "a": "FYSS,LOUO,AWBP",
+      "b": "133133512341",
+      "c": "BUS LAW LOW SOP SUB YOU BUOY BUSY FLAW",
+      "d": "ALOW BUSS FLOW SOUS WOLF"
+    },
+    {
+      "a": "ABG,DSA,ELB",
+      "b": "333455543",
+      "c": "BAD GAS SAG ABLE BADE DABS SLED GABLE SABLE",
+      "d": "ABLED ABS BADS BAG BLED DAB GAB LED LEDS"
+    },
+    {
+      "a": "HC-TY,ARMON,-DSO-",
+      "b": "310315535401220",
+      "c": "ARC NOT TON TOO ARMS HARD HARM SOON HARMONY",
+      "d": "ARCH ARM CHAR MOOS SOOT TOMS TONY"
+    },
+    {
+      "a": "SDF,HOO,ELL",
+      "b": "443775564",
+      "c": "SHE DOLE DOLL FOOD FOOL HELL HOOF SHOD SHOO HELLO SHELL",
+      "d": "DOHS HOD HODS HOLE OOHS"
+    },
+    {
+      "a": "FAIM,ESSE,DFOG",
+      "b": "332546542123",
+      "c": "AIM ASS EGO FED FOG GEM FESS MESS MISS SAFE MESSED",
+      "d": "EGOS MISE MISO MISSED SEGO SEMI"
+    },
+    {
+      "a": "ADVIS,JOGLE,TUGSR",
+      "b": "245531543633212",
+      "c": "DOG GOD GUT JOG OUT OGLE TUGS VILE VISE VILER ADVISE ADVISER",
+      "d": "GOUT TUG VIS"
+    },
+    {
+      "a": "CLA,BUD,FEE",
+      "b": "353267462",
+      "c": "BUD DUE FEE LAD CLAD CLUB CLUE FEED FEUD FEUDAL",
+      "d": "DUB LADE"
+    },
+    {
+      "a": "DRO--,-IFF-,--TAR",
+      "b": "253000364000553",
+      "c": "FAR FAT FIR FOR OFF RAT TAR RIFT DRIFT AFFORD",
+      "d": "FORD RIFF"
+    },
+    {
+      "a": "YPE,TUD,SHY",
+      "b": "332864432",
+      "c": "HUT PUT SHY DUTY SHUT STUD TYPE STUDY TYPED",
+      "d": "DUPE HUTS PUTS"
+    },
+    {
+      "a": "OBUCI,WEAKK,SDAEN",
+      "b": "362217946234133",
+      "c": "KEN OWE WEB BEAK BEAU BEDS BOWS BUCK KICK OWED WEAK WEDS KNEAD WEAKEN",
+      "d": "BED BOW CUB CUBE DEW DEWS WED"
+    },
+    {
+      "a": "REWS,CGIP,EDEE",
+      "b": "113122461554",
+      "c": "PIG WIG CEDE CREW DEEP PEED PIED WIPE SPEED",
+      "d": "DEEPS EDGE EDGER PEE PIE SWIG SWIPE"
+    },
+    {
+      "a": "SWH,PAC,INI",
+      "b": "531983371",
+      "c": "CAP PAN PAW PIN SPAN SPIN SWAN SWAP PANIC SPINACH",
+      "d": "CAN CAPS CAW NAP NAPS NIP NIPA NIPS PAWS PINA SPA WAN"
+    },
+    {
+      "a": "BO-SN,ATTEE,-HPR-",
+      "b": "520444659602140",
+      "c": "BAT SEE SET TAB TEE BATH BOTH SEEN TEEN OTTER PREEN SNEER BATTER",
+      "d": "BATT BOT BOTA SETT TEENS"
+    },
+    {
+      "a": "TSP,ANE,SDW",
+      "b": "334587144",
+      "c": "AND END NEW PEN PEW SAT TAN ANEW SPEW SPEND STAND",
+      "d": "ENDS NATS PEND PENS SAND SANE SANS STAN TANS WEN WEND WENS"
+    },
+    {
+      "a": "POEW,ADTN,SDER",
+      "b": "442146313544",
+      "c": "ADD ODD PAD POD SAP WET POET REDS TERN ODDER SADDER",
+      "d": "ADDER ADDS DERN DOE DOPA EDDO ODDS RED REDD RETE SAD TEDS"
+    },
+    {
+      "a": "NKINA,EABUY,EWLAY",
+      "b": "133612243232111",
+      "c": "AWE BIN BUN BUY KIN LAY NAY NUB WEE AKIN KNEE",
+      "d": "KINA NIB"
+    },
+    {
+      "a": "SPG,TOR,NEE",
+      "b": "5618c8136",
+      "c": "ORE ROE ROT TOE TOP PORE POTS SPOT STOP TORE GREEN SPORE STORE",
+      "d": "GREE GROT GROTS POT ROTS TOPS TOR"
+    },
+    {
+      "a": "AC-RE,SHOWN,PI-SE",
+      "b": "230116966433011",
+      "c": "ASH HOW OWN SEN CASH CHIP CHOW HIPS SHIP SHOW OWNER SHOWN",
+      "d": "CHIPS HIP SENE SHOWS WREN"
+    },
+    {
+      "a": "FTW,OXA,SER",
+      "b": "323335344",
+      "c": "ARE ERA FOX SEX WAR WAX SOFT SOFTWARE",
+      "d": "ARES AXE AXES OXER RAW SERA WARE"
+    },
+    {
+      "a": "OAADK,LDWOC,IPSTI",
+      "b": "211344236622462",
+      "c": "COT DOT LIP OLD WAD COWS DOCK LOAD STOW TICK STOCK LIPSTICK",
+      "d": "COD CODA COTS COW DAWS DOTS LIPS OTIC STICK TOW"
+    },
+    {
+      "a": "PLOY,MICR,EDYE",
+      "b": "352345212321",
+      "c": "CRY DIM DYE ICY LID LIME LIMP PLOY EMPLOY",
+      "d": "DIME DYER EMIC IDEM IMP LOCI MIL MILO"
+    },
+    {
+      "a": "PAT,RUN,EVE",
+      "b": "237558567",
+      "c": "EVE PAT RUN TAU AUNT EVEN EVER RUNE RUNT VENT EVENT PREVENT",
+      "d": "NEVE NEVER PRUNE TAP"
+    },
+    {
+      "a": "WO-NT,BRSEI,-NAM-",
+      "b": "340331447103440",
+      "c": "AMEN BROW NAME SAME SENT TIES WORN WORSE ORNAMENT",
+      "d": "MESA NAMES RNASE SENTI"
+    },
+    {
+      "a": "UGR,NIA,YYM",
+      "b": "146767114",
+      "c": "GIN GUN MAR RAM YIN GRAM MAIN RAIN GRAIN RAINY",
+      "d": ""
+    },
+    {
+      "a": "CAOT,SLYR,WIVE",
+      "b": "121226831444",
+      "c": "IVY SLY TOY TRY LIVE LYRE VERY WILY ALIVE SCALY",
+      "d": "EVIL EVILS LACS LIVER VILA WIVE"
+    },
+    {
+      "a": "HICOM,AUEOM,DLANU",
+      "b": "214432144212361",
+      "c": "EON HAD ICE AEON HAUL MOON OCEAN COMMON COMMUNAL",
+      "d": "AULD COON MONA"
+    },
+    {
+      "a": "TCOEP,RIPYE,STEYR",
+      "b": "2431147b2216822",
+      "c": "COP EYE PER PET PIT RIP RYE TIP YET CITE COPE COPY RIPE STEP TRIP TRIPE",
+      "d": "EPIC ETIC PETS PITS RITE STIR TRITE YETI"
+    },
+    {
+      "a": "ADVAN,TIDEC,-BCO-",
+      "b": "233543688202110",
+      "c": "BIT DID VAN BIDE COED DEAN EDIT IDEA TIDE ADVANCE ADVANCED",
+      "d": "ADIT BID CEDI DIB TAD"
+    },
+    {
+      "a": "SOR,LAT,IKE",
+      "b": "441597156",
+      "c": "ATE OAK OAT LAKE LATE LIKE SLAT SOAK SORT TAKE SLATE",
+      "d": "ALIKE ALSO LAOS LAT TALI"
+    },
+    {
+      "a": "COVER,VLMAL,EHINE",
+      "b": "267851357511245",
+      "c": "ALE HIM MAN COVE LANE LOVE MALE MANE MINE OVER REAL VEAL COVER LOVER REVOLVE",
+      "d": "AMINE ELAN MANI MINA REAM"
+    },
+    {
+      "a": "COKE,CORD,PLAI",
+      "b": "354336391766",
+      "c": "AID AIDE COKE COOK COOL CORD DIAL LAID LOOK LORD COKED PLAID CORDIAL",
+      "d": "ARK COLA CORA CORAL CORK LARD LARK OKRA ORAL RAID ROOK"
+    },
+    {
+      "a": "STU,SIN,BEG",
+      "b": "2834aa246",
+      "c": "BEG NUT SIN SIT TIE TIN SING STUN TING UNIT BEING SINGE STING",
+      "d": "NIT NITS NUTS SITS TINGE TIS TUNG UNITS"
+    },
+    {
+      "a": "UR-YY,MIGHT,-EGU-",
+      "b": "130113556503210",
+      "c": "EGG HUG RIM RUM THY EIGHT MIGHT RIGHT EIGHTY",
+      "d": "MIGHTY RIG"
+    },
+    {
+      "a": "MAT,UGO,CSL",
+      "b": "435365123",
+      "c": "AGO GOT GUM LOG LOT MAT MUG TAG SCUM SLOT",
+      "d": "LOGS LOTA MAG MAGS SLOG TAGS TOGA TOGS"
+    },
+    {
+      "a": "YNAG,WTLU,HERE",
+      "b": "246333315653",
+      "c": "ANT ANY HER LAG LUG NAG HERE WHET ALTER WHERE ANYWHERE",
+      "d": "AGUE ANTE ETNA"
+    },
+    {
+      "a": "OWLCU,VHASE,GRILL",
+      "b": "222111253224753",
+      "c": "AIL AIR HAS ILL OWL VOW CUES LAIR GRILL HAILS GRILLE",
+      "d": "AILS CUE ELLS HAIL HAIR LASE LIAS RIAL RIAS RILL SAIL SELL"
+    },
+    {
+      "a": "SLI,TEN,CAT",
+      "b": "264798487",
+      "c": "ACT CAT EAT LEA NIL TEA TEN LENT LETS LINE LINT NEAT NETS TACT INTACT",
+      "d": "ACTS ILEA LEAT LET NET NILS TAEL TEAT TENT"
+    },
+    {
+      "a": "VNP-B,IEARR,A-LLO",
+      "b": "2160124a6310553",
+      "c": "ALL EAR LAP ORB PAL PAR RAP VIA VIE EARL NEAR PALL ROLL PARLOR",
+      "d": "NEAP OLLA PALLOR PARR"
+    },
+    {
+      "a": "TRS,BUT,RET",
+      "b": "2626b7352",
+      "c": "BUT RUB RUE RUT TUB STUB TRUE BURST TRUER UTTER BUTTER",
+      "d": "BURS BURT BUTS BUTT BUTTE RUER RUTS"
+    },
+    {
+      "a": "WEMOS,HLUFK,ATHAN",
+      "b": "134222333326565",
+      "c": "FAN HAT HUM HANK MELT MULE SOFA SOME THAN WHAT THANK THANKFUL",
+      "d": "EMU FUME HANKS HATH MEW SOMEWHAT WELT"
+    },
+    {
+      "a": "SUNL,THGI,TIWT",
+      "b": "576535452213",
+      "c": "HIT LIT SUN WIT HUNG SUNG THUS LIGHT UNLIT SUNLIT SUNLIGHT",
+      "d": "GNUS LIGHTS TIGHT TIGHTS"
+    },
+    {
+      "a": "OND,BYE,RAC",
+      "b": "334546586",
+      "c": "ACE BRA BYE RAY ACED BOND BONY RACE DECAY RACED CARBON",
+      "d": "BRACE BRACED CAR CARB"
+    },
+    {
+      "a": "OI-CA,ALOUD,-YLR-",
+      "b": "220411336401130",
+      "c": "CAD CUD CUR DUO OIL OUR CURL OILY ALOUD",
+      "d": "CURLY LOUD OUD"
+    },
+    {
+      "a": "ADE,MUS,OPT",
+      "b": "466bb9333",
+      "c": "MAD MOP MUD OPT SUM USE DUST MADE MUSE MUST PUMA SUMO USED AMUSE MUSED",
+      "d": "ADUST DAM EDAM OPTS OPUS SEDUM"
+    },
+    {
+      "a": "THOS,MAZE,OWAY",
+      "b": "252346251533",
+      "c": "HAM MAW MOW WAY AWAY AYES HAZE HOSE MAZE THAW THOSE",
+      "d": "YES"
+    },
+    {
+      "a": "CINCH,GRKSE,OCUTW",
+      "b": "155672114512123",
+      "c": "COG HEW INK SEW CHEW CUTS INCH CHEST CINCH GRINCH INCHES",
+      "d": "CUT GRIN HEST INKS IRKS RINK RINKS WEST"
+    },
+    {
+      "a": "WIN,RUD,AGE",
+      "b": "233634565",
+      "c": "AGE RAG RUG WIN AGED RAGE RUDE RUIN WIND RAGED",
+      "d": "DUG DURA GAR RAGU RUGA"
+    },
+    {
+      "a": "GR-RR,BANGE,KS-ML",
+      "b": "140124a76712014",
+      "c": "ASK BAN BAR ELM ERR GEL LEG NAB RAN GRAB SANG ANGEL ANGER RANGE",
+      "d": "BANG BASK GNAR GRAN RANG"
+    },
+    {
+      "a": "MRI,SON,TWG",
+      "b": "1524b9262",
+      "c": "NOR NOW ROW SON SOW TWO WON IRON NOWT RING SONG NORMS",
+      "d": "NORI NORM SORI WORM WORMS"
+    },
+    {
+      "a": "GOBRE,ROOMS,SAVET",
+      "b": "312113355211342",
+      "c": "BOG MET MOB MOVE REST SAVE GROOM ROOMS GROOVE",
+      "d": "MOBO MOOR MOORS ROOM SERB STEM VET VETS"
+    },
+    {
+      "a": "EYAM,ELKC,RFSI",
+      "b": "342277322422",
+      "c": "EEL ELF ELK FLY MAY YAM FLEE FREE RELY SICK SICKLE",
+      "d": "EELY ELKS LYE SICKLY"
+    },
+    {
+      "a": "RFA,HID,ONE",
+      "b": "142466376",
+      "c": "DEN DIN FAD FIN HID ONE FADE FINE HIDE HONE RHINO",
+      "d": "ADEN DINE ENID FINED FINO HONED NIDE"
+    },
+    {
+      "a": "SM-SY,DONKE,-ODI-",
+      "b": "150323747302540",
+      "c": "DON KEY KID MOD SKI DIKE DOOM MONK MOOD NODS SKID MONKEYS",
+      "d": "KEYS MODS NOD"
+    },
+    {
+      "a": "EDT,SIR,BEE",
+      "b": "262499247",
+      "c": "BEE DIE IRE RID SIR BEER DIRE DIRT SIDE SIRE TREE DESIRE",
+      "d": "DESI EIRE IDES RIDE RISE"
+    },
+    {
+      "a": "TAIS,SWHT,EPOR",
+      "b": "223423543552",
+      "c": "HIS HOP WHO HOPE PEST SWAT THIS PORTS TROPE WAIST",
+      "d": "HIST HOPES ORTS PORT ROPE ROPES STROP TAW THOR TROP WHIST"
+    },
+    {
+      "a": "SLBIG,SOCKE,TOSUR",
+      "b": "163223835443112",
+      "c": "BIG KEG TOO BIKE LOCK LOOT LOSS LOST SOCK SURE TOOL BLOCKER",
+      "d": "COLS COOS COOT COSS COST LOOS SOLS SOOT SOTS"
+    },
+    {
+      "a": "SEPRI,AABLN,YSSEC",
+      "b": "233221743227652",
+      "c": "ABS ASS SAY SEA ABLE BASS EASY LESS PEAS BLESS PRINCE PRINCESS",
+      "d": "ASEA BAAS CESS PEA SABLE SAYS SEAS"
+    },
+    {
+      "a": "HAVEN,PROAS,-CAG-",
+      "b": "378842842203120",
+      "c": "ARC GAS SAG HARP HAVE ORCA OVEN RAVE ROVE CRAVE HAVEN RAVEN PROVEN",
+      "d": "AGAS ARCA AVENS HAVENS PRO PROVE SAGA"
+    },
+    {
+      "a": "UTS,OHO,MEY",
+      "b": "262382464",
+      "c": "HEM HEY OUT SOY THE HOST THEM THEY HOMEY MOUTH",
+      "d": "HOME OUTS THOU"
+    },
+    {
+      "a": "CEOJM,OMGER,NPUTS",
+      "b": "311113255213451",
+      "c": "CON EGO GET GUT JET PUG COME GERM PUTS COMPUTER",
+      "d": "COMP ERST GETS GUTS JETS JOG NOME PUT REGO RETS TEG TEGU TERM TUG"
+    },
+    {
+      "a": "UPFT,CHAR,GNIM",
+      "b": "112243872235",
+      "c": "AIM ARM ART CUP FAR CHARM CHART FARMING CHARMING",
+      "d": "AFT CHAIN HARMING TRAIN"
+    },
+    {
+      "a": "ARF,SOB,EDA",
+      "b": "1615a5684",
+      "c": "BAD DAB FRO ODE ROB ROD SOB BADE DOSE RODE ROSE SODA AROSE",
+      "d": "ADOS BODE BODES BORA BOSE ODES OSAR RASE ROSA SAROD SOBA SORA"
+    },
+    {
+      "a": "SP-IV,MASSE,-RKT-",
+      "b": "470125b75304410",
+      "c": "MAPS MASK MASS PARK PASS RAPS SPAS VEST MARKS PASSE SPARK MASSIVE",
+      "d": "ARKS MARK MASSE PARKS PASSIVE RAMS SAPS SPAM SPAR VISE"
+    }
+  ],
+  "daily": []
+}

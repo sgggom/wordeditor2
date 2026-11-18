@@ -4,6 +4,7 @@ import test from "node:test";
 import { parseLevelFile, serializeLevelFile, updateFileLevel, changeFileOrder, writeLevelFile } from "../dist/level-file.js";
 import { setTargetWord } from "../dist/level-rules.js";
 import { normalizePresetLevels } from "../dist/preset-level-lists.js";
+import { createGameExport } from "../dist/level-export.js";
 
 const gameLevel = id => ({ id, name: `Level ${id}`, g: "AB,DC", t: "ABCD", n: "1111", e: "AB CD",
   lv: "07", ty: "original", curtains: [0], custom: { keep: true } });
@@ -172,4 +173,51 @@ test("configuration lists and malformed level files fail before replacing an ope
     { fixedWords: ["ABCD"], fixedLayout: { rows: 3, columns: 3, placements: [] } }]) {
     assert.throws(() => parseLevelFile(JSON.stringify({ records: [{ level: { ...level, ...invalid } }] })));
   }
+});
+
+test("the supplied compact file round-trips and retains both level and daily", async () => {
+  const text = await readFile(new URL("./fixtures/compact-levels.json", import.meta.url), "utf8");
+  const source = JSON.parse(text);
+  const document = parseLevelFile(text);
+  assert.equal(document.records.length, 2);
+  assert.deepEqual(document.records.map(record => record.group), ["level", "daily"]);
+  assert.deepEqual(createGameExport(document.records), source);
+  assert.deepEqual(JSON.parse(serializeLevelFile(document)), source);
+  const file = memoryHandle(text); document.handle = file.handle;
+  await writeLevelFile(document);
+  assert.deepEqual(JSON.parse(file.read()), source);
+});
+
+test("editing, reordering and repeated saves keep compact fields, group boundaries and metadata", async () => {
+  const source = { edition: "keep", level: [
+    { a: "AB,DC", b: "1111", c: "ABCD", d: "AB CD", custom: "first" },
+  ], daily: [{ a: "CD-,AO-,TG-", b: "110110110", c: "CAT DOG", d: "", custom: "daily" }] };
+  const document = parseLevelFile(JSON.stringify(source));
+  const file = memoryHandle(document.savedText); document.handle = file.handle;
+  edit(document);
+  await writeLevelFile(document);
+  assert.deepEqual(JSON.parse(file.read()), { ...source,
+    level: [{ ...source.level[0], b: "2211", c: "AB ABCD", d: "CD" }] });
+  assert.ok(document.records.every(record => record.changed === false));
+  changeFileOrder(document, 2, "up");
+  await writeLevelFile(document);
+  assert.equal(JSON.parse(file.read()).level[0].custom, "daily");
+  assert.equal(JSON.parse(file.read()).daily[0].custom, "first");
+  assert.equal(parseLevelFile(file.read()).records.length, 2);
+  for (const { id } of [...document.records]) changeFileOrder(document, id, "delete");
+  await writeLevelFile(document);
+  assert.deepEqual(JSON.parse(file.read()), { edition: "keep", level: [], daily: [] });
+  updateFileLevel(document, null, parseLevelFile(JSON.stringify(source)).records[0].level);
+  await writeLevelFile(document);
+  assert.deepEqual(JSON.parse(file.read()), { edition: "keep",
+    level: [{ a: "AB,DC", b: "1111", c: "ABCD", d: "AB CD" }], daily: [] });
+});
+
+test("compact single-level files stay single-level when edited and saved", () => {
+  const source = { a: "AB,DC", b: "1111", c: "ABCD", d: "AB CD" };
+  const document = parseLevelFile(JSON.stringify(source));
+  assert.equal(document.format, "single");
+  edit(document);
+  assert.deepEqual(JSON.parse(serializeLevelFile(document)), { a: "AB,DC", b: "2211", c: "AB ABCD", d: "CD" });
+  assert.throws(() => updateFileLevel(document, null, document.records[0].level), /只能保存一关/);
 });

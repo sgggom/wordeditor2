@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "sourcePlanFile": "level-editor/dist/data/level-plan-target-floor-first-500.json",
+  "sourcePlanSha256": "883acb8daccb80e46e6d37d3ebbb55b93349f8290ed8ccace69fb4a77845e232",
+  "adjustments": [
+    {
+      "from": 321,
+      "to": 340,
+      "metric": "hist:6+:2",
+      "previousRange": [
+        0,
+        2
+      ],
+      "range": [
+        0,
+        3
+      ]
+    },
+    {
+      "from": 341,
+      "to": 360,
+      "metric": "hist:6+:2",
+      "previousRange": [
+        0,
+        2
+      ],
+      "range": [
+        0,
+        4
+      ]
+    },
+    {
+      "from": 461,
+      "to": 480,
+      "metric": "hist:6+:2",
+      "previousRange": [
+        0,
+        2
+      ],
+      "range": [
+        0,
+        3
+      ]
+    }
+  ],
+  "verifiedRemainingStages": [
+    [
+      321,
+      340
+    ],
+    [
+      341,
+      360
+    ],
+    [
+      361,
+      380
+    ],
+    [
+      381,
+      400
+    ],
+    [
+      401,
+      420
+    ],
+    [
+      421,
+      440
+    ],
+    [
+      441,
+      460
+    ],
+    [
+      461,
+      480
+    ],
+    [
+      481,
+      500
+    ]
+  ],
+  "reason": "Keep all target totals, length totals, boards and score profiles; minimally expand double-long level capacity after joint template feasibility validation."
+}

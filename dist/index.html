@@ -507,15 +507,20 @@
       </div>
     </dialog>
     <dialog id="path-comparison-dialog" class="preset-level-dialog path-comparison-dialog" aria-label="目标路径对比">
+      <div class="preset-level-toolbar path-comparison-sources">
+        <label>A 方 <select id="path-comparison-source-a" disabled></select></label>
+        <label>B 方 <select id="path-comparison-source-b" disabled></select></label>
+      </div>
       <div class="preset-level-toolbar">
         <fieldset id="path-comparison-modes" class="path-comparison-toggle" aria-label="查看方式">
-          <label><input type="radio" name="path-comparison-mode" value="ours" />我们</label>
-          <label><input type="radio" name="path-comparison-mode" value="theirs" />他们</label>
+          <label><input type="radio" name="path-comparison-mode" value="ours" />A 方</label>
+          <label><input type="radio" name="path-comparison-mode" value="theirs" />B 方</label>
           <label><input type="radio" name="path-comparison-mode" value="both" checked />对比</label>
         </fieldset>
         <fieldset id="path-comparison-views" class="path-comparison-toggle" aria-label="图表视图">
           <label><input type="radio" name="path-comparison-view" value="table" checked />路径表</label>
           <label><input type="radio" name="path-comparison-view" value="trend" />趋势图</label>
+          <label><input type="radio" name="path-comparison-view" value="difficulty" />难度分</label>
         </fieldset>
         <button type="button" id="path-comparison-prev" class="reset-button" disabled>上一页</button>
         <button type="button" id="path-comparison-next" class="reset-button" disabled>下一页</button>

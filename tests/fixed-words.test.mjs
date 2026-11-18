@@ -56,9 +56,9 @@ test("presets can fully share existing letters and remain mandatory when the boa
   assert.deepEqual(level.initialWords.map(entry => entry.word), ["ABCDEF", "ABC"]);
   assert.deepEqual(level.targetWords.map(entry => entry.word), ["ABCDEF", "ABC"]);
   assert.ok(level.cells.some(cell => cell.count === 2));
-  const exported = createGameExport([{ level }]).books[0].levels[0];
-  assert.equal(exported.t, "ABC ABCDEF");
-  assert.equal(exported.n, level.cells.map(cell => cell.count.toString(36)).join(""));
+  const exported = createGameExport([{ level }]).level[0];
+  assert.equal(exported.c, "ABC ABCDEF");
+  assert.equal(exported.b, level.cells.map(cell => cell.count.toString(36)).join(""));
 });
 
 test("fixed words ignore retired limits but must fit the enabled board", () => {

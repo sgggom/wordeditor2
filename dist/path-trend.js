@@ -6,16 +6,21 @@ const LEFT = 64;
 const TOP = 28;
 const BOTTOM = HEIGHT - 32;
 
-export function createPathTrend(sources, bands, total, selectedLevel, hiddenBands, onLevelChange) {
+export function createPathTrend(sources, bands, total, selectedLevel, hiddenBands, onLevelChange, difficulty = false) {
   let spacing = 0;
   let displayedLevel = null;
   const x = level => LEFT + (level - 1) * spacing;
   const figure = document.createElement("figure");
   figure.className = "path-trend";
+  figure.dataset.metric = difficulty ? "difficulty" : "count";
+  const plotSources = difficulty
+    ? sources.map(source => ({ ...source, counts: source.difficulties.map(score => [score]) }))
+    : sources;
+  const legendBands = difficulty ? [] : bands;
   const legend = document.createElement("figcaption");
   legend.className = "path-trend-legend";
   const bandLines = bands.map(() => []);
-  for (const [band, label] of bands.entries()) {
+  for (const [band, label] of legendBands.entries()) {
     const item = document.createElement("button");
     item.type = "button";
     item.dataset.scoreBand = String(band);
@@ -44,13 +49,15 @@ export function createPathTrend(sources, bands, total, selectedLevel, hiddenBand
   viewport.setAttribute("aria-label", "左右滚动查看关卡趋势");
   const chart = svgElement("svg", {
     role: "img",
-    "aria-label": "逐关目标路径数量趋势图。横轴为关卡号，纵轴为目标词数量。",
+    "aria-label": difficulty
+      ? "逐关难度总分趋势图。横轴为关卡号，纵轴为难度总分。"
+      : "逐关目标路径数量趋势图。横轴为关卡号，纵轴为目标词数量。",
   });
   viewport.append(chart);
   const plot = svgElement("g", {});
   const axis = svgElement("g", { class: "path-trend-axis" });
   axis.append(svgElement("rect", { width: LEFT - 1, height: HEIGHT, fill: "#fff" }));
-  const maximum = Math.max(1, ...sources.map(({ counts }) =>
+  const maximum = Math.max(1, ...plotSources.map(({ counts }) =>
     counts.reduce((max, level) => Math.max(max, ...level), 0)));
   const yStep = Math.max(1, Math.ceil(maximum / 6));
   const yMax = Math.ceil(maximum / yStep) * yStep;
@@ -75,20 +82,21 @@ export function createPathTrend(sources, bands, total, selectedLevel, hiddenBand
     y: BOTTOM + 20,
     "text-anchor": level === 1 ? "start" : level === total ? "end" : "middle",
   }));
-  text(axis, "目标词数量", { x: LEFT - 4, y: 17, "text-anchor": "end" });
+  text(axis, difficulty ? "难度总分" : "目标词数量", { x: LEFT - 4, y: 17, "text-anchor": "end" });
   axis.append(svgElement("line", { class: "path-trend-grid", x1: LEFT - 1, x2: LEFT - 1, y1: TOP, y2: BOTTOM }));
 
   const series = [];
-  for (const { key, counts } of sources) {
-    for (const band of bands.keys()) {
-      const line = svgElement("polyline", {
+  const seriesBands = difficulty ? [0] : [...bands.keys()];
+  for (const { key, counts } of plotSources) {
+    for (const band of seriesBands) {
+      const line = svgElement(difficulty ? "path" : "polyline", {
         class: "path-trend-line",
         "data-score-band": band,
         "data-source": key,
       });
-      series.push({ line, heights: counts.map(level => y(level[band]).toFixed(2)) });
+      series.push({ line, heights: counts.map(level => Number.isFinite(level[band]) ? y(level[band]).toFixed(2) : null) });
       bandLines[band].push(line);
-      line.toggleAttribute("hidden", hiddenBands.has(band));
+      line.toggleAttribute("hidden", !difficulty && hiddenBands.has(band));
       plot.append(line);
     }
   }
@@ -126,7 +134,21 @@ export function createPathTrend(sources, bands, total, selectedLevel, hiddenBand
     grid.forEach(line => line.setAttribute("x2", width));
     tickLabels.forEach((label, index) => label.setAttribute("x", x(ticks[index])));
     for (const { line, heights } of series) {
-      line.setAttribute("points", heights.map((height, index) => `${x(index + 1).toFixed(2)},${height}`).join(" "));
+      if (difficulty) {
+        let connected = false;
+        const points = [];
+        for (const [index, height] of heights.entries()) {
+          if (height === null) {
+            connected = false;
+            continue;
+          }
+          points.push(`${connected ? "L" : "M"}${x(index + 1).toFixed(2)},${height}`);
+          connected = true;
+        }
+        line.setAttribute("d", points.join(" "));
+      } else {
+        line.setAttribute("points", heights.map((height, index) => `${x(index + 1).toFixed(2)},${height}`).join(" "));
+      }
     }
     viewport.scrollLeft = (levelOffset ?? selectedLevel - 1 - LEVELS_PER_SCREEN / 2) * spacing;
     positionAxis();

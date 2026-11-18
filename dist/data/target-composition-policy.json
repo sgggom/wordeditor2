@@ -1,0 +1,1054 @@
+{
+  "schemaVersion": 1,
+  "id": "empirical-target-composition-20261112",
+  "mode": "empirical-joint-preferences",
+  "seed": 2026111220,
+  "sourceFiles": {
+    "outputs/20261112-level-plan-reference-size/plan.json": "ace39a9455c2784f03e0b5bb8f546c357253c1dda4c6c1ad8037e0e29adc0aa0",
+    "level-editor/dist/data/presets/word-tiles-list0.json": "8d9939fc85f212011ee9a1cecfb3f1388aa1e0b8d65242bcc64ecd622ef369d3",
+    "outputs/20261112-competitor-direction-by-length/first-step-summary.json": "2e1fe840b74b1f721aeb6fa02621df03ce5ed3e255e0a0ff11c353a1d13c32be",
+    "outputs/20261112-competitor-three-letter-counts/summary.json": "b448c09250987cb8bea77486ff313a4ddfa20f9cf08f1e9b47552525a71e4ff2",
+    "outputs/20261112-competitor-target-counts-by-length/summary.json": "3c92fbc21dededa022f09e521b5dee2ca641bc5055187bba2a3475133ee594d2",
+    "outputs/20261112-competitor-length-variety/summary.json": "75e5ac00b57e9adc584a0e21cebd3e5774d6d50a337758960c046771f4fd9a6f"
+  },
+  "classes": [
+    "3",
+    "4",
+    "5",
+    "6+"
+  ],
+  "countPolicy": "按阶段、相近有效格数和目标总数抽取竞品联合词长构成，再按我们的目标总数分配；计数范围、种类数和首步比例用于排序，不逐关强配参考配额。",
+  "hardRules": {
+    "ordinaryThreeLetterMinimum": 1,
+    "noThreeLetterPositions": [
+      46,
+      76,
+      109,
+      140,
+      170,
+      197,
+      227,
+      258,
+      282,
+      320,
+      347,
+      374,
+      408,
+      435,
+      460,
+      500,
+      525,
+      550,
+      580,
+      612,
+      646,
+      676,
+      707,
+      737,
+      760,
+      795,
+      829,
+      853,
+      882,
+      913,
+      944,
+      972,
+      1006,
+      1036,
+      1066,
+      1100,
+      1121,
+      1156,
+      1189,
+      1219,
+      1245,
+      1278,
+      1305,
+      1334,
+      1361,
+      1398,
+      1421,
+      1455,
+      1488,
+      1516,
+      1544,
+      1574,
+      1608,
+      1635,
+      1664,
+      1693,
+      1728,
+      1755,
+      1790,
+      1811,
+      1844,
+      1875,
+      1910,
+      1934,
+      1966,
+      1992
+    ],
+    "minimumDistinctLengths": 2
+  },
+  "noThreeSchedule": {
+    "firstBlock": 31,
+    "blockSize": 30,
+    "onePerBlock": true,
+    "minimumGap": 20,
+    "centerJitter": 5,
+    "minimumTargets": 6,
+    "maximumTargetsPerActiveCell": 1
+  },
+  "directionPolicy": {
+    "basis": "第1个字母到第2个字母",
+    "positive": [
+      "R",
+      "D"
+    ],
+    "reverse": [
+      "L",
+      "U"
+    ],
+    "balance": "stage-and-exact-length",
+    "sparsePriorWords": 20,
+    "rareNinePlusFallback": "6～8字母合并比例，避免各1例样本造成100%正向"
+  },
+  "observed": {
+    "three": {
+      "levels": 1500,
+      "totalThreeLetterTargets": 6195,
+      "mean": 4.13,
+      "median": 4,
+      "mode": [
+        4
+      ],
+      "minimum": 0,
+      "maximum": 11,
+      "standardDeviation": 1.6148580949008078,
+      "skewness": -0.2558018802681771,
+      "excessKurtosis": 0.3080341743856252,
+      "quartiles": [
+        3,
+        4,
+        5
+      ],
+      "threeToSixCount": 1214,
+      "threeToSixShare": 80.93333333333334,
+      "histogram": [
+        {
+          "count": 0,
+          "levels": 50,
+          "share": 3.3333333333333335
+        },
+        {
+          "count": 1,
+          "levels": 29,
+          "share": 1.9333333333333333
+        },
+        {
+          "count": 2,
+          "levels": 126,
+          "share": 8.4
+        },
+        {
+          "count": 3,
+          "levels": 293,
+          "share": 19.53333333333333
+        },
+        {
+          "count": 4,
+          "levels": 372,
+          "share": 24.8
+        },
+        {
+          "count": 5,
+          "levels": 334,
+          "share": 22.26666666666667
+        },
+        {
+          "count": 6,
+          "levels": 215,
+          "share": 14.333333333333334
+        },
+        {
+          "count": 7,
+          "levels": 66,
+          "share": 4.3999999999999995
+        },
+        {
+          "count": 8,
+          "levels": 12,
+          "share": 0.8
+        },
+        {
+          "count": 9,
+          "levels": 2,
+          "share": 0.13333333333333333
+        },
+        {
+          "count": 11,
+          "levels": 1,
+          "share": 0.06666666666666667
+        }
+      ]
+    },
+    "others": [
+      {
+        "label": "4字母",
+        "all": {
+          "levels": 1500,
+          "totalTargets": 5517,
+          "mean": 3.678,
+          "median": 4,
+          "mode": [
+            3
+          ],
+          "minimum": 0,
+          "maximum": 12,
+          "standardDeviation": 1.5860798634789277,
+          "skewness": 0.6279424745504586,
+          "excessKurtosis": 0.9350097401572577,
+          "quartiles": [
+            3,
+            4,
+            5
+          ],
+          "histogram": [
+            {
+              "count": 0,
+              "levels": 10,
+              "share": 0.6666666666666667
+            },
+            {
+              "count": 1,
+              "levels": 83,
+              "share": 5.533333333333333
+            },
+            {
+              "count": 2,
+              "levels": 242,
+              "share": 16.133333333333333
+            },
+            {
+              "count": 3,
+              "levels": 399,
+              "share": 26.6
+            },
+            {
+              "count": 4,
+              "levels": 379,
+              "share": 25.266666666666666
+            },
+            {
+              "count": 5,
+              "levels": 201,
+              "share": 13.4
+            },
+            {
+              "count": 6,
+              "levels": 112,
+              "share": 7.466666666666668
+            },
+            {
+              "count": 7,
+              "levels": 46,
+              "share": 3.0666666666666664
+            },
+            {
+              "count": 8,
+              "levels": 20,
+              "share": 1.3333333333333335
+            },
+            {
+              "count": 9,
+              "levels": 4,
+              "share": 0.26666666666666666
+            },
+            {
+              "count": 10,
+              "levels": 3,
+              "share": 0.2
+            },
+            {
+              "count": 12,
+              "levels": 1,
+              "share": 0.06666666666666667
+            }
+          ]
+        },
+        "positive": {
+          "levels": 1490,
+          "totalTargets": 5517,
+          "mean": 3.7026845637583894,
+          "median": 4,
+          "mode": [
+            3
+          ],
+          "minimum": 1,
+          "maximum": 12,
+          "standardDeviation": 1.5624127920350444,
+          "skewness": 0.7014716442655236,
+          "excessKurtosis": 0.9550272925953864,
+          "quartiles": [
+            3,
+            4,
+            5
+          ],
+          "histogram": [
+            {
+              "count": 1,
+              "levels": 83,
+              "share": 5.570469798657718
+            },
+            {
+              "count": 2,
+              "levels": 242,
+              "share": 16.241610738255034
+            },
+            {
+              "count": 3,
+              "levels": 399,
+              "share": 26.778523489932887
+            },
+            {
+              "count": 4,
+              "levels": 379,
+              "share": 25.436241610738254
+            },
+            {
+              "count": 5,
+              "levels": 201,
+              "share": 13.48993288590604
+            },
+            {
+              "count": 6,
+              "levels": 112,
+              "share": 7.516778523489933
+            },
+            {
+              "count": 7,
+              "levels": 46,
+              "share": 3.087248322147651
+            },
+            {
+              "count": 8,
+              "levels": 20,
+              "share": 1.342281879194631
+            },
+            {
+              "count": 9,
+              "levels": 4,
+              "share": 0.2684563758389262
+            },
+            {
+              "count": 10,
+              "levels": 3,
+              "share": 0.20134228187919465
+            },
+            {
+              "count": 12,
+              "levels": 1,
+              "share": 0.06711409395973154
+            }
+          ]
+        }
+      },
+      {
+        "label": "5字母",
+        "all": {
+          "levels": 1500,
+          "totalTargets": 1818,
+          "mean": 1.212,
+          "median": 1,
+          "mode": [
+            1
+          ],
+          "minimum": 0,
+          "maximum": 6,
+          "standardDeviation": 0.9318740973615123,
+          "skewness": 0.7688501665944416,
+          "excessKurtosis": 1.0492433699117436,
+          "quartiles": [
+            1,
+            1,
+            2
+          ],
+          "histogram": [
+            {
+              "count": 0,
+              "levels": 332,
+              "share": 22.133333333333333
+            },
+            {
+              "count": 1,
+              "levels": 673,
+              "share": 44.86666666666667
+            },
+            {
+              "count": 2,
+              "levels": 370,
+              "share": 24.666666666666668
+            },
+            {
+              "count": 3,
+              "levels": 103,
+              "share": 6.866666666666667
+            },
+            {
+              "count": 4,
+              "levels": 15,
+              "share": 1
+            },
+            {
+              "count": 5,
+              "levels": 6,
+              "share": 0.4
+            },
+            {
+              "count": 6,
+              "levels": 1,
+              "share": 0.06666666666666667
+            }
+          ]
+        },
+        "positive": {
+          "levels": 1168,
+          "totalTargets": 1818,
+          "mean": 1.5565068493150684,
+          "median": 1,
+          "mode": [
+            1
+          ],
+          "minimum": 1,
+          "maximum": 6,
+          "standardDeviation": 0.7609196782856925,
+          "skewness": 1.5112053910045262,
+          "excessKurtosis": 2.8592897509869557,
+          "quartiles": [
+            1,
+            1,
+            2
+          ],
+          "histogram": [
+            {
+              "count": 1,
+              "levels": 673,
+              "share": 57.619863013698634
+            },
+            {
+              "count": 2,
+              "levels": 370,
+              "share": 31.67808219178082
+            },
+            {
+              "count": 3,
+              "levels": 103,
+              "share": 8.818493150684931
+            },
+            {
+              "count": 4,
+              "levels": 15,
+              "share": 1.2842465753424657
+            },
+            {
+              "count": 5,
+              "levels": 6,
+              "share": 0.5136986301369862
+            },
+            {
+              "count": 6,
+              "levels": 1,
+              "share": 0.08561643835616438
+            }
+          ]
+        }
+      },
+      {
+        "label": "6字母及以上",
+        "all": {
+          "levels": 1500,
+          "totalTargets": 1120,
+          "mean": 0.7466666666666667,
+          "median": 1,
+          "mode": [
+            1
+          ],
+          "minimum": 0,
+          "maximum": 5,
+          "standardDeviation": 0.7274307909042314,
+          "skewness": 0.9380636637705648,
+          "excessKurtosis": 1.4833105984560326,
+          "quartiles": [
+            0,
+            1,
+            1
+          ],
+          "histogram": [
+            {
+              "count": 0,
+              "levels": 592,
+              "share": 39.46666666666667
+            },
+            {
+              "count": 1,
+              "levels": 734,
+              "share": 48.93333333333334
+            },
+            {
+              "count": 2,
+              "levels": 140,
+              "share": 9.333333333333334
+            },
+            {
+              "count": 3,
+              "levels": 31,
+              "share": 2.0666666666666664
+            },
+            {
+              "count": 4,
+              "levels": 2,
+              "share": 0.13333333333333333
+            },
+            {
+              "count": 5,
+              "levels": 1,
+              "share": 0.06666666666666667
+            }
+          ]
+        },
+        "positive": {
+          "levels": 908,
+          "totalTargets": 1120,
+          "mean": 1.2334801762114538,
+          "median": 1,
+          "mode": [
+            1
+          ],
+          "minimum": 1,
+          "maximum": 5,
+          "standardDeviation": 0.5231451423031542,
+          "skewness": 2.46442713629136,
+          "excessKurtosis": 6.86336802679976,
+          "quartiles": [
+            1,
+            1,
+            1
+          ],
+          "histogram": [
+            {
+              "count": 1,
+              "levels": 734,
+              "share": 80.83700440528634
+            },
+            {
+              "count": 2,
+              "levels": 140,
+              "share": 15.418502202643172
+            },
+            {
+              "count": 3,
+              "levels": 31,
+              "share": 3.4140969162995596
+            },
+            {
+              "count": 4,
+              "levels": 2,
+              "share": 0.22026431718061676
+            },
+            {
+              "count": 5,
+              "levels": 1,
+              "share": 0.11013215859030838
+            }
+          ]
+        }
+      }
+    ],
+    "distinctLengths": {
+      "levels": 1500,
+      "averageLengthCount": 3.4313333333333333,
+      "distribution": [
+        {
+          "lengthCount": 1,
+          "levels": 2,
+          "share": 0.13333333333333333
+        },
+        {
+          "lengthCount": 2,
+          "levels": 68,
+          "share": 4.533333333333333
+        },
+        {
+          "lengthCount": 3,
+          "levels": 797,
+          "share": 53.13333333333333
+        },
+        {
+          "lengthCount": 4,
+          "levels": 552,
+          "share": 36.8
+        },
+        {
+          "lengthCount": 5,
+          "levels": 77,
+          "share": 5.133333333333334
+        },
+        {
+          "lengthCount": 6,
+          "levels": 3,
+          "share": 0.2
+        },
+        {
+          "lengthCount": 7,
+          "levels": 1,
+          "share": 0.06666666666666667
+        }
+      ],
+      "commonCombinations": [
+        {
+          "lengths": "3+4+5",
+          "levels": 525,
+          "share": 35
+        },
+        {
+          "lengths": "3+4+5+6",
+          "levels": 255,
+          "share": 17
+        },
+        {
+          "lengths": "3+4+5+7",
+          "levels": 161,
+          "share": 10.733333333333334
+        },
+        {
+          "lengths": "3+4+6",
+          "levels": 133,
+          "share": 8.866666666666667
+        },
+        {
+          "lengths": "3+4+5+8",
+          "levels": 96,
+          "share": 6.4
+        },
+        {
+          "lengths": "3+4+7",
+          "levels": 71,
+          "share": 4.733333333333333
+        },
+        {
+          "lengths": "3+4",
+          "levels": 56,
+          "share": 3.733333333333334
+        },
+        {
+          "lengths": "3+4+5+6+7",
+          "levels": 42,
+          "share": 2.8000000000000003
+        },
+        {
+          "lengths": "3+4+8",
+          "levels": 33,
+          "share": 2.1999999999999997
+        },
+        {
+          "lengths": "3+4+5+6+8",
+          "levels": 25,
+          "share": 1.6666666666666667
+        },
+        {
+          "lengths": "3+4+6+7",
+          "levels": 15,
+          "share": 1
+        },
+        {
+          "lengths": "3+4+6+8",
+          "levels": 13,
+          "share": 0.8666666666666666
+        },
+        {
+          "lengths": "4+5+6",
+          "levels": 11,
+          "share": 0.7333333333333333
+        },
+        {
+          "lengths": "4+5+8",
+          "levels": 10,
+          "share": 0.6666666666666667
+        },
+        {
+          "lengths": "3+4+5+7+8",
+          "levels": 7,
+          "share": 0.46666666666666673
+        },
+        {
+          "lengths": "4+5",
+          "levels": 7,
+          "share": 0.46666666666666673
+        },
+        {
+          "lengths": "4+5+7",
+          "levels": 7,
+          "share": 0.46666666666666673
+        },
+        {
+          "lengths": "4+5+6+8",
+          "levels": 6,
+          "share": 0.4
+        },
+        {
+          "lengths": "3+4+5+6+7+8",
+          "levels": 3,
+          "share": 0.2
+        },
+        {
+          "lengths": "3+5+6",
+          "levels": 3,
+          "share": 0.2
+        },
+        {
+          "lengths": "3",
+          "levels": 2,
+          "share": 0.13333333333333333
+        },
+        {
+          "lengths": "3+4+6+7+8",
+          "levels": 2,
+          "share": 0.13333333333333333
+        },
+        {
+          "lengths": "3+5",
+          "levels": 2,
+          "share": 0.13333333333333333
+        },
+        {
+          "lengths": "3+5+6+7",
+          "levels": 2,
+          "share": 0.13333333333333333
+        },
+        {
+          "lengths": "4+5+6+7",
+          "levels": 2,
+          "share": 0.13333333333333333
+        },
+        {
+          "lengths": "4+6+7",
+          "levels": 2,
+          "share": 0.13333333333333333
+        },
+        {
+          "lengths": "3+4+5+6+7+8+9",
+          "levels": 1,
+          "share": 0.06666666666666667
+        },
+        {
+          "lengths": "3+4+5+7+10",
+          "levels": 1,
+          "share": 0.06666666666666667
+        },
+        {
+          "lengths": "3+4+7+8",
+          "levels": 1,
+          "share": 0.06666666666666667
+        },
+        {
+          "lengths": "3+5+8",
+          "levels": 1,
+          "share": 0.06666666666666667
+        },
+        {
+          "lengths": "4+5+7+8",
+          "levels": 1,
+          "share": 0.06666666666666667
+        },
+        {
+          "lengths": "4+6",
+          "levels": 1,
+          "share": 0.06666666666666667
+        },
+        {
+          "lengths": "4+6+8",
+          "levels": 1,
+          "share": 0.06666666666666667
+        },
+        {
+          "lengths": "4+7",
+          "levels": 1,
+          "share": 0.06666666666666667
+        },
+        {
+          "lengths": "4+8",
+          "levels": 1,
+          "share": 0.06666666666666667
+        }
+      ]
+    },
+    "firstStepByLength": [
+      {
+        "length": 3,
+        "total": 6195,
+        "R": 2398,
+        "D": 2148,
+        "L": 781,
+        "U": 868,
+        "positive": 4546,
+        "reverse": 1649,
+        "positiveShare": 73.3817594834544,
+        "reverseShare": 26.618240516545598
+      },
+      {
+        "length": 4,
+        "total": 5517,
+        "R": 2099,
+        "D": 1852,
+        "L": 694,
+        "U": 872,
+        "positive": 3951,
+        "reverse": 1566,
+        "positiveShare": 71.61500815660685,
+        "reverseShare": 28.38499184339315
+      },
+      {
+        "length": 5,
+        "total": 1818,
+        "R": 689,
+        "D": 640,
+        "L": 209,
+        "U": 280,
+        "positive": 1329,
+        "reverse": 489,
+        "positiveShare": 73.10231023102311,
+        "reverseShare": 26.897689768976896
+      },
+      {
+        "length": 6,
+        "total": 583,
+        "R": 181,
+        "D": 182,
+        "L": 100,
+        "U": 120,
+        "positive": 363,
+        "reverse": 220,
+        "positiveShare": 62.264150943396224,
+        "reverseShare": 37.735849056603776
+      },
+      {
+        "length": 7,
+        "total": 332,
+        "R": 117,
+        "D": 98,
+        "L": 56,
+        "U": 61,
+        "positive": 215,
+        "reverse": 117,
+        "positiveShare": 64.7590361445783,
+        "reverseShare": 35.24096385542169
+      },
+      {
+        "length": 8,
+        "total": 203,
+        "R": 68,
+        "D": 55,
+        "L": 41,
+        "U": 39,
+        "positive": 123,
+        "reverse": 80,
+        "positiveShare": 60.591133004926114,
+        "reverseShare": 39.40886699507389
+      },
+      {
+        "length": 9,
+        "total": 1,
+        "R": 1,
+        "D": 0,
+        "L": 0,
+        "U": 0,
+        "positive": 1,
+        "reverse": 0,
+        "positiveShare": 100,
+        "reverseShare": 0
+      },
+      {
+        "length": 10,
+        "total": 1,
+        "R": 1,
+        "D": 0,
+        "L": 0,
+        "U": 0,
+        "positive": 1,
+        "reverse": 0,
+        "positiveShare": 100,
+        "reverseShare": 0
+      }
+    ]
+  },
+  "stageProfiles": [
+    {
+      "from": 1,
+      "to": 10,
+      "levels": 5,
+      "meanPreferredCounts": [
+        2.2,
+        1.4,
+        0.6,
+        0.4
+      ],
+      "zeroThree": 0,
+      "firstStepPositiveShares": {
+        "3": 0.7996877573148761,
+        "4": 0.7333015434809889,
+        "5": 0.7432343234323433,
+        "6": 0.6809605488850772,
+        "7": 0.6758647493198601,
+        "8": 0.6199317923455856,
+        "6+": 0.6270125223613596
+      }
+    },
+    {
+      "from": 11,
+      "to": 20,
+      "levels": 10,
+      "meanPreferredCounts": [
+        2.8,
+        1.8,
+        0.5,
+        0.2
+      ],
+      "zeroThree": 0,
+      "firstStepPositiveShares": {
+        "3": 0.7996877573148761,
+        "4": 0.7333015434809889,
+        "5": 0.7432343234323433,
+        "6": 0.6809605488850772,
+        "7": 0.6758647493198601,
+        "8": 0.6199317923455856,
+        "6+": 0.6270125223613596
+      }
+    },
+    {
+      "from": 21,
+      "to": 50,
+      "levels": 30,
+      "meanPreferredCounts": [
+        3.2333333333333334,
+        2.566666666666667,
+        1.1,
+        0.5333333333333333
+      ],
+      "zeroThree": 1,
+      "firstStepPositiveShares": {
+        "3": 0.7996877573148761,
+        "4": 0.7333015434809889,
+        "5": 0.7432343234323433,
+        "6": 0.6809605488850772,
+        "7": 0.6758647493198601,
+        "8": 0.6199317923455856,
+        "6+": 0.6270125223613596
+      }
+    },
+    {
+      "from": 51,
+      "to": 100,
+      "levels": 50,
+      "meanPreferredCounts": [
+        3.78,
+        3.22,
+        1.32,
+        0.56
+      ],
+      "zeroThree": 1,
+      "firstStepPositiveShares": {
+        "3": 0.7996877573148761,
+        "4": 0.7333015434809889,
+        "5": 0.7432343234323433,
+        "6": 0.6809605488850772,
+        "7": 0.6758647493198601,
+        "8": 0.6199317923455856,
+        "6+": 0.6270125223613596
+      }
+    },
+    {
+      "from": 101,
+      "to": 500,
+      "levels": 400,
+      "meanPreferredCounts": [
+        4.045,
+        3.71,
+        1.345,
+        0.765
+      ],
+      "zeroThree": 14,
+      "firstStepPositiveShares": {
+        "3": 0.7184325167060192,
+        "4": 0.7266327504254187,
+        "5": 0.7299820377517978,
+        "6": 0.5648096460868595,
+        "7": 0.6529881903853036,
+        "8": 0.6366850188351203,
+        "6+": 0.6270125223613596
+      }
+    },
+    {
+      "from": 501,
+      "to": 1000,
+      "levels": 500,
+      "meanPreferredCounts": [
+        4.222,
+        3.802,
+        1.224,
+        0.75
+      ],
+      "zeroThree": 16,
+      "firstStepPositiveShares": {
+        "3": 0.7297839321856955,
+        "4": 0.6988963876893313,
+        "5": 0.7230855288918723,
+        "6": 0.6627358490566039,
+        "7": 0.6359985396129975,
+        "8": 0.576071570126267,
+        "6+": 0.6270125223613596
+      }
+    },
+    {
+      "from": 1001,
+      "to": 1500,
+      "levels": 500,
+      "meanPreferredCounts": [
+        4.378,
+        3.636,
+        1.204,
+        0.754
+      ],
+      "zeroThree": 17,
+      "firstStepPositiveShares": {
+        "3": 0.7368153633495539,
+        "4": 0.722100210719476,
+        "5": 0.7366622288194816,
+        "6": 0.6114085125054849,
+        "7": 0.6483230218169977,
+        "8": 0.6013909011880615,
+        "6+": 0.6270125223613596
+      }
+    },
+    {
+      "from": 1501,
+      "to": 2000,
+      "levels": 500,
+      "meanPreferredCounts": [
+        4.328,
+        3.654,
+        1.21,
+        0.744
+      ],
+      "zeroThree": 17,
+      "firstStepPositiveShares": {
+        "3": 0.7368153633495539,
+        "4": 0.722100210719476,
+        "5": 0.7366622288194816,
+        "6": 0.6114085125054849,
+        "7": 0.6483230218169977,
+        "8": 0.6013909011880615,
+        "6+": 0.6270125223613596
+      }
+    }
+  ]
+}

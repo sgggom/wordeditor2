@@ -1,4 +1,4 @@
-import { importGameLevels } from "./level-import.js";
+import { importGameLevels, gameLevelLocations, singleGamePack } from "./level-import.js";
 import { createGameExport } from "./level-export.js";
 import { calculateLevelStatistics, describePath } from "./level-statistics.js";
 import { validateLevelConfig } from "./level-config.js";
@@ -68,13 +68,11 @@ export function parseLevelFile(text, dictionary = []) {
       catch (error) { throw new Error(`第 ${index + 1} 关：${error.message}`); }
     });
   } else {
-    format = original && typeof original.g === "string" ? "single" : "game";
-    const pack = format === "single" ? { books: [{ levels: [original] }], daily: [] } : original;
-    if (!pack || !Array.isArray(pack.books) || !Array.isArray(pack.daily) || pack.books.some(book => !Array.isArray(book?.levels))) {
-      throw new Error("请选择游戏关卡文件（books / daily 或单关 g、t、n、e）或编辑器关卡文件（records / level）。");
-    }
-    const locations = [...pack.books.flatMap((book, index) => book.levels.map(source => ({ group: index, original: source }))),
-      ...pack.daily.map(source => ({ group: "daily", original: source }))];
+    const pack = singleGamePack(original);
+    format = pack === original ? "game" : "single";
+    let locations;
+    try { locations = gameLevelLocations(pack); }
+    catch { throw new Error("请选择游戏关卡文件（level / daily 或单关 a、b、c、d，也支持旧格式）或编辑器关卡文件（records / level）。"); }
     const levels = locations.length ? importGameLevels(pack, dictionary) : [];
     records = levels.map((level, index) => ({ id: index + 1, ...copy(locations[index]), level }));
   }
@@ -91,7 +89,7 @@ export function updateFileLevel(document, id, level) {
   } else {
     if (document.format === "single" && document.records.length) throw new Error("单关文件只能保存一关。");
     id = document.nextId++;
-    const group = document.records.at(-1)?.group ?? (document.original.books?.length ? 0 : "daily");
+    const group = document.records.at(-1)?.group ?? (Array.isArray(document.original.level) ? "level" : document.original.books?.length ? 0 : "daily");
     document.records.push({ id, group, level: copy(level), changed: true });
     document.orderChanged = true;
   }
@@ -122,7 +120,7 @@ export function changeFileOrder(document, id, action) {
 export function serializeLevelFile(document) {
   const { format, records } = document;
   if (format === "single" && records.length !== 1) throw new Error("单关文件必须保留一关。");
-  const exported = records.length ? createGameExport(records).books[0].levels : [];
+  const exported = records.length ? createGameExport(records.map(({ level }) => ({ level }))).level : [];
   let output = copy(document.original);
   if (format === "editor") {
     const usedIds = new Set(records.map(record => String(record.original?.id)));
@@ -138,22 +136,27 @@ export function serializeLevelFile(document) {
     let nextId = 1;
     const levels = records.map((record, index) => {
       if (!record.changed && record.original) return copy(record.original);
-      const generated = exported[index];
+      const compact = record.original ? Object.hasOwn(record.original, "a")
+        : Object.hasOwn(document.original, "level") || Object.hasOwn(document.original, "a");
+      const data = exported[index];
+      const generated = compact ? data : { name: String(record.level.name ?? ""), g: data.a, t: data.c, n: data.b, e: data.d };
       if (!record.original) {
+        if (compact) return generated;
         while (usedIds.has(String(nextId))) nextId++;
         usedIds.add(String(nextId));
-        return { ...generated, id: String(nextId++) };
+        return { id: String(nextId++), ...generated, lv: "", ty: "", curtains: [] };
       }
       // IDs, book metadata, lv/ty, curtains and unknown fields belong to the
       // original file. Only editor-owned board/word fields are replaced.
-      return { ...copy(record.original), ...Object.fromEntries(["g", "t", "n", "e", "name"].map(key => [key, generated[key]])) };
+      return { ...copy(record.original), ...generated };
     });
     if (format === "single") output = levels[0];
     else {
-      output.books.forEach(book => { book.levels = []; });
+      if (Array.isArray(output.level)) output.level = [];
+      else output.books.forEach(book => { book.levels = []; });
       output.daily = [];
       records.forEach((record, index) => {
-        const destination = record.group === "daily" ? output.daily : output.books[record.group]?.levels;
+        const destination = record.group === "daily" ? output.daily : record.group === "level" ? output.level : output.books[record.group]?.levels;
         if (!destination) throw new Error("关卡所属书册不存在。");
         destination.push(levels[index]);
       });
@@ -181,7 +184,7 @@ export async function writeLevelFile(document, handle = document.handle) {
   document.savedText = text;
   document.original = JSON.parse(text);
   const originals = document.format === "editor" ? document.original.records : document.format === "single" ? [document.original]
-    : [...document.original.books.flatMap(book => book.levels), ...document.original.daily];
+    : gameLevelLocations(document.original).map(location => location.original);
   document.records.forEach((record, index) => { record.original = copy(originals[index]); record.changed = false; });
   document.handle = handle;
   document.label = handle.name;

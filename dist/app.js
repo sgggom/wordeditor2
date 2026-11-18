@@ -12,7 +12,7 @@ import { createBatchRunner, formatBatchState } from "./batch-runner.js";
 import { createGenerationClient, defaultGenerationWorkers } from "./generation-client.js";
 import { gameExportText, createGameExport } from "./level-export.js";
 import { normalizeFixedWords, normalizeFixedLayout, normalizeFixedWordExemptions } from "./fixed-words.js";
-import { setupPresetLevelLists, createPresetRecords } from "./preset-level-lists.js";
+import { setupPresetLevelLists, createPresetRecords, createPresetGameExport } from "./preset-level-lists.js";
 import { bindWordTooltip, setupWordTooltips } from "./word-tooltip.js";
 import { updateFileLevel, changeFileOrder, serializeLevelFile, writeLevelFile } from "./level-file.js";
 import { createPathPreview } from "./path-preview.js";
@@ -554,7 +554,7 @@ import { setupPlaytest } from "./playtest-dialog.js";
       name.textContent = `关卡 ${String(index + 1).padStart(3, "0")}`;
       const dimensions = document.createElement("span");
       dimensions.className = "saved-level-size";
-      dimensions.textContent = `${saved.rows} × ${saved.columns}`;
+      dimensions.textContent = `${saved.columns} 列 × ${saved.rows} 行`;
       heading.append(name, dimensions);
       const meta = document.createElement("span");
       meta.className = "saved-level-meta";
@@ -745,7 +745,17 @@ import { setupPlaytest } from "./playtest-dialog.js";
       if (membership.candidate.has(entry.word)) return 3;
       return 5;
     };
-    const entries = [...byWord.values()].sort((a, b) => priority(a) - priority(b) || a.word.localeCompare(b.word));
+    const presetRecord = presetView?.records.find(record => record.id === activeSavedLevelId);
+    const targetOrder = presetRecord?.levelNumber === undefined ? null
+      : new Map([...membership.target].map((word, index) => [word, index]));
+    const entries = [...byWord.values()].sort((a, b) => {
+      const groupOrder = priority(a) - priority(b);
+      if (groupOrder) return groupOrder;
+      if (targetOrder?.has(a.word) && targetOrder.has(b.word)) {
+        return targetOrder.get(a.word) - targetOrder.get(b.word);
+      }
+      return a.word.localeCompare(b.word);
+    });
     wordCount.textContent = String(entries.length);
     targetWordCount.textContent = String(membership.target.size);
     extraWordCount.textContent = String(membership.extra.size);
@@ -905,7 +915,7 @@ import { setupPlaytest } from "./playtest-dialog.js";
         ["档位缺失", vocabulary.unknownRarityCount],
       ]],
       ["棋盘", [
-        ["尺寸", `${boardStats.rows} × ${boardStats.columns} · ${boardStats.cellCount} 格`],
+        ["尺寸", `${boardStats.columns} 列 × ${boardStats.rows} 行 · ${boardStats.cellCount} 个有效格`],
         ["不同字母数", boardStats.distinctLetterCount],
         ["字母格数", distribution(boardStats.letterDistribution, "")],
         ["重复字母格", share(boardStats.duplicateLetterCellCount, boardStats.duplicateLetterCellRatio, "格"), "每种字母保留首个格子，其余重复格数 ÷ 总格数"],
@@ -1272,12 +1282,13 @@ import { setupPlaytest } from "./playtest-dialog.js";
     savedLevelError.hidden = true;
     renderSavedLevels();
     try {
-      const records = presetView?.records ?? await (await getLevelStore()).getSavedLevels();
-      const text = gameExportText(records);
+      const text = presetView
+        ? JSON.stringify(createPresetGameExport(presetView.records), null, 2) + "\n"
+        : gameExportText(await (await getLevelStore()).getSavedLevels());
       const url = URL.createObjectURL(new Blob([text], { type: "application/json;charset=utf-8" }));
       const link = document.createElement("a");
       link.href = url;
-      link.download = "word-tiles-levels.json";
+      link.download = "levels.json";
       document.body.append(link);
       link.click();
       link.remove();
@@ -1298,7 +1309,11 @@ import { setupPlaytest } from "./playtest-dialog.js";
   }
 
   function currentSingleLevelText() {
-    return JSON.stringify(createGameExport([{ level }]).books[0].levels[0], null, 2);
+    const record = presetView?.records.find(entry => entry.id === activeSavedLevelId);
+    if (record?.levelNumber !== undefined) {
+      return JSON.stringify(createPresetGameExport([{ ...record, group: "level", level }]).level[0], null, 2);
+    }
+    return JSON.stringify(createGameExport([{ level }]).level[0], null, 2);
   }
 
   levelDataPanel.addEventListener("beforetoggle", event => {

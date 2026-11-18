@@ -55,7 +55,7 @@ test('guide-only filtering supports fixed words, generation, export and metadata
   assert.deepEqual(level.targetWords.map(entry => entry.word), ['OF', 'IF']);
   assert.ok(level.candidateWords.every(entry => entry.scope === 0 && entry.rarityLevel === 1));
   const pack = createGameExport([{ level }]);
-  assert.equal(pack.books[0].levels[0].g, 'OF,IF');
+  assert.equal(pack.level[0].a, 'OF,IF');
   const [restored] = importGameLevels(pack, [...normal, ...extras, ...guide]);
   for (const entry of restored.targetWords) {
     const source = guide.find(record => record.word === entry.word);

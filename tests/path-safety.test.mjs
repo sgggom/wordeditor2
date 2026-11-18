@@ -143,7 +143,7 @@ test("real vocabulary across all six board sizes keeps valid assigned paths and 
     }
     assert.deepEqual(level.cells.map(cell => cell.count), counts);
     assert.ok(counts.every(count => count > 0));
-    assert.ok(createGameExport([{ level }]).books[0].levels[0]);
+    assert.ok(createGameExport([{ level }]).level[0]);
   }
 });
 

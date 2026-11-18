@@ -34,7 +34,7 @@ test('disabled cells stay empty, are excluded from paths and statistics, and sur
   assert.ok(level.targetWords.every(entry => entry.path.every(cell => !disabledCells.includes(cell))));
   assert.ok(createPathSafetyChecker(level)('CAT'));
   const exported = createGameExport([{ level }]);
-  assert.equal(exported.books[0].levels[0].g, 'CD-,AO-,TG-');
+  assert.equal(exported.level[0].a, 'CD-,AO-,TG-');
   assert.deepEqual(importGameLevels(exported, dictionary)[0].cells, level.cells);
 });
 

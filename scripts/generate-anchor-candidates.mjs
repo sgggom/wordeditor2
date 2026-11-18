@@ -8,7 +8,7 @@ import { validateCurrentRuleConfigs, validateGenerationPolicy } from '../dist/ge
 import { fixedLayoutLetters, normalizeFixedLayout, validateFixedWords } from '../dist/fixed-words.js';
 import { prepareGeneration, selectExtraWords, EXTRA_WORD_LENGTH_POLICY } from '../dist/level-rules.js';
 import { createGameExport } from '../dist/level-export.js';
-import { importSingleGameLevel, importGameLevels } from '../dist/level-import.js';
+import { importSingleGameLevel, importGameLevels, gameLevelLocations, gameLevelData } from '../dist/level-import.js';
 import { analyzeTargetPaths } from '../dist/target-path-analysis.js';
 
 const read = file => JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -39,11 +39,12 @@ function writeWordOptions(directory, pools) {
       + '　' + pool.candidates.length + '张棋盘，' + pool.summary.distinctTargetSets + '组选词';
     const groups = new Map();
     for (const candidate of pool.candidates) {
-      if (!groups.has(candidate.game.t)) {
+      const game = gameLevelData(candidate.game);
+      if (!groups.has(game.c)) {
         const additions = candidate.paths.map(([word]) => word).filter(word => !core.has(word));
-        groups.set(candidate.game.t, { additions, numbers: [] });
+        groups.set(game.c, { additions, numbers: [] });
       }
-      groups.get(candidate.game.t).numbers.push(String(candidate.number).padStart(3, '0'));
+      groups.get(game.c).numbers.push(String(candidate.number).padStart(3, '0'));
     }
     const options = [...groups.values()].map(group => group.numbers.join('/') + '　' + group.additions.join(' / '));
     return [heading, ...options, ''];
@@ -89,11 +90,12 @@ export function prepareJob(task, context, history) {
 }
 
 export function verifyCandidate(level, game, job, context) {
+  game = gameLevelData(game);
   const targetNames = new Set(level.targetWords.map(entry => entry.word));
   for (const word of job.config.fixedWords) assert.ok(targetNames.has(word), '缺少指定目标词：' + word);
   const excluded = new Set(job.config.excludedBoards);
-  assert.ok(!excluded.has(game.g), '棋盘与其他已保存位置重复');
-  assert.deepEqual(game.g.split(',').map(row => [...row].map(c => c === '-' ? '0' : '1').join('')), job.config.generationRules.boardMask);
+  assert.ok(!excluded.has(game.a), '棋盘与其他已保存位置重复');
+  assert.deepEqual(game.a.split(',').map(row => [...row].map(c => c === '-' ? '0' : '1').join('')), job.config.generationRules.boardMask);
   for (const pin of job.config.fixedLayout?.placements ?? []) {
     const target = level.targetWords.find(entry => entry.word === pin.word);
     assert.deepEqual(target?.path, pin.path, '核心词路径发生变化：' + pin.word);
@@ -107,10 +109,10 @@ export function verifyCandidate(level, game, job, context) {
     letters: level.cells.map(cell => cell.letter), minimumWordLength: 3,
   });
   const expectedExtras = selectExtraWords(found, level.targetWords).map(entry => entry.word).sort();
-  assert.equal(game.e, expectedExtras.join(' '), '额外词未按目标词长度完整收录');
-  const roundTrip = createGameExport([{ level }]).books[0].levels[0];
-  for (const key of ['g', 't', 'n', 'e']) assert.equal(roundTrip[key], game[key]);
-  assert.equal(level.cells.map(cell => cell.count.toString(36)).join(''), game.n);
+  assert.equal(game.d, expectedExtras.join(' '), '额外词未按目标词长度完整收录');
+  const roundTrip = createGameExport([{ level }]).level[0];
+  for (const key of ['a', 'b', 'c', 'd']) assert.equal(roundTrip[key], game[key]);
+  assert.equal(level.cells.map(cell => cell.count.toString(36)).join(''), game.b);
   const safety = analyzeTargetPaths(level);
   assert.ok(safety.solvable && safety.allChoicesComplete, '存在不能完成的合法消词选择');
 }
@@ -126,15 +128,13 @@ function generatePool(task, job, context) {
   while (candidates.length < limit && stalls < 3 && performance.now() - started < context.timeLimitMs) {
     try {
       const level = context.generator.generate({ ...job.config, excludedBoards: [...seen], duplicateCheck: job.duplicateCheck, random });
-      const game = createGameExport([{ level }]).books[0].levels[0];
-      game.id = String(task.position);
-      game.name = '第' + task.position + '关';
-      assert.ok(!seen.has(game.g), '重复候选棋盘');
+      const game = createGameExport([{ level }]).level[0];
+      assert.ok(!seen.has(game.a), '重复候选棋盘');
       verifyCandidate(level, game, job, context);
-      seen.add(game.g);
+      seen.add(game.a);
       attempts += level.generationQuality.attemptsEvaluated;
       candidates.push({
-        id: hash([task.position, game.g, game.t, game.n]).slice(0, 16), number: candidates.length + 1,
+        id: hash([task.position, game.a, game.c, game.b]).slice(0, 16), number: candidates.length + 1,
         game, paths: level.targetWords.map(entry => [entry.word, entry.path]), quality: level.generationQuality,
       });
       stalls = 0;
@@ -153,8 +153,8 @@ function generatePool(task, job, context) {
   const wordSets = new Set();
   const shortlist = [];
   for (const candidate of ranked) {
-    if (!wordSets.has(candidate.game.t) && shortlist.length < 8) shortlist.push(candidate.id);
-    wordSets.add(candidate.game.t);
+    if (!wordSets.has(candidate.game.c) && shortlist.length < 8) shortlist.push(candidate.id);
+    wordSets.add(candidate.game.c);
   }
   const summary = {
     position: task.position, coreWords: job.config.fixedWords, freeCells: job.freeCells,
@@ -194,8 +194,6 @@ function selectCandidates(pools, picks, context) {
       missingPreceding: job.missingPreceding, quality: candidate.quality };
   });
   const game = createGameExport(chosen.map(choice => ({ level: choice.level })));
-  game.books[0].name = '核心词试拼';
-  game.books[0].levels.forEach((entry, i) => { entry.id = String(decisions[i].position); });
   return { ...game, sourcePreset: context.preset.id, poolSeed: context.seed, decisions };
 }
 
@@ -215,10 +213,10 @@ export function createPoolContext(planFile, sourceDirectory = dataDirectory) {
   let historyGame = null;
   if (plan.history) {
     historyGame = read(path.resolve(path.dirname(planFile), plan.history));
-    const source = [...historyGame.books.flatMap(book => book.levels), ...historyGame.daily];
+    const source = gameLevelLocations(historyGame).map(location => location.original);
     const levels = importGameLevels(historyGame, dictionary);
     for (const [i, level] of levels.entries()) {
-      const position = Number(source[i].id);
+      const position = Number(source[i].id ?? historyGame.decisions?.[i]?.position ?? i + 1);
       assert.ok(Number.isSafeInteger(position) && position > 0, '历史关号无效');
       level.sourceConfig = { position };
       history.push({ id: position, level });

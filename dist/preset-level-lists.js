@@ -1,10 +1,15 @@
-import { importGameLevels } from "./level-import.js";
+import { importGameLevels, gameLevelLocations } from "./level-import.js";
+import { createGameExport } from "./level-export.js";
 import { bindWordTooltip } from "./word-tooltip.js";
 
 export function createPresetRecords(data, format, dictionary = []) {
   if (format === "game") {
-    const sources = [...data.books.flatMap(book => book.levels), ...data.daily];
-    return importGameLevels(data, dictionary).map((level, index) => ({ id: -index - 1, sourceId: sources[index].id, level }));
+    const locations = gameLevelLocations(data);
+    return importGameLevels(data, dictionary).map((level, index) => {
+      const { original, group } = locations[index];
+      return { id: -index - 1, sourceId: original.id ?? index + 1, group, level,
+        ...(typeof original.level === "string" ? { levelNumber: original.level } : {}) };
+    });
   }
   if (format !== "word-tiles") return structuredClone(data.records).map((record, index) => ({ ...record, id: -index - 1 }));
   const sources = normalizePresetLevels(data, format).map(level => {
@@ -19,6 +24,22 @@ export function createPresetRecords(data, format, dictionary = []) {
       n: counts.map(count => count.toString(36)).join("") };
   });
   return importGameLevels({ books: [{ levels: sources }], daily: [] }, dictionary).map((level, index) => ({ id: -index - 1, sourceId: data[index].id, level }));
+}
+
+export function createPresetGameExport(records) {
+  const game = createGameExport(records);
+  const positions = { level: 0, daily: 0 };
+  for (const record of records) {
+    const group = record.group === "daily" ? "daily" : "level";
+    const index = positions[group]++;
+    if (record.levelNumber === undefined) continue;
+    game[group][index] = {
+      level: record.levelNumber,
+      ...game[group][index],
+      c: record.level.targetWords.map(entry => entry.word).join(" "),
+    };
+  }
+  return game;
 }
 
 export function normalizePresetLevels(data, format) {
@@ -120,9 +141,9 @@ export function setupPresetLevelLists({ getView, getFiles, onSelect, onBrowser, 
     jump.value = String(activeIndex + 1);
     [...list.children].forEach((button, index) => button.setAttribute('aria-pressed', String(index === activeIndex)));
     const heading = document.createElement('h3');
-    heading.textContent = `关卡 ${String(activeIndex + 1).padStart(3, '0')} · ${level.rows} × ${level.columns}`;
+    heading.textContent = `关卡 ${String(activeIndex + 1).padStart(3, '0')} · ${level.columns} 列 × ${level.rows} 行`;
     const meta = document.createElement('p'); meta.className = 'preset-level-metadata';
-    meta.textContent = `目标词 ${level.targetWords.length} · 额外词 ${level.extraWords.length}` + (level.sourceId === null ? '' : ` · 原关卡 ID ${level.sourceId}`);
+    meta.textContent = `目标词 ${level.targetWords.length} · 额外词 ${level.extraWords.length} · ${level.letters.length - level.disabledCells.length} 个有效格` + (level.sourceId === null ? '' : ` · 原关卡 ID ${level.sourceId}`);
     const board = document.createElement('div'); board.className = 'preset-level-board';
     board.style.setProperty('--preset-columns', String(level.columns));
     board.setAttribute('aria-label', '关卡棋盘');
@@ -159,7 +180,7 @@ export function setupPresetLevelLists({ getView, getFiles, onSelect, onBrowser, 
     const preset = presets.find(item => item.id === view.id);
     if (preset?.gameFile) {
       download.href = new URL(preset.gameFile, new URL('./data/', import.meta.url)).href;
-      download.download = `${preset.id}-word-tiles-levels.json`; download.hidden = false;
+      download.download = `${preset.id}-levels.json`; download.hidden = false;
     }
     const fragment = document.createDocumentFragment();
     levels.forEach((level, index) => {
@@ -171,6 +192,16 @@ export function setupPresetLevelLists({ getView, getFiles, onSelect, onBrowser, 
     const scroll = list.scrollTop; list.replaceChildren(fragment); list.scrollTop = scroll;
     renderPreview();
   }
+  download.addEventListener('click', event => {
+    event.preventDefault();
+    try {
+      const text = JSON.stringify(createPresetGameExport(getView().records), null, 2) + '\n';
+      const url = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
+      const link = document.createElement('a'); link.href = url; link.download = download.download;
+      document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (problem) { failure(problem); }
+  });
   async function perform(operation) {
     if (busy) return;
     busy = true; error.hidden = true; refresh();

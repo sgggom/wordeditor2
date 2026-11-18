@@ -1,0 +1,11 @@
+{
+  "id": "mixed-seed-search-20261113",
+  "millisecondsPerSeed": 200,
+  "modes": ["mixed", "long-five", "five-four", "mixed", "long-five", "two-longs-five", "five-four", "mixed"],
+  "failuresBeforeCooldown": 3,
+  "cooldownSelections": 20,
+  "recentWordWindow": 6,
+  "poolLimit": 1200,
+  "maxPerLengthProfile": 80,
+  "refreshFractionAfterFailure": 0.25
+}

@@ -1,6 +1,6 @@
 import { normalizeDisabledCells } from "./board-shape.js";
 
-// Compatible with word关卡/index.html: assemblePack / freshLevel.
+// Game files contain regular levels and daily levels, each using a/b/c/d.
 export function createGameExport(records) {
   if (!Array.isArray(records) || !records.length) throw new Error("关卡列表为空。");
   const levels = records.map(({ level }, index) => {
@@ -32,18 +32,16 @@ export function createGameExport(records) {
     }
     if (counts.some((count, index) => disabled.has(index) ? count !== 0 : count < 1 || count > 35)) fail("格子使用次数须为 1～35，才能写入游戏格式。");
     return {
-      id: String(number),
-      name: String(level.name ?? ""),
-      g: Array.from({ length: rows }, (_, row) => cells.slice(row * columns, (row + 1) * columns).map((cell, column) => disabled.has(row * columns + column) ? "-" : cell.letter).join("")).join(","),
-      t: targetWords.map(entry => entry.word).sort((a, b) => a.length - b.length || a.localeCompare(b)).join(" "),
-      n: counts.map(count => count.toString(36)).join(""),
-      e: extraWords.map(entry => entry.word).sort().join(" "),
-      lv: "",
-      ty: "",
-      curtains: [],
+      a: Array.from({ length: rows }, (_, row) => cells.slice(row * columns, (row + 1) * columns).map((cell, column) => disabled.has(row * columns + column) ? "-" : cell.letter).join("")).join(","),
+      b: counts.map(count => count.toString(36)).join(""),
+      c: targetWords.map(entry => entry.word).sort((a, b) => a.length - b.length || a.localeCompare(b)).join(" "),
+      d: extraWords.map(entry => entry.word).sort().join(" "),
     };
   });
-  return { books: [{ name: "第一册", sub: "入门", mix: [100, 0, 0, 0, 0], levels }], daily: [] };
+  return {
+    level: levels.filter((_, index) => records[index].group !== "daily"),
+    daily: levels.filter((_, index) => records[index].group === "daily"),
+  };
 }
 
 export function gameExportText(records) {

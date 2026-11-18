@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { importGameLevels, importSingleGameLevel } from "../dist/level-import.js";
+import { importGameLevels, importSingleGameLevel, gameLevelData } from "../dist/level-import.js";
 import { createGameExport } from "../dist/level-export.js";
 
 const fixture = () => ({ books: [{ levels: [{ name: "测试", g: "ABC,DEF", t: "ABC DEF", e: "FED", n: "111111" }] }], daily: [] });
@@ -13,8 +13,8 @@ test("game import restores paths, dictionary metadata, statistics and export cou
   assert.equal(level.statistics.workload.targetCount, 2);
   assert.equal(level.initialWords.length, 0);
   assert.equal(level.candidateWords.length, 3);
-  const exported = createGameExport([{ level }]).books[0].levels[0];
-  for (const key of ["name", "g", "t", "e", "n"]) assert.equal(exported[key], data.books[0].levels[0][key]);
+  assert.equal(level.name, "测试");
+  assert.deepEqual(createGameExport([{ level }]).level[0], gameLevelData(data.books[0].levels[0]));
   assert.deepEqual(data, before);
 });
 
@@ -40,10 +40,33 @@ test("single-level JSON reads an object or one-level pack and preserves disabled
   const level = importSingleGameLevel("\uFEFF" + JSON.stringify(single), [{ word: "CAT", rarityLevel: 1 }]);
   assert.deepEqual(level.disabledCells, [2, 5, 8]);
   assert.equal(level.targetWords[0].rarityLevel, 1);
-  const exported = createGameExport([{ level }]).books[0].levels[0];
-  for (const key of Object.keys(single)) assert.equal(exported[key], single[key]);
+  assert.equal(level.name, single.name);
+  assert.deepEqual(createGameExport([{ level }]).level[0], gameLevelData(single));
   assert.deepEqual(importSingleGameLevel(JSON.stringify(fixture())).cells,
     importGameLevels(fixture())[0].cells);
+});
+
+test("compact level/daily import preserves group order, counts and shaped single-level data", () => {
+  const first = { a: "ABC,DEF", b: "111111", c: "ABC DEF", d: "FED" };
+  const daily = { a: "CD-,AO-,TG-", b: "110110110", c: "CAT DOG", d: "" };
+  const source = { level: [first], daily: [daily] };
+  const before = structuredClone(source);
+  const levels = importGameLevels(source);
+  assert.equal(levels.length, 2);
+  assert.deepEqual(createGameExport(levels.map(level => ({ level }))).level, [first, daily]);
+  assert.deepEqual(importSingleGameLevel(JSON.stringify(daily)).cells, levels[1].cells);
+  assert.deepEqual(importSingleGameLevel(JSON.stringify({ level: [], daily: [daily] })).cells, levels[1].cells);
+  assert.deepEqual(source, before);
+  assert.throws(() => importSingleGameLevel(JSON.stringify(source)), /只能读取一关/);
+});
+
+test("compact files reject malformed groups, missing fields, invalid words and inconsistent counts", () => {
+  for (const data of [{ level: [], daily: [] }, { level: {}, daily: [] }, { level: [] }, { level: [], daily: {} }]) {
+    assert.throws(() => importGameLevels(data));
+  }
+  for (const patch of [{ a: "ABC,D-F" }, { b: "111112" }, { c: "ABC ABC" }, { d: null }, { d: "ACE" }]) {
+    assert.throws(() => importGameLevels({ level: [{ a: "ABC,DEF", b: "111111", c: "ABC DEF", d: "FED", ...patch }], daily: [] }), /第 1 关/);
+  }
 });
 
 test("single-level reading rejects malformed JSON, multiple levels and invalid paths", () => {

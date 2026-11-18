@@ -17,6 +17,21 @@
         "增加独立预设关卡列表，收录Word Tiles list 0完整1500关；本版本与参考关卡分开保存。"
       ],
       "gitTag": "local-2026-10-28-v1"
+    },
+    {
+      "id": "2026-11-18-v1",
+      "date": "2026-11-18",
+      "version": 1,
+      "label": "2026-11-18 · 版本 1",
+      "levelCount": 1000,
+      "levels": "./versions/2026-11-18-v1/levels.json",
+      "gameFile": "./versions/2026-11-18-v1/word-tiles-levels.json",
+      "configs": "./versions/2026-11-18-v1/configs.json",
+      "notes": [
+        "保存最新前1000关及当前配置列表。",
+        "游戏导出保留 level_1 至 level_1000 编号及原目标词顺序。"
+      ],
+      "gitTag": "local-2026-11-18-v1"
     }
   ]
 }

@@ -1,0 +1,150 @@
+{
+  "sourcePlanFile": "level-editor/dist/data/level-plan-target-floor-first-1000.json",
+  "sourcePlanSha256": "62d7307f264cc9b06127828913573af387fce987f62a3073b6c97dd35ac4df45",
+  "preservedThrough": 500,
+  "approvedPrefixFile": "level-editor/dist/data/presets/our-levels-new-plan-first-500-2026-11-16.json",
+  "approvedPrefixSha256": "1756ad011e087b882473da14b8a975b8021a9fb770b46e008105535f98feba6e",
+  "verifiedStages": 25,
+  "proof": {
+    "file": "outputs/20261117-target-floor-first-1000/budget-consistency-audit.json",
+    "sha256": "79aacca2418d105d4096f56b1c42210c021c8d20f0d707fd22e6af413871616b"
+  },
+  "repairWeights": {
+    "doubleLongHistogram": 1,
+    "otherLongHistogram": 2,
+    "variety": 10,
+    "shortWordHistograms": 50
+  },
+  "adjustments": [
+    {
+      "from": 501,
+      "to": 520,
+      "metric": "hist:6+:2",
+      "previousRange": [
+        0,
+        2
+      ],
+      "range": [
+        0,
+        3
+      ]
+    },
+    {
+      "from": 521,
+      "to": 540,
+      "metric": "hist:6+:2",
+      "previousRange": [
+        2,
+        4
+      ],
+      "range": [
+        2,
+        5
+      ]
+    },
+    {
+      "from": 541,
+      "to": 560,
+      "metric": "hist:6+:0",
+      "previousRange": [
+        6,
+        8
+      ],
+      "range": [
+        5,
+        8
+      ]
+    },
+    {
+      "from": 541,
+      "to": 560,
+      "metric": "hist:6+:2",
+      "previousRange": [
+        2,
+        4
+      ],
+      "range": [
+        2,
+        7
+      ]
+    },
+    {
+      "from": 561,
+      "to": 580,
+      "metric": "hist:6+:2",
+      "previousRange": [
+        1,
+        3
+      ],
+      "range": [
+        1,
+        5
+      ]
+    },
+    {
+      "from": 601,
+      "to": 620,
+      "metric": "hist:6+:2",
+      "previousRange": [
+        3,
+        5
+      ],
+      "range": [
+        3,
+        7
+      ]
+    },
+    {
+      "from": 801,
+      "to": 820,
+      "metric": "hist:5:3",
+      "previousRange": [
+        0,
+        3
+      ],
+      "range": [
+        0,
+        5
+      ]
+    },
+    {
+      "from": 861,
+      "to": 880,
+      "metric": "hist:5:3",
+      "previousRange": [
+        0,
+        3
+      ],
+      "range": [
+        0,
+        4
+      ]
+    },
+    {
+      "from": 941,
+      "to": 960,
+      "metric": "hist:6+:0",
+      "previousRange": [
+        8,
+        10
+      ],
+      "range": [
+        6,
+        10
+      ]
+    },
+    {
+      "from": 941,
+      "to": 960,
+      "metric": "hist:6+:2",
+      "previousRange": [
+        0,
+        1
+      ],
+      "range": [
+        0,
+        6
+      ]
+    }
+  ]
+}

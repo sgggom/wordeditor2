@@ -1,15 +1,39 @@
 import { calculateLevelStatistics, compareRepresentativePaths, describePath } from "./level-statistics.js";
 import { pathCellMask } from "./path-safety.js";
 
+export function gameLevelLocations(data) {
+  if (!data || !Array.isArray(data.daily)) throw new Error("需要包含 level 和 daily 的关卡 JSON（也支持旧版 books / daily）。");
+  let locations;
+  if (Object.hasOwn(data, "level")) {
+    if (!Array.isArray(data.level)) throw new Error("level 必须为关卡数组。");
+    locations = data.level.map(original => ({ group: "level", original }));
+  } else {
+    if (!Array.isArray(data.books) || data.books.some(book => !Array.isArray(book?.levels))) {
+      throw new Error("需要包含 level 和 daily 的关卡 JSON（也支持旧版 books / daily）。");
+    }
+    locations = data.books.flatMap((book, group) => book.levels.map(original => ({ group, original })));
+  }
+  return [...locations, ...data.daily.map(original => ({ group: "daily", original }))];
+}
+
+export function gameLevelData(source) {
+  return source && Object.hasOwn(source, "a") ? source
+    : { a: source?.g, b: source?.n, c: source?.t, d: source?.e };
+}
+
+export function singleGamePack(data) {
+  return data && typeof data === "object" && !Array.isArray(data) && (Object.hasOwn(data, "a") || Object.hasOwn(data, "g"))
+    ? { level: [data], daily: [] } : data;
+}
+
 export function importGameLevels(data, records = []) {
-  if (!data || !Array.isArray(data.books) || !Array.isArray(data.daily) ||
-      data.books.some(book => !Array.isArray(book?.levels))) throw new Error("需要包含 books 和 daily 的关卡 JSON。");
-  const sources = [...data.books.flatMap(book => book.levels), ...data.daily];
+  const sources = gameLevelLocations(data).map(location => location.original);
   if (!sources.length) throw new Error("文件中没有关卡。");
   const dictionary = new Map(records.map(record => [record.word, record]));
-  return sources.map((source, index) => {
+  return sources.map((original, index) => {
+    const source = gameLevelData(original);
     const fail = message => { throw new Error(`第 ${index + 1} 关：${message}`); };
-    const grid = typeof source?.g === "string" ? source.g.split(",") : [];
+    const grid = typeof source.a === "string" ? source.a.split(",") : [];
     const rows = grid.length, columns = grid[0]?.length;
     if (![2, 3, 4, 5].includes(rows) || ![2, 3, 4, 5].includes(columns) || grid.some(row => row.length !== columns || !/^[A-Z-]+$/.test(row))) fail("棋盘尺寸或字母无效。");
     const letters = [...grid.join("")].map(letter => letter === "-" ? "" : letter);
@@ -21,7 +45,7 @@ export function importGameLevels(data, records = []) {
       if (result.some(word => !/^[A-Z]+$/.test(word))) fail("单词必须为大写英文字母。");
       return result;
     };
-    const targets = words(source.t), extras = words(source.e);
+    const targets = words(source.c), extras = words(source.d);
     if (!targets.length || new Set([...targets, ...extras]).size !== targets.length + extras.length) fail("目标词为空或单词重复。");
     const neighbors = letters.map((_, cell) => [cell - columns, cell + columns,
       ...(cell % columns ? [cell - 1] : []), ...(cell % columns < columns - 1 ? [cell + 1] : [])]
@@ -40,8 +64,8 @@ export function importGameLevels(data, records = []) {
       return { ...dictionary.get(word), id: dictionary.get(word)?.id ?? word, word, paths,
         onlyExtra: !targets.includes(word) && dictionary.get(word)?.onlyExtra === true };
     });
-    if (typeof source.n !== "string" || source.n.length !== letters.length || !/^[0-9a-z]+$/i.test(source.n)) fail("格子使用次数无效。");
-    const remaining = [...source.n].map(char => parseInt(char, 36));
+    if (typeof source.b !== "string" || source.b.length !== letters.length || !/^[0-9a-z]+$/i.test(source.b)) fail("格子使用次数无效。");
+    const remaining = [...source.b].map(char => parseInt(char, 36));
     const targetEntries = entries.slice(0, targets.length);
     const ordered = [...targetEntries].sort((a, b) => a.paths.length - b.paths.length);
     let attempts = 0;
@@ -67,11 +91,11 @@ export function importGameLevels(data, records = []) {
         assigned: describePath(entry.path, columns), representative: descriptions[0] };
       delete entry.paths;
     }
-    const level = { rows, columns, disabledCells, name: source.name ?? "", targetCount: targets.length,
+    const level = { rows, columns, disabledCells, name: original.name ?? "", targetCount: targets.length,
       initialForwardProbability: 50, filters: {}, initialWords: [],
       candidateWords: entries.filter(entry => !entry.onlyExtra), targetWords: targetEntries,
       extraWords: entries.slice(targets.length),
-      cells: letters.map((letter, cell) => ({ letter, count: parseInt(source.n[cell], 36), ...(disabledCells.includes(cell) ? { disabled: true } : {}) })),
+      cells: letters.map((letter, cell) => ({ letter, count: parseInt(source.b[cell], 36), ...(disabledCells.includes(cell) ? { disabled: true } : {}) })),
     };
     return { ...level, statistics: calculateLevelStatistics(level) };
   });
@@ -81,12 +105,11 @@ export function importSingleGameLevel(text, records = []) {
   let data;
   try { data = JSON.parse(text.replace(/^\uFEFF/, "")); }
   catch { throw new Error("JSON 格式无效，请粘贴完整的单关数据。"); }
-  const pack = data && typeof data === "object" && !Array.isArray(data) && Object.hasOwn(data, "g")
-    ? { books: [{ levels: [data] }], daily: [] } : data;
-  if (!pack || !Array.isArray(pack.books) || !Array.isArray(pack.daily) || pack.books.some(book => !Array.isArray(book?.levels))) {
-    throw new Error("请粘贴包含 g、t、n、e 的单关 JSON 对象。");
-  }
-  if (pack.books.reduce((count, book) => count + book.levels.length, 0) + pack.daily.length !== 1) {
+  const pack = singleGamePack(data);
+  let locations;
+  try { locations = gameLevelLocations(pack); }
+  catch { throw new Error("请粘贴包含 a、b、c、d 的单关 JSON 对象（也支持旧版 g、t、n、e）。"); }
+  if (locations.length !== 1) {
     throw new Error("每次只能读取一关数据。");
   }
   return importGameLevels(pack, records)[0];

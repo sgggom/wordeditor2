@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { normalizePresetLevels, findPresetWordPath, createPresetRecords } from "../dist/preset-level-lists.js";
+import { normalizePresetLevels, findPresetWordPath, createPresetRecords, createPresetGameExport } from "../dist/preset-level-lists.js";
 import { createGameExport } from "../dist/level-export.js";
+import { gameLevelData } from "../dist/level-import.js";
 
 const read = path => JSON.parse(readFileSync(new URL(`../dist/data/${path}`, import.meta.url)));
 
@@ -30,13 +31,17 @@ test("the complete reference list preserves source data and every word has an or
   assert.equal(JSON.stringify(source), before);
 });
 
-test("local version one retains exactly twenty complete levels and an identical game export", () => {
+test("local version one retains twenty complete levels and exports the same content in the new format", () => {
   const version = read("local-versions.json").versions[0];
   assert.equal(version.id, "2026-10-28-v1");
   const snapshot = read(version.levels);
   assert.equal(snapshot.records.length, version.levelCount);
   assert.equal(version.levelCount, 20);
-  assert.deepEqual(createGameExport(snapshot.records), read(version.gameFile));
+  const originalGame = read(version.gameFile);
+  assert.deepEqual(createGameExport(snapshot.records), {
+    level: originalGame.books.flatMap(book => book.levels).map(gameLevelData),
+    daily: originalGame.daily.map(gameLevelData),
+  });
   const levels = normalizePresetLevels(snapshot, "editor");
   assert.equal(levels.length, 20);
   assert.deepEqual(levels[0].targetWords.map(entry => entry.word), snapshot.records[0].level.targetWords.map(entry => entry.word));
@@ -73,26 +78,47 @@ test("reference levels can open in the main editor without changing the original
   assert.equal(local.length, 20);
 });
 
-test("the preset index lists only the competitor and our current 2000-level set", () => {
+test("the preset index exposes only the latest 1000 levels and the independent reference", () => {
   const { referenceLists, presets } = read("preset-level-lists.json");
   assert.deepEqual(referenceLists.map(item => item.id), ["word-tiles-list0"]);
-  assert.deepEqual(presets.map(item => item.id), ["our-levels-three-letter-pruned-2000-2026-11-05"]);
+  assert.deepEqual(presets.map(item => [item.id, item.levelCount]), [
+    ["our-levels-new-plan-first-1000-2026-11-17", 1000],
+  ]);
+
   const [preset] = presets;
   const bytes = readFileSync(new URL(`../dist/data/${preset.file}`, import.meta.url));
   assert.equal(createHash("sha256").update(bytes).digest("hex"), preset.source.sha256);
   const data = JSON.parse(bytes);
-  const original = JSON.stringify(data);
-  const sources = [...data.books.flatMap(book => book.levels), ...data.daily];
   const records = createPresetRecords(data, preset.format);
-  assert.equal(records.length, 2000);
   assert.equal(records.length, preset.levelCount);
-  const exported = createGameExport(records).books[0].levels;
-  for (const [index, source] of sources.entries()) {
+  assert.deepEqual(createPresetGameExport(records), data);
+  for (const [index, entry] of data.level.entries()) {
+    assert.equal(Object.keys(entry)[0], "level");
+    assert.equal(entry.level, `level_${index + 1}`);
     assert.equal(records[index].id, -index - 1);
-    assert.equal(records[index].sourceId, source.id);
-    for (const key of ["g", "t", "e", "n"]) assert.equal(exported[index][key], source[key], `Level ${index + 1}: ${key}`);
+    assert.equal(records[index].sourceId, index + 1);
   }
   const preview = normalizePresetLevels(data, preset.format);
   assert.deepEqual(preview[0].letters, records[0].level.cells.map(cell => cell.letter));
-  assert.equal(JSON.stringify(data), original);
+  assert.deepEqual(preview[0].targetWords.map(entry => entry.word), ["CAT", "ALL", "CALL"]);
+  assert.deepEqual(data, JSON.parse(bytes));
+});
+
+test("the latest local snapshot restores the current preset and configuration", () => {
+  const version = read("local-versions.json").versions.find(entry => entry.id === "2026-11-18-v1");
+  const [preset] = read("preset-level-lists.json").presets;
+  const snapshot = read(version.levels);
+  assert.equal(snapshot.records.length, version.levelCount);
+  assert.deepEqual(read(version.gameFile), read(preset.gameFile));
+  assert.deepEqual(createPresetGameExport(snapshot.records), read(version.gameFile));
+  assert.equal(read(version.configs).records.length, 2000);
+});
+
+test("compact presets preserve regular/daily order and derive source numbers from array order", () => {
+  const source = { level: [{ a: "ABC,DEF", b: "111111", c: "ABC DEF", d: "FED" }],
+    daily: [{ a: "CD-,AO-,TG-", b: "110110110", c: "CAT DOG", d: "" }] };
+  const records = createPresetRecords(source, "game");
+  assert.deepEqual(records.map(record => record.sourceId), [1, 2]);
+  assert.deepEqual(createGameExport(records), source);
+  assert.deepEqual(normalizePresetLevels(source, "game")[1].disabledCells, [2, 5, 8]);
 });

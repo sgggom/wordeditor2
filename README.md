@@ -17,6 +17,76 @@ npm run check
 npm test
 ```
 
+## 独立逐关规划试跑（2026-11-12）
+
+2026-11-13 目标补齐版执行 `npm run configure:target-floor-50`，生成 `dist/data/level-plan-target-floor-first-50.json`。前5关保留；第6～50关逐关以“竞品对应关目标数”和“本版原目标数”的较大值为目标数量，不允许用其他关的超额抵消缺口。优先从本关额外词中补入当前主词库里非缩写、稀有度1～4的合格词，保留原目标；补不齐或安全/分布检查不通过时重新选盘。每次补词重新计算格子使用次数、额外词、全路径安全及导出回读。
+
+扩展到100关执行 `npm run configure:target-floor-100`，生成 `dist/data/level-plan-target-floor-first-100.json`。已验收的目标补齐版前50关及其阶段配置逐字保留，第51～100关按51～60、61～80、81～100三个阶段重新统计竞品词长数量、每关数量分布、词长种类、五字母覆盖和加权正/逆/中性比例。新增关卡的目标数取原逐关规划与竞品对应关的较大值，原棋盘尺寸、特殊造型和难度节奏不变。新阶段精确词长预算允许中心值上下1个，同时逐词长不低于对应参考阶段；方向继续按实际词量采用三类联合取整及大样本±2个百分点规则。候选按每关自己的位置向前滚动计算50关冷却，已过期的前序词逐关释放，阶段内联合去重；整包导出后逐关重新检查50关冷却。
+
+扩展到200关执行 `npm run configure:target-floor-200`，冻结包含第3关CITY、第4关BOMB调整的当前前100关；第101～200关按5个20关阶段采用同一套目标下限、词长构成、加权方向和五字母覆盖规则。新增100关共1069个目标词。续跑从配置中的完整前序文件读取开场，并核验其SHA256，避免恢复旧开场。50关冷却按每个单词独立计算，目标词和额外词跨类型共用；词在第n关出现后，第n+1～n+50关禁止复用，第n+51关起释放。结果通过整包报告和独立验收后，写入独立200关本地预设。
+
+扩展到500关执行 `npm run configure:target-floor-500`，当前输出为 `dist/data/level-plan-target-floor-first-500-r2.json`，冻结已确认的 `our-levels-new-plan-first-200-2026-11-16` 预设。仅新增201～500关，按15个20关阶段读取对应竞品的词长数量、每关分布、五字母覆盖及加权方向比例；逐关目标下限、完整额外词、跨类型50关冷却和全路径通关检查沿用200关规则。配额联检修复了长词总量与投放容量的冲突：321～340、461～480关的双长词关上限各增加1关，341～360关增加2关；逐关配置和其他阶段配额保持原样。
+
+扩展到1000关执行 `npm run configure:target-floor-1000`，输出 `dist/data/level-plan-target-floor-first-1000-r2.json`，冻结已确认的 `our-levels-new-plan-first-500-2026-11-16` 预设。仅新增501～1000关，共25个20关阶段、5503个目标词；棋盘、目标下限、得分、当前词库、完整额外词、逐词50关冷却与加权方向规则沿用前500关。新阶段的投放范围经组合可行性联检，修正记录位于 `dist/data/target-floor-1000-budget-consistency.json`；前500关的规划与投放范围完整保留。配置源文件变化时需重新联检，不能直接复用旧修正记录。
+
+101～200关补入目标时，保留原规划各得分档位的槽位；新增词可落入简单档位。总分下限采用原规划下限加新增词的最低基础分（有3字母目标时每词1.3，无3字母目标时每词1.4），上限仍随词数放大；避免把新增简单目标也强行按原平均难度计入下限。搜索交替尝试简单补词与均衡档位配置，目标总数、棋盘、阶段词长及方向配额均不受此调整影响。
+
+新增目标会增加得分档位的词数：保留原有各档槽位，允许新增槽位落入不同档位，总分区间随目标数量按比例调整。逐阶段词长数量与方向预算按新的实际总词量重算；右/下为正、左/上为逆，首步权重2、其余每步1，中性单列。联合选关在满足硬配额后优先保留原棋盘，再比较阶段分布与单关质量。使用同一生成脚本并指定 `--plan level-editor/dist/data/level-plan-target-floor-first-50.json --out outputs/20261113-target-floor-first-50`，按6～20、21～30、31～50阶段生成；种子2026111352。整包验收额外核对每关目标下限及原目标数量保护，通过后更新50关预设。
+
+已有候选时可使用 `--solve-only --solver-backend milp --solver-seconds 60`，由 SciPy/HiGHS 求解相同的完整约束；默认 `auto` 优先使用 CP-SAT。`--candidate-cache FILE` 可恢复指定候选缓存，规划和冷却上下文必须匹配。恢复时先加入原盘补词候选，随后加载缓存；原盘候选在后续刷新中保留。
+
+2026-11-13 新增整条路径的正逆向统计：右/下为正，左/上为逆，首步权重2、后续每步权重1；正向分减逆向分，大于0为正向、小于0为逆向、等于0单列中性。共用计算在 `dist/word-direction.js`，`measureComposition` 的 `weightedDirections` 按实际词长统计正/逆/中性数量。此分数用于阅读方向判断，与现有拐弯、折返及词汇难度分分别计算。已有 `firstSteps` 和首步阶段预算保留原口径以复核历史结果；新方向预算需用加权规则重新统计竞品，不能直接套用原首步比例。
+
+路径加权版执行 `npm run configure:weighted-50`，生成 `dist/data/weighted-stage-policy.json` 和 `dist/data/level-plan-weighted-first-50.json`。正/逆/中性比例统一以全部实际目标词为分母，按竞品同阶段、同词长重算。数量至少20时，三类同时控制在参考值±2个百分点的整数解；小样本或无可达整数解时，用最大余数法联合分配，保证三类数量之和等于目标词数。单词量为1时，各类取整残差带入后续阶段。棋盘、目标数、难度分档、词长覆盖等沿用收紧版规划。
+
+从项目上级目录运行 `node level-editor/scripts/generate-tightened-stage.mjs --plan level-editor/dist/data/level-plan-weighted-first-50.json --out outputs/20261113-weighted-first-50 --from 6 --through 20 --python /path/to/python --solver-seconds 75`，随后运行21～30和31～50阶段。新生成棋盘会比较保持尺寸与造型的旋转、镜像朝向，并重新搜词和验收得分；额外词仍按本关实际目标词长度完整收录。输出目录的检查点记录本轮排除的旧关卡与候选来源。全部阶段完成后，用同一规划、输出目录、种子2026111351和排除文件参数执行 `run-level-plan.mjs --resume` 做整包验收，再替换前50关预设。
+
+收紧版前50关使用 `dist/data/stage-tightening-policy.json` 和 `dist/data/level-plan-tightened-first-50.json`，执行 `npm run configure:tightened-50` 编译。前5关保留，原棋盘、目标数和得分规划继续逐关检查。31～50关五字母覆盖要求17～18关，每5关至少4关覆盖且空白不连续；四种词长8～9关、五种词长1关。每种词长的首步方向按本阶段参考比例和导出后实际词数计算：20个及以上使用±2个百分点的可达整数，不足20个锁定最近整数；单词量为1时累计取整残差。7、8字母单独验收。
+
+收紧版按完整阶段联合选关。在上级目录运行 `node level-editor/scripts/generate-tightened-stage.mjs --from 6 --through 20 --python /path/to/python`，然后依次运行21～30、31～50两个阶段。`--out` 指定已有初始化检查点的输出目录，默认 `outputs/20261113-tightened-first-50`；候选来源由检查点记录，上一版50关的原盘、镜像旋转及完整字母组合均排除。联合求解先满足硬约束并靠近阶段配额中心，再比较单关质量；各阶段的 `joint-stage-起点-终点.json` 记录结果。完成后用 `run-level-plan.mjs --plan level-editor/dist/data/level-plan-tightened-first-50.json --to 50 --out outputs/20261113-tightened-first-50 --seed 2026111350 --exclude-game outputs/20261112-stage-budget-v6-fresh-through-50/game.json --exclude-game outputs/20261112-composition-fresh-through-100/game.json --exclude-game outputs/20261112-reference-size-fresh-through-100/game.json --budget-python /path/to/python --resume` 从上级目录执行整包验证。使用当前词库重新枚举额外词、检查50关冷却、全路径安全和导出回读，全部通过后再替换预设。
+
+构造起始词由 `dist/data/tightened-seed-strategy.json` 单独控制：轮换混合词长、长词＋5字母、5＋4字母及双长词＋5字母组合，每次限时200毫秒。同一词连续三次未产出新候选时，暂停使用20次选词；近期6个起始词尽量避开。候选池失败后淘汰部分冲突较多的组合，继续生成，避免候选池满后停止探索。候选池及选词状态保存为 `candidate-pools-起点-终点.json`，重启可恢复；这些构造策略不改变阶段验收范围。Python 环境需 NumPy/SciPy；安装 OR-Tools 可使用 CP-SAT 联合求解（本轮为9.15.6755），未安装时使用 SciPy MILP。
+
+起始词预筛同时排除正读和逆读的冷却子词：例如 REFLECT 中的 FLE 会逆读出 ELF，ELF 尚在冷却时，含3字母目标的构造模板必须排除这个起始词。前100关扩展结果位于 `../outputs/20261113-target-floor-first-100/`；前50关保留，新生成51～100关。少数供给不足的关先以核心词铺盘，再按完整规划选出目标；构造词数量不作为最终目标数。`report.json` 与独立 `audit.json` 均通过后更新100关预设与游戏导出，继续严格执行50关冷却，不保留 EAR 第86、88关重复的例外。
+
+已有足量候选时，可加 `--solve-only --solver-seconds 120` 直接从缓存联合选关，延长求解时间而不重新铺盘。求解超时表示尚未找到组合，不等同于配置不可行；未完成时保留已有阶段检查点。
+
+阶段预算版前50关使用 `../outputs/20261112-stage-budget-first-50/plan.json`，在具备 NumPy/SciPy 的 Python 环境中执行 `npm run configure:stage-budget-50` 可重编译。预算按第6～20、21～30、31～50关分别控制精确词长总量、每关数量分布、词长种类及首步方向；每关从联合模板中选词，末尾三关做联合可行性检查。6/7/8字母分别计数，每阶段非零词长总量最多偏差1个，长词0/1/2个关卡的配额固定，首步方向按配置范围验收。双长词模板只分配给至少12个有效格且含3字母目标的关卡；同阶段关卡可交换单长词投放位置，阶段长词关卡数量不变。方向欠额按累计词量约束，避免集中到阶段末尾。构建时保留原棋盘、难度、目标数及得分规划。
+
+生成命令为 `npm run run:plan -- --plan ../outputs/20261112-stage-budget-first-50/plan.json --to 50 --seed 2026111252 --out ../outputs/20261112-stage-budget-v6-fresh-through-50 --exclude-game ../outputs/20261112-composition-fresh-through-100/game.json --exclude-game ../outputs/20261112-reference-size-fresh-through-100/game.json`。`report.json` 包含逐阶段 `stageBudgets` 验收结果，全部完成且达标才可替换预设；导出回读后的路径也必须满足配额。已有试跑使用 `--resume` 恢复，并保持相同参数。
+
+可用 `--budget-python PATH` 指定装有 NumPy/SciPy 的 Python，启用阶段末7关的完整剩余预算求解。每次落定候选前，同时检查剩余联合模板、数量分布和分词长正向容量能否补齐；无法完成的组合提前回退，不改动验收范围。求解结果按累计指标缓存，`report.json` 的 `stageTailSolver` 记录调用情况。
+
+需要联合调整末段时，在 `level-editor/` 的上级目录运行 `node level-editor/scripts/complete-plan-tail.mjs --from 38 --python /path/to/python`。工具只使用本轮新铺的候选，按词长构成保留多种实际关卡；同时约束阶段预算、逐段方向欠额、目标和额外词的跨关冷却及整盘字母组合去重。完整组合通过检查后才更新检查点，并记录 `joint-tail-selection.json`；随后用原跑关命令加 `--resume` 做完整验证和导出。
+
+执行 `npm run run:plan -- --to 50`，读取 `dist/data/level-plan.json`，在独立目录 `../outputs/20261112-composition-fresh-through-50/` 重新铺字母生成第6～50关。前5关沿用当前手调开场，不替换浏览器关卡。默认不读取旧候选棋盘库，并排除旧1000关及前两次试跑的原盘、旋转镜像和完整字母组合。`--reuse-inventory` 仅供显式复现旧候选库流程。可用 `--plan JSON`、`--out DIR` 指定文件，已有进度用 `--resume` 恢复。显式指定旧规划时仍可复现旧规则。
+
+普通盘尺寸逐关沿用 Word Tiles，1501～2000关对应竞品1001～1500关；每5关投放的特殊造型避开上一款后按竞品有效格数择近。工具在开始时核验全部规划尺寸，拒绝尺寸独立重排的旧试稿。难度、目标数量、四档得分词数及总分范围沿用自主规划，不套用旧竞品词长或阶段比例。逐词参考分用于候选排序。使用当前词库与目标白名单，目标和额外词合并冷却50关，额外词按实际目标长度集合完整枚举，所有合法目标消词选择均须可完成。候选在选用前先导出回读，以编辑器实际重建路径的评分核对规划；恢复旧检查点时会退回首个回读分数不符的关卡。默认只积累本次新铺棋盘，显式使用 `--reuse-inventory` 时才读取旧盘作为种子。认词与最终验证始终使用当前词库。
+
+输出包含保留开场的 `game.json`、本次生成的 `new-game.json`、编辑数据、检查点和规划/实际对照 `report.json`。只有完整范围通过全部校验时 `passed` 才为真。
+
+重新生成已有范围时，可用 `--exclude-game ../outputs/此前结果/game.json` 排除该成品的相同棋盘、旋转镜像和完整字母组合；可重复传入多个文件。
+
+`npm run configure:composition` 从已核验的竞品统计重新编译词长配置，保存 `dist/data/target-composition-policy.json`、`dist/data/level-plan.json` 和 `../outputs/20261112-level-plan-composition/配置说明及逐关清单.txt`。这是当前独立规划跑关工具使用的配置，旧“当前规则”配表继续保留作对照。
+
+词长采用实际频数的联合分布，按阶段、相近有效格数和目标总数选择参考构成，再按我们的词量分配；没有把所有词长都改为正态抽样。逐关配置列出3/4/5/6+字母偏好数量、数量范围、实际词长种类及首步方向参考。数量范围和种类偏好用于候选排序；必须满足的规则是常规关至少1个3字母目标、变化关没有3字母目标、至少2种词长。从第31～60关这一组开始，每30关安排一关变化关，组内位置浮动，间距至少20关，共66关；选择目标数不少于6且不超过有效格数的位置，避开小盘高词量组合。首步方向看第1个字母到第2个字母，按阶段及实际词长累计平衡；9字母以上沿用6～8字母合并比例，避免各1例的稀少样本被误作100%正向。
+
+向后续跑可执行 `npm run run:plan -- --continue-from ../outputs/20261112-reference-size-fresh-through-100 --to 200`，输出自动写入 `../outputs/20261112-composition-fresh-through-200/`。已完成的前100关逐字保留，回退只发生在新增关卡内；`new-game.json` 仅包含第101～200关。允许从本版的父规划结果续跑，旧关仍核验原棋盘、目标数、得分和通关规则，词长策略标记为 `preserved-before-policy`，从新增关卡起执行新规则。恢复续跑时保留相同的 `--continue-from` 参数并加 `--resume`。
+
+## 逐关约束试核（2026-11-11）
+
+执行 `node scripts/build-level-constraints.mjs`，在 `../outputs/20261111-level-constraints/` 生成机器可读的 `constraints.json`、逐关清单 `constraints.txt` 和核验结果 `validation.json`。这一步只整理约束和检查当前成品，不生成、重排或替换关卡。
+
+前5关按用户要求暂时排除，自动约束从第6关开始，后续关号保持不变。涉及这些人工关的50关冷却、整盘去重、首行连续规律、首阶段指标和第10关造型选择保留待补检状态。特殊造型按上一次实际投放选择最近格数的可用款式。旧核心词仅作为生成建议，参考词长和拐弯等逐关指标用于排序，阶段比例范围单独检查。当前词库和所有数值来源记录内容哈希；历史文件只提供既有数值上限，不参与认词。
+
+### 候选库20关试跑
+
+执行 `node scripts/run-constraint-trial.mjs`，从独立空库试跑第6～25关，结果保存到 `../outputs/20261111-optimized-pool-trial-20/`。已有输出需使用 `--resume` 续跑或通过 `--out DIR` 指定独立目录。试跑不会替换编辑器关卡、配置或旧试跑结果。
+
+完整阶段先换算整数预算，并在选词分支内联动检查正向词、生僻词、词长、直线与多拐路径。库存按可变目标词供给和对称造型索引；查询分片保留游标，未查完时继续查库。每批铺盘最多检查100个完成棋盘，局部字母搜索最多检查50个候选；连续两批无合格结果后回退，所有已验证棋盘继续保留。`report.json` 记录生成、索引检索、选词与回退次数，`library.json.gz` 无损保存完整棋盘库。
+
+向后续跑可执行 `node scripts/run-constraint-trial.mjs --continue-from ../outputs/20261111-optimized-pool-trial-20 --to 50 --out ../outputs/20261112-continued-pool-through-50`。继承前序关卡和候选库，锁定已完成范围，只在新增关卡内回退。允许目标数量浮动的阶段会保留所有合法总词数的预算分支。合并导出为 `game.json`，本次新增部分另存 `new-game.json`。
+
 ## 当前2000关规则生成
 
 打开“关卡配置列表”，选择“当前规则 · 2000关 · 三成造型 · 长词与路径节奏优化”，再选择生成范围。已有配置列表保留；新规则列表独立加入。每10关第1、3、7关镂空，其余7关完整矩形；首关固定CAT／ALL的T型计入第一组3关。镂空造型前10关去重，最后500关循环对应参考配置。
@@ -31,7 +101,7 @@ npm test
 node scripts/generate-current-rules.mjs --from 1 --to 20 --seed 20261104 --out ../outputs/current-rule-trial
 ```
 
-中段续做可加 `--history 历史文件.json`，支持draft数组、编辑器records和游戏books/daily。输出游戏文件、可编辑数据、每20关的草稿检查点和质量报告；报告会标明前序历史是否完整。原50关预设保持不变。
+中段续做可加 `--history 历史文件.json`，支持draft数组、编辑器records和游戏level/daily（兼容旧版books/daily）。输出游戏文件、可编辑数据、每20关的草稿检查点和质量报告；报告会标明前序历史是否完整。原50关预设保持不变。
 
 ### 先摆核心词，再挑选成品
 
@@ -135,7 +205,7 @@ node scripts/generate-anchor-candidates.mjs pick ../outputs/20261105-anchor-pool
 
 编辑器关卡快照使用 `records: [{id, level, ...}]`，保存棋盘、路径、目标词、额外词、统计、生成配置和来源。配置快照使用 `records: [{id, config, levelId?}]`；配置与结果分别保存。
 
-游戏导出仍为 `{books, daily}`，所有关卡放入第一册，daily 为空，ID 按实际顺序从字符串 `"1"` 连续编号。每关保留 `id/name/g/t/n/e/lv/ty/curtains` 九个字段；棋盘每行用逗号连接，目标词和额外词各用空格连接。格子次数按目标路径重算，以 36 进制逐格编码。`lv/ty` 为空字符串，`curtains` 为空数组，册 `mix` 为 `[100,0,0,0,0]`。
+游戏导出为 `{level: [...], daily: []}`，普通关卡按列表顺序放入 `level`，没有每日关卡时 `daily` 为空。每关仅含四个字段：`a` 为棋盘（行间用逗号连接，镂空格为 `-`），`b` 为格子使用次数（按目标路径重算，以36进制逐格编码），`c` 为目标词，`d` 为额外词（词间用空格连接）。单关复制也使用 `{a, b, c, d}`。读取兼容旧版 `{books, daily}` 和 `{g, t, n, e}`；打开已有文件后保存仍保留其原结构、分组和扩展字段。
 
 固定布局为 `{rows, columns, placements: [{word, path}]}`，路径索引从左上角 0 开始逐行编号。`fixedWords` 保存全部固定词，`fixedLayout` 仅保存固定位置的词。
 
@@ -163,4 +233,4 @@ node scripts/generate-anchor-candidates.mjs pick ../outputs/20261105-anchor-pool
 
 快照路径：`dist/data/versions/YYYY-MM-DD-vN/`，包含完整关卡、游戏导出和当时配置列表。历史登记在 `dist/data/local-versions.json`。2026-10-28-v1 是确认保留的 20 关（001～020），参考竞品预设与我们的版本独立保存。
 
-内置预设索引只列出竞品“Word Tiles · list 0”和当前的“三字母词库精简 · 2000关 · 2026-11-05”。当前预设支持直接下载游戏文件，旧预设可从 Git 历史找回。
+内置预设索引只列出竞品“Word Tiles · list 0”和当前的“新规划试跑 · 前1000关 · 2026-11-17（目标补齐）”。当前预设支持直接下载游戏文件。续跑和规划校验依赖的旧关卡文件保留原路径，供生成脚本和检查点读取。

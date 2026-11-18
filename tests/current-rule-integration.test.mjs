@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { validateConfigList, installConfigPreset, readConfigLists, writeConfigLists } from '../dist/level-config.js';
-import { CURRENT_INITIAL_WORDS_REVISION, validateGenerationPolicy, validateCurrentRuleConfigs } from '../dist/generation-policy.js';
+import { CURRENT_INITIAL_WORDS_REVISION, SPECIAL_SHAPE_IDS, closestSpecialShapes,
+  usesSpecialShape, validateGenerationPolicy, validateCurrentRuleConfigs } from '../dist/generation-policy.js';
 import { prepareGeneration } from '../dist/level-rules.js';
 import { createBatchRunner } from '../dist/batch-runner.js';
 import { randomizeBoardShape } from '../dist/board-shape.js';
@@ -80,23 +81,44 @@ test('a revised core pair replaces its previous stock pair while preserving an e
   assert.deepEqual(saved.records[1826].config.fixedWords, ['FLIGHT', 'LIGHT']);
   assert.deepEqual(saved.records[1892].config.fixedWords, ['GROWTH', 'GROWN']);
 });
-test('the full 2000-rule preset aligns masks, three hollow boards per ten, cooldown and the last500 cycle',()=>{
+test('the full 2000-rule preset preserves the opening, uses one special board per five and follows competitor sizes',()=>{
   assert.equal(validateConfigList(preset.records).length,2000);
   assert.equal(validateCurrentRuleConfigs(preset.records,{complete:true}).length,2000);
-  for(let start=0;start<2000;start+=10){
-    const block=preset.records.slice(start,start+10);
-    assert.deepEqual(block.flatMap((r,i)=>r.config.disabledCells.length?[i+1]:[]),[1,3,7]);
+  for(let start=0;start<2000;start+=5){
+    const block=preset.records.slice(start,start+5);
+    assert.deepEqual(block.flatMap((r,i)=>usesSpecialShape(r.position)?[i+1]:[]),[5]);
   }
-  for(const position of [233,597,747,777,837,897,933]){
-    const c=preset.records[position-1].config;
-    assert.equal(c.rows*c.columns-c.disabledCells.length,13);
-    assert.equal(c.generationRules.referenceCells,15);
+  const reference=JSON.parse(fs.readFileSync(new URL('../dist/data/presets/word-tiles-list0.json',import.meta.url)));
+  let previous=null;
+  for(const row of preset.records.slice(2)){
+    const c=row.config, rules=c.generationRules;
+    const ref=reference[rules.referencePosition-1];
+    assert.equal(rules.referenceCells,ref.height*ref.width);
+    if(usesSpecialShape(row.position)){
+      assert.ok(SPECIAL_SHAPE_IDS.includes(rules.shapeId));
+      assert.notEqual(rules.shapeId,previous);
+      assert.equal(rules.previousSpecialShapeId,previous);
+      assert.ok(closestSpecialShapes(ref.height*ref.width,previous).some(s=>s.id===rules.shapeId));
+      previous=rules.shapeId;
+    }else{
+      assert.equal(c.rows,ref.height);assert.equal(c.columns,ref.width);
+      assert.equal(c.disabledCells.length,0);
+    }
   }
   assert.equal(preset.records[1500].config.generationRules.referencePosition,1001);
   assert.equal(preset.records.at(-1).config.generationRules.referencePosition,1500);
-  const tampered=structuredClone(preset.records[2].config);tampered.disabledCells=[];
+  const tampered=structuredClone(preset.records[4].config);tampered.disabledCells=[];
   assert.throws(()=>validateGenerationPolicy(tampered),/禁用格/);
   assert.equal(randomizeBoardShape(preset.records[2].config),preset.records[2].config);
+});
+test('nearest special shapes exclude the preceding special occurrence, including separated occurrences',()=>{
+  assert.deepEqual(closestSpecialShapes(9).map(shape=>shape.id),[12]);
+  assert.deepEqual(closestSpecialShapes(9,12).map(shape=>shape.id),[25]);
+  assert.deepEqual(closestSpecialShapes(15,28).map(shape=>shape.id),[29,33]);
+  const changed=structuredClone(preset.records);
+  changed[19].config.generationRules.previousSpecialShapeId=25;
+  assert.throws(()=>validateCurrentRuleConfigs(changed,{complete:true}),/上一次特殊造型/);
+  assert.equal(validateCurrentRuleConfigs(preset.records.slice(9, 20)).length,11);
 });
 test('installing the new rule preset preserves existing records and the active list',()=>{
   const storage=memory(),old={id:'older',label:'保留配置',records:[preset.records[0]]};

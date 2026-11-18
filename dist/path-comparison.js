@@ -1,7 +1,7 @@
-import { describePath } from "./level-statistics.js";
+import { calculateLevelDifficulty, describePath } from "./level-statistics.js";
 import { createPathPreview, pathScoreBand } from "./path-preview.js";
 import { createPathTrend } from "./path-trend.js";
-import { findPresetWordPath, normalizePresetLevels } from "./preset-level-lists.js";
+import { createPresetRecords, findPresetWordPath, normalizePresetLevels } from "./preset-level-lists.js";
 
 const BANDS = ["绿 · 0 分", "蓝 · 1 分", "黄 · 2 分", "红 · 3 分及以上"];
 const PAGE_SIZE = 25;
@@ -17,7 +17,7 @@ function groupTargetPaths(level) {
   return groups;
 }
 
-function renderLevel(number, sources) {
+function renderLevel(number, sources, difficulty = false) {
   const sides = sources.map(({ label, levels }) => {
     const level = levels[number - 1];
     return { label, level, groups: groupTargetPaths(level) };
@@ -47,6 +47,13 @@ function renderLevel(number, sources) {
     const heading = document.createElement("th");
     heading.scope = "row";
     heading.textContent = label;
+    if (difficulty && level) {
+      const total = calculateLevelDifficulty(level.targetWords);
+      const score = document.createElement("small");
+      score.className = "path-comparison-difficulty";
+      score.textContent = Number.isFinite(total) ? `难度 ${total} 分` : "难度数据缺失";
+      heading.append(score);
+    }
     row.append(heading);
     if (!level || !bands.length) {
       const empty = row.insertCell();
@@ -92,6 +99,13 @@ export function setupPathComparison() {
   const jumpInput = jump.elements.namedItem("level");
   const modes = document.querySelector("#path-comparison-modes");
   const views = document.querySelector("#path-comparison-views");
+  const selections = [
+    { key: "ours", label: "A 方", select: document.querySelector("#path-comparison-source-a") },
+    { key: "theirs", label: "B 方", select: document.querySelector("#path-comparison-source-b") },
+  ];
+  let presets = [];
+  const sourceCache = new Map();
+  let dictionaryPromise = null;
   let levelSources = [];
   let total = 0;
   let start = 0;
@@ -100,10 +114,27 @@ export function setupPathComparison() {
   let trendChart = null;
   const hiddenTrendBands = new Set();
 
+  function updateControls() {
+    for (const { select } of selections) select.disabled = loading || !presets.length;
+    modes.disabled = views.disabled = loading || !total;
+    jumpInput.disabled = jump.querySelector("button").disabled = loading || !total;
+    previous.disabled = loading || !total || start === 0;
+    next.disabled = loading || !total || start + PAGE_SIZE >= total;
+  }
+
+  function currentNumber() {
+    if (trendChart || !total) return selectedLevel;
+    const top = list.getBoundingClientRect().top;
+    const index = [...list.children].findIndex(table => table.getBoundingClientRect().bottom > top);
+    return start + Math.max(0, index) + 1;
+  }
+
   function render(number = start + 1, trendOffset) {
     const end = Math.min(start + PAGE_SIZE, total);
     const mode = modes.querySelector(":checked").value;
-    const trend = views.querySelector(":checked").value === "trend";
+    const view = views.querySelector(":checked").value;
+    const trend = view !== "table";
+    const difficulty = view === "difficulty";
     const visibleSources = levelSources.filter(source => mode === "both" || mode === source.key);
     selectedLevel = number;
     jumpInput.value = String(number);
@@ -112,17 +143,21 @@ export function setupPathComparison() {
     trendChart = null;
     if (trend) {
       for (const source of visibleSources) {
-        source.counts ??= source.levels.map(level => groupTargetPaths(level).map(group => group.length));
+        if (difficulty) {
+          source.difficulties ??= source.levels.map(level => calculateLevelDifficulty(level.targetWords));
+        } else {
+          source.counts ??= source.levels.map(level => groupTargetPaths(level).map(group => group.length));
+        }
       }
       const details = document.createElement("div");
       details.className = "path-trend-details";
       trendChart = createPathTrend(visibleSources, BANDS, total, number, hiddenTrendBands, level => {
-        details.replaceChildren(renderLevel(level, visibleSources));
-      });
+        details.replaceChildren(renderLevel(level, visibleSources, difficulty));
+      }, difficulty);
       list.replaceChildren(trendChart.figure, details);
       trendChart.mount(trendOffset);
       list.scrollTop = 0;
-      status.textContent = `第 1–${total} 关 · 逐关计数`;
+      status.textContent = `第 1–${total} 关 · ${difficulty ? "难度总分" : "逐关计数"}`;
     } else {
       const page = document.createDocumentFragment();
       for (let index = start; index < end; index += 1) {
@@ -130,40 +165,97 @@ export function setupPathComparison() {
       }
       list.replaceChildren(page);
       list.children[number - 1 - start].scrollIntoView({ block: "start", inline: "nearest" });
-      previous.disabled = start === 0;
-      next.disabled = end === total;
       status.textContent = `第 ${start + 1}–${end} 关 / 共 ${total} 关`;
+    }
+    updateControls();
+  }
+
+  async function readSource(preset) {
+    if (!sourceCache.has(preset.id)) {
+      dictionaryPromise ??= Promise.all(["required-words.json", "extra-words.json", "guide-words.json"]
+        .map(readData)).then(groups => groups.flat()).catch(error => {
+          dictionaryPromise = null;
+          throw error;
+        });
+      const pending = Promise.all([readData(preset.file), dictionaryPromise]).then(([data, dictionary]) => ({
+        levels: normalizePresetLevels({ records: createPresetRecords(data, preset.format, dictionary) }, "editor"),
+      }));
+      sourceCache.set(preset.id, pending);
+      pending.catch(() => sourceCache.delete(preset.id));
+    }
+    return sourceCache.get(preset.id);
+  }
+
+  async function loadSources() {
+    if (loading) return;
+    const number = currentNumber();
+    const offset = trendChart?.offset();
+    loading = true;
+    updateControls();
+    status.textContent = "正在读取关卡…";
+    try {
+      const nextSources = await Promise.all(selections.map(async ({ key, label, select }) => {
+        const preset = presets.find(item => item.id === select.value);
+        if (!preset) throw new Error("找不到所选关卡来源。");
+        return { key, label, id: preset.id, ...await readSource(preset) };
+      }));
+      if (nextSources.some(source => !source.levels.length)) throw new Error("所选关卡列表为空。");
+      levelSources = nextSources;
+      total = Math.max(...levelSources.map(source => source.levels.length));
+      const target = Math.min(number, total);
+      start = Math.floor((target - 1) / PAGE_SIZE) * PAGE_SIZE;
+      jumpInput.max = String(total);
+      render(target, offset);
+    } catch (error) {
+      for (const source of levelSources) {
+        selections.find(selection => selection.key === source.key).select.value = source.id;
+      }
+      status.textContent = error.message || "无法加载目标路径对比。";
+    } finally {
+      loading = false;
+      updateControls();
     }
   }
 
   document.querySelector("#open-path-comparison").addEventListener("click", async () => {
     dialog.showModal();
     if (loading || total) return;
-    loading = true;
-    status.textContent = "正在读取关卡…";
-    try {
-      const index = await readData("preset-level-lists.json");
-      const ours = index.presets.find(preset => preset.id === "our-levels-three-letter-pruned-2000-2026-11-05");
-      const reference = index.referenceLists.find(preset => preset.id === "word-tiles-list0");
-      if (!ours || !reference) throw new Error("找不到用于对比的本地预设。");
-      const [ourLevels, referenceLevels] = await Promise.all([ours, reference].map(async preset =>
-        normalizePresetLevels(await readData(preset.file), preset.format)));
-      levelSources = [
-        { key: "ours", label: "我们的", levels: ourLevels },
-        { key: "theirs", label: "Word Tiles", levels: referenceLevels },
-      ];
-      total = Math.max(ourLevels.length, referenceLevels.length);
-      render();
-      jumpInput.max = String(total);
-      jumpInput.disabled = false;
-      jump.querySelector("button").disabled = false;
-    } catch (error) {
-      total = 0;
-      status.textContent = error.message || "无法加载目标路径对比。";
-    } finally {
-      loading = false;
+    if (!presets.length) {
+      loading = true;
+      updateControls();
+      status.textContent = "正在读取关卡来源…";
+      try {
+        const index = await readData("preset-level-lists.json");
+        presets = [...(index.presets ?? []), ...(index.referenceLists ?? [])];
+        if (!presets.length) throw new Error("没有可供对比的关卡来源。");
+        for (const { key, select } of selections) {
+          select.replaceChildren();
+          for (const [label, entries] of [
+            ["我们的关卡", index.presets ?? []],
+            ["参考竞品", index.referenceLists ?? []],
+          ]) {
+            if (!entries.length) continue;
+            const group = document.createElement("optgroup");
+            group.label = label;
+            for (const preset of entries) {
+              group.append(new Option(`${preset.label}（${preset.levelCount} 关）`, preset.id));
+            }
+            select.append(group);
+          }
+          const preferred = key === "ours" ? index.presets?.[0] : index.referenceLists?.[0];
+          select.value = (preferred ?? presets[0]).id;
+        }
+      } catch (error) {
+        status.textContent = error.message || "无法读取关卡来源。";
+        return;
+      } finally {
+        loading = false;
+        updateControls();
+      }
     }
+    await loadSources();
   });
+  for (const { select } of selections) select.addEventListener("change", loadSources);
   document.querySelector("#close-path-comparison").addEventListener("click", () => dialog.close());
   previous.addEventListener("click", () => { start = Math.max(0, start - PAGE_SIZE); render(); });
   next.addEventListener("click", () => { start += PAGE_SIZE; render(); });
@@ -173,9 +265,7 @@ export function setupPathComparison() {
       render(selectedLevel, trendChart.offset());
       return;
     }
-    const top = list.getBoundingClientRect().top;
-    const index = [...list.children].findIndex(table => table.getBoundingClientRect().bottom > top);
-    render(start + Math.max(0, index) + 1);
+    render(currentNumber());
   }
   modes.addEventListener("change", changeView);
   views.addEventListener("change", changeView);

@@ -32,7 +32,7 @@ test('generation ignores all retired limits while preserving shaped fixed words'
   assert.ok(level.candidateWords.some(entry => entry.word === 'AT'));
   assert.ok(!level.extraWords.some(entry => entry.word === 'AT'));
   assert.ok(level.targetWords.every(entry => createPathSafetyChecker(level)(entry.word)));
-  assert.equal(createGameExport([{ level }]).books[0].levels[0].g, 'CD-,AO-,TG-');
+  assert.equal(createGameExport([{ level }]).level[0].a, 'CD-,AO-,TG-');
   assert.deepEqual(options, before);
   const many = generator.generate({ ...options, targetCount: 100, targetLengthPlan: Array(100).fill('long') });
   assert.equal(many.targetWords.length, 2);

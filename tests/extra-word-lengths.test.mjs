@@ -13,7 +13,7 @@ test('generation filters extras by actual target lengths before extra duplicate 
  assert.deepEqual(level.targetWords.map(e=>e.word),['CAT','DOG']);
  assert.deepEqual(level.extraWords.map(e=>e.word),['GOD','TAC']);
  assert.ok(level.foundWords.some(e=>e.word==='CATGOD'));
- assert.equal(createGameExport([{level}]).books[0].levels[0].e,'GOD TAC');
+ assert.equal(createGameExport([{level}]).level[0].d,'GOD TAC');
 });
 
 test('allowed extra lengths are the exact target length set, not an inclusive interval',()=>{

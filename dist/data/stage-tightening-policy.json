@@ -1,0 +1,22 @@
+{
+  "id": "tightened-first-50-20261113",
+  "scope": [6, 50],
+  "directionPolicy": {
+    "rateSource": "same-stage-reference-unsmoothed",
+    "denominator": "actual-exported-target-count",
+    "largeSampleMinimum": 20,
+    "largeSampleTolerancePoints": 2,
+    "integerFallback": "nearest-count-with-no-extra-word-tolerance",
+    "smallSample": "nearest-count-exact",
+    "rounding": "half-up",
+    "nEqualsOne": "carry-rounding-residual-by-length-across-stages",
+    "ranking": "minimize-stage-direction-deviation-before-level-quality",
+    "aggregate": "derived-from-per-length-quotas-no-independent-6plus-lock"
+  },
+  "stage31To50": {
+    "fiveHistogram": {"0": {"target": 2, "range": [2, 3]}, "1": {"target": 14, "range": [13, 15]}, "2": {"target": 3, "range": [2, 4]}, "3": {"target": 1, "range": [0, 1]}, "4": {"target": 0, "range": [0, 0]}},
+    "varietyHistogram": {"1": {"target": 0, "range": [0, 0]}, "2": {"target": 3, "range": [2, 3]}, "3": {"target": 7, "range": [7, 9]}, "4": {"target": 9, "range": [8, 9]}, "5": {"target": 1, "range": [1, 1]}, "6": {"target": 0, "range": [0, 0]}},
+    "fiveCoverage": {"targetLevels": 18, "allowedLevels": [17, 18], "perFiveLevelsMinimum": 4, "maxConsecutiveZeroLevels": 1},
+    "rareLengthCounts": {"7": 2, "8": 2}
+  }
+}
