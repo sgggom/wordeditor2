@@ -87,7 +87,7 @@ test("the preset index exposes only the latest 1000 levels and the independent r
 
   const [preset] = presets;
   const bytes = readFileSync(new URL(`../dist/data/${preset.file}`, import.meta.url));
-  assert.equal(createHash("sha256").update(bytes).digest("hex"), preset.source.sha256);
+  assert.equal(createHash("sha256").update(bytes).digest("hex"), preset.sha256);
   const data = JSON.parse(bytes);
   const records = createPresetRecords(data, preset.format);
   assert.equal(records.length, preset.levelCount);
@@ -104,13 +104,17 @@ test("the preset index exposes only the latest 1000 levels and the independent r
   assert.deepEqual(data, JSON.parse(bytes));
 });
 
-test("the latest local snapshot restores the current preset and configuration", () => {
+test("the saved 1000-level snapshot and the current opening have the expected data", () => {
   const version = read("local-versions.json").versions.find(entry => entry.id === "2026-11-18-v1");
   const [preset] = read("preset-level-lists.json").presets;
   const snapshot = read(version.levels);
   assert.equal(snapshot.records.length, version.levelCount);
-  assert.deepEqual(read(version.gameFile), read(preset.gameFile));
-  assert.deepEqual(createPresetGameExport(snapshot.records), read(version.gameFile));
+  const savedGame = read(version.gameFile);
+  assert.deepEqual(createPresetGameExport(snapshot.records), savedGame);
+  const expected = structuredClone(savedGame);
+  expected.level[1] = { ...expected.level[1], a: "ASJA-,-KUMP", c: "ASK JAM JUMP", d: "" };
+  expected.level[3] = { ...expected.level[3], a: "NAF,BEW,MOB", b: "111211111" };
+  assert.deepEqual(read(preset.gameFile), expected);
   assert.equal(read(version.configs).records.length, 2000);
 });
 

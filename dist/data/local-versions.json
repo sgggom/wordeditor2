@@ -32,6 +32,21 @@
         "游戏导出保留 level_1 至 level_1000 编号及原目标词顺序。"
       ],
       "gitTag": "local-2026-11-18-v1"
+    },
+    {
+      "id": "2026-11-19-v1",
+      "date": "2026-11-19",
+      "version": 1,
+      "label": "2026-11-19 · 版本 1",
+      "levelCount": 1000,
+      "levels": "./versions/2026-11-19-v1/levels.json",
+      "gameFile": "./versions/2026-11-19-v1/word-tiles-levels.json",
+      "configs": "./versions/2026-11-19-v1/configs.json",
+      "notes": [
+        "第2关沿原路径使用ASK、JAM、JUMP，额外词为0。",
+        "第4关棋盘行序改为3、2、1。"
+      ],
+      "gitTag": "local-2026-11-19-v1"
     }
   ]
 }
